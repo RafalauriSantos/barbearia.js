@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState } from 'react';
 import { AppHeader } from '@/components/AppHeader';
 import { DaySummaryCard } from '@/components/DaySummaryCard';
 import { AppointmentRow } from '@/components/AppointmentRow';
@@ -16,7 +16,7 @@ export default function AppPage() {
     const dayKey = formatDayKey(currentDate);
     const appointments = getAppointmentsForDay(dayKey);
     const summary = getDaySummary(dayKey);
-    const reload = useCallback(() => setRefresh(r => r + 1), []);
+    const reload = () => setRefresh(refresh + 1);
     const prevDay = () => {
         const d = new Date(currentDate);
         d.setDate(d.getDate() - 1);
