@@ -1,8 +1,8 @@
-const APPT_KEY = "cutledger_appointments";
-const SVC_KEY = "cutledger_services";
-const PROD_KEY = "cutledger_products";
-const EXP_KEY = "cutledger_expenses";
-const PROFILE_KEY = "cutledger_profile";
+const APPT_KEY = "kurt_appointments";
+const SVC_KEY = "kurt_services";
+const PROD_KEY = "kurt_products";
+const EXP_KEY = "kurt_expenses";
+const PROFILE_KEY = "kurt_profile";
 
 function readList(key) {
 	try {

@@ -1,10 +1,10 @@
-# CutLedger
+# KURT
 
 Sistema simples para gestao de barbearia feito com React.
 
 ## Funcionalidades
 
-- Cadastro inicial da barbearia
+- Cadastro inicial no KURT
 - Agenda de atendimentos
 - Cadastro de servicos e produtos
 - Controle de despesas e resumo financeiro

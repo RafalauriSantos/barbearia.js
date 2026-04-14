@@ -6,10 +6,10 @@ export default function LandingPage() {
 		<div className="min-h-[100dvh] bg-background flex flex-col items-center justify-center px-6 py-12">
 			<div className="animate-fade-up text-center max-w-sm">
 				<p className="font-mono-ui text-[9px] text-paid tracking-[0.4em] mb-3">
-					GESTÃO PARA BARBEARIAS
+					KURT PARA BARBEARIAS
 				</p>
 				<h1 className="font-logo text-4xl sm:text-5xl text-foreground tracking-wider">
-					CUTLEDGER
+					KURT
 				</h1>
 				<p className="font-client text-base text-muted-foreground mt-4 leading-relaxed">
 					Controle sua agenda, serviços e finanças — rápido como um bloco de

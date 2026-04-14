@@ -1,3 +1,4 @@
 export function cn(...inputs) {
-	return inputs.filter(Boolean).join(" ");
+	const classes = inputs.filter(Boolean);
+	return classes.join(" ");
 }
