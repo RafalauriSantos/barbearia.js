@@ -5,7 +5,7 @@ import {
 	deleteAppointment,
 	loadServices,
 } from "@/lib/store";
-export function AppointmentRow({ appointment, index, onUpdate, onEdit }) {
+export function AppointmentRow({ appointment, onUpdate, onEdit }) {
 	const [expanded, setExpanded] = useState(false);
 	const [showServicePicker, setShowServicePicker] = useState(false);
 	const today = new Date().toISOString().slice(0, 10);
@@ -31,11 +31,9 @@ export function AppointmentRow({ appointment, index, onUpdate, onEdit }) {
 		return `${d}/${m}`;
 	})();
 	return (
-		<div
-			className="animate-row-in"
-			style={{ animationDelay: `${index * 60}ms` }}>
+		<div className="animate-row-in">
 			<div className="flex items-center gap-3 px-4 py-3.5 bg-background">
-				<span className="font-mono-ui text-[11px] text-foreground-faint w-10 shrink-0">
+				<span className="font-mono-ui text-xs text-foreground-faint w-12 shrink-0">
 					{appointment.time_slot}
 				</span>
 
@@ -50,8 +48,8 @@ export function AppointmentRow({ appointment, index, onUpdate, onEdit }) {
 					)}
 					<button
 						onClick={() => setShowServicePicker((prev) => !prev)}
-						className="w-5 h-5 rounded-full border border-border flex items-center justify-center text-foreground-faint hover:text-foreground hover:bg-secondary transition-colors active:scale-95 shrink-0 text-xs leading-none">
-						+
+						className="px-2 py-1 rounded border border-border text-[10px] text-foreground-faint shrink-0">
+						SERVICO
 					</button>
 				</div>
 
@@ -76,7 +74,7 @@ export function AppointmentRow({ appointment, index, onUpdate, onEdit }) {
 				<div className={`w-2 h-2 rounded-full shrink-0 dot-${statusColor}`} />
 				<button
 					onClick={() => setExpanded((prev) => !prev)}
-					className="font-mono-ui text-[9px] text-foreground-faint hover:text-foreground px-2 py-1 rounded hover:bg-secondary transition-colors">
+					className="font-mono-ui text-[10px] text-foreground-faint px-2 py-1 rounded border border-border">
 					{expanded ? "FECHAR" : "AÇÕES"}
 				</button>
 			</div>
@@ -120,14 +118,14 @@ function InlineEditor({ appointment, onUpdate, onClose, onEdit }) {
 	return (
 		<div className="animate-slide-down bg-background-deep px-4 py-3 flex items-center gap-2 flex-wrap">
 			<input
-				className="bg-secondary text-foreground font-mono-ui text-xs px-2 py-1.5 rounded w-20 outline-none focus:ring-1 focus:ring-ring"
+				className="bg-secondary text-foreground font-mono-ui text-xs px-2 py-1.5 rounded w-20 border border-border"
 				value={value}
 				onChange={(e) => setValue(e.target.value)}
 				inputMode="decimal"
 				placeholder="Valor"
 			/>
 			<select
-				className="bg-secondary text-foreground font-mono-ui text-[10px] px-2 py-1.5 rounded outline-none"
+				className="bg-secondary text-foreground font-mono-ui text-[10px] px-2 py-1.5 rounded border border-border"
 				value={status}
 				onChange={(e) => setStatus(e.target.value)}>
 				<option value="normal">Normal</option>
@@ -136,19 +134,19 @@ function InlineEditor({ appointment, onUpdate, onClose, onEdit }) {
 			</select>
 			<button
 				onClick={save}
-				className="font-mono-ui text-[10px] text-paid bg-paid/10 px-3 py-1.5 rounded hover:bg-paid/20 transition-colors active:scale-95">
+				className="font-mono-ui text-[10px] text-paid bg-paid/10 px-3 py-1.5 rounded border border-border">
 				OK
 			</button>
 			{onEdit && (
 				<button
 					onClick={onEdit}
-					className="font-mono-ui text-[10px] text-foreground-faint hover:text-foreground px-2 py-1.5 rounded hover:bg-secondary transition-colors active:scale-95">
+					className="font-mono-ui text-[10px] text-foreground-faint px-2 py-1.5 rounded border border-border">
 					EDITAR
 				</button>
 			)}
 			<button
 				onClick={handleDelete}
-				className="font-mono-ui text-[10px] text-overdue bg-overdue/10 px-2 py-1.5 rounded hover:bg-overdue/20 transition-colors active:scale-95 ml-auto">
+				className="font-mono-ui text-[10px] text-overdue bg-overdue/10 px-2 py-1.5 rounded border border-border ml-auto">
 				EXCLUIR
 			</button>
 		</div>
@@ -180,7 +178,7 @@ function ServicePicker({ appointment, onUpdate, onClose }) {
 				<button
 					key={svc.id}
 					onClick={() => handleSelect(svc)}
-					className="font-mono-ui text-[10px] text-foreground bg-secondary px-2.5 py-1.5 rounded border border-border hover:bg-accent hover:text-accent-foreground transition-colors active:scale-95">
+					className="font-mono-ui text-[10px] text-foreground bg-secondary px-2.5 py-1.5 rounded border border-border">
 					{svc.name} · R$ {svc.price.toFixed(2)}
 				</button>
 			))}

@@ -1,14 +1,14 @@
 const NotFound = () => {
 	const path = window.location.pathname;
 	return (
-		<div className="flex min-h-screen items-center justify-center bg-muted">
-			<div className="text-center">
-				<h1 className="mb-4 text-4xl font-bold">404</h1>
-				<p className="mb-4 text-xl text-muted-foreground">
+		<div className="flex min-h-screen items-center justify-center bg-background px-4">
+			<div className="text-center border border-border rounded p-6 bg-card max-w-md w-full">
+				<h1 className="mb-3 text-3xl font-bold">404</h1>
+				<p className="mb-4 text-sm text-muted-foreground">
 					Pagina nao encontrada: {path}
 				</p>
-				<a href="/" className="text-primary underline hover:text-primary/90">
-					Return to Home
+				<a href="/" className="text-primary underline">
+					Voltar para o inicio
 				</a>
 			</div>
 		</div>

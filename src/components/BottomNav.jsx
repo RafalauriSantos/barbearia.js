@@ -1,9 +1,9 @@
 import { useLocation, useNavigate } from 'react-router-dom';
 const tabs = [
-    { path: '/app', label: 'AGENDA', icon: '📋' },
-    { path: '/services', label: 'SERVIÇOS', icon: '✂' },
-    { path: '/financial', label: 'FINANCEIRO', icon: '💰' },
-    { path: '/expenses', label: 'DESPESAS', icon: '📉' },
+    { path: '/app', label: 'AGENDA' },
+    { path: '/services', label: 'SERVICOS' },
+    { path: '/financial', label: 'FINANCEIRO' },
+    { path: '/expenses', label: 'DESPESAS' },
 ];
 export function BottomNav() {
     const location = useLocation();
@@ -12,9 +12,8 @@ export function BottomNav() {
       <div className="flex items-stretch max-w-[800px] mx-auto">
         {tabs.map(tab => {
             const isActive = location.pathname === tab.path;
-            return (<button key={tab.path} onClick={() => navigate(tab.path)} className={`flex-1 flex flex-col items-center gap-0.5 py-2.5 sm:py-3 transition-colors active:scale-95 ${isActive ? 'text-paid' : 'text-foreground-faint hover:text-foreground'}`}>
-              <span className="text-base sm:text-lg leading-none">{tab.icon}</span>
-              <span className="font-mono-ui text-[8px] sm:text-[9px] tracking-wider">{tab.label}</span>
+            return (<button key={tab.path} onClick={() => navigate(tab.path)} className={`flex-1 py-3 border-r last:border-r-0 border-border text-xs ${isActive ? 'bg-secondary text-foreground' : 'text-foreground-faint'}`}>
+              <span className="font-mono-ui text-[10px]">{tab.label}</span>
             </button>);
         })}
       </div>

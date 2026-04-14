@@ -71,7 +71,6 @@ export default function ServicesPage() {
         cancelEdit();
     };
     const items = tab === 'services' ? services : products;
-    const emptyIcon = tab === 'services' ? '✂' : '🧴';
     const emptyLabel = tab === 'services' ? 'NENHUM SERVIÇO CADASTRADO' : 'NENHUM PRODUTO CADASTRADO';
     const emptyHint = tab === 'services'
         ? 'Adicione serviços para usar nos agendamentos'
@@ -79,71 +78,66 @@ export default function ServicesPage() {
     const formLabel = tab === 'services' ? 'NOME DO SERVIÇO' : 'NOME DO PRODUTO';
     const formPlaceholder = tab === 'services' ? 'Ex: Corte + Barba' : 'Ex: Pomada, Shampoo';
     return (<div className="app-shell flex flex-col min-h-[100dvh] bg-background">
-      {/* Header */}
       <header className="sticky top-0 z-50 bg-background border-b border-border">
         <div className="px-4 py-3 flex items-center justify-between">
-          <h1 className="font-logo text-foreground text-base tracking-wider">CATÁLOGO</h1>
-          <button onClick={() => { cancelEdit(); setShowForm(true); }} className="font-mono-ui text-[10px] text-paid bg-paid/10 px-3 py-1.5 rounded hover:bg-paid/20 transition-colors active:scale-95">
+          <h1 className="font-logo text-foreground text-base">CATALOGO</h1>
+          <button onClick={() => { cancelEdit(); setShowForm(true); }} className="font-mono-ui text-xs border border-border px-3 py-1.5 rounded">
             + NOVO
           </button>
         </div>
 
-        {/* Tabs */}
         <div className="flex border-t border-border">
-          <button onClick={() => switchTab('services')} className={`flex-1 py-2.5 font-mono-ui text-[10px] tracking-widest transition-colors ${tab === 'services'
+          <button onClick={() => switchTab('services')} className={`flex-1 py-2.5 font-mono-ui text-xs ${tab === 'services'
             ? 'text-foreground border-b-2 border-foreground'
-            : 'text-foreground-faint hover:text-foreground'}`}>
-            SERVIÇOS
+            : 'text-foreground-faint'}`}>
+            SERVICOS
           </button>
-          <button onClick={() => switchTab('products')} className={`flex-1 py-2.5 font-mono-ui text-[10px] tracking-widest transition-colors ${tab === 'products'
+          <button onClick={() => switchTab('products')} className={`flex-1 py-2.5 font-mono-ui text-xs ${tab === 'products'
             ? 'text-foreground border-b-2 border-foreground'
-            : 'text-foreground-faint hover:text-foreground'}`}>
+            : 'text-foreground-faint'}`}>
             PRODUTOS
           </button>
         </div>
       </header>
 
       <div className="flex-1 overflow-y-auto pb-20">
-        {/* Add/Edit form */}
-        {(showForm || editingId) && (<form onSubmit={editingId ? handleUpdate : handleAdd} className="px-4 py-4 border-b border-border space-y-3 animate-fade-up bg-background-deep">
+        {(showForm || editingId) && (<form onSubmit={editingId ? handleUpdate : handleAdd} className="px-4 py-4 border-b border-border space-y-3 bg-background-deep">
             <div>
-              <label className="font-mono-ui text-[10px] text-foreground-faint block mb-1">{formLabel}</label>
-              <input type="text" value={name} onChange={e => setName(e.target.value)} className="w-full bg-secondary text-foreground font-mono text-sm px-3 py-2.5 rounded outline-none focus:ring-1 focus:ring-ring placeholder:text-foreground-faint/40" placeholder={formPlaceholder} autoFocus/>
+              <label className="font-mono-ui text-xs text-foreground-faint block mb-1">{formLabel}</label>
+              <input type="text" value={name} onChange={e => setName(e.target.value)} className="w-full bg-secondary text-foreground text-sm px-3 py-2 rounded border border-border" placeholder={formPlaceholder} autoFocus/>
             </div>
             <div>
-              <label className="font-mono-ui text-[10px] text-foreground-faint block mb-1">PREÇO (R$)</label>
-              <input type="text" value={price} onChange={e => setPrice(e.target.value)} className="w-full bg-secondary text-foreground font-mono text-sm px-3 py-2.5 rounded outline-none focus:ring-1 focus:ring-ring placeholder:text-foreground-faint/40" placeholder="40,00" inputMode="decimal"/>
+              <label className="font-mono-ui text-xs text-foreground-faint block mb-1">PRECO (R$)</label>
+              <input type="text" value={price} onChange={e => setPrice(e.target.value)} className="w-full bg-secondary text-foreground text-sm px-3 py-2 rounded border border-border" placeholder="40,00" inputMode="decimal"/>
             </div>
             <div className="flex gap-2">
-              <button type="submit" className="flex-1 bg-foreground text-primary-foreground font-mono-ui text-xs py-2.5 rounded hover:opacity-90 transition-opacity active:scale-[0.98]">
+              <button type="submit" className="flex-1 bg-foreground text-primary-foreground font-mono-ui text-sm py-2 rounded">
                 {editingId ? 'SALVAR' : 'ADICIONAR'}
               </button>
-              <button type="button" onClick={cancelEdit} className="font-mono-ui text-xs text-foreground-faint px-4 py-2.5 rounded hover:bg-secondary transition-colors active:scale-95">
+              <button type="button" onClick={cancelEdit} className="font-mono-ui text-sm text-foreground-faint px-4 py-2 rounded border border-border">
                 CANCELAR
               </button>
             </div>
           </form>)}
 
-        {/* Items list */}
-        {items.length === 0 && !showForm ? (<div className="flex flex-col items-center justify-center py-16 gap-3 animate-fade-up">
-            <span className="text-2xl">{emptyIcon}</span>
-            <span className="font-mono-ui text-[10px] text-foreground-faint tracking-widest">
+        {items.length === 0 && !showForm ? (<div className="flex flex-col items-center justify-center py-16 gap-3">
+            <span className="font-mono-ui text-xs text-foreground-faint">
               {emptyLabel}
             </span>
             <span className="font-client text-sm text-foreground-faint/60">
               {emptyHint}
             </span>
-          </div>) : (items.map((item, i) => (<div key={item.id} className="flex items-center justify-between px-4 py-3.5 border-b border-border/50 animate-row-in" style={{ animationDelay: `${i * 60}ms` }}>
+          </div>) : (items.map((item) => (<div key={item.id} className="flex items-center justify-between px-4 py-3.5 border-b border-border/50">
               <div className="flex-1 min-w-0">
                 <span className="font-client text-base text-foreground">{item.name}</span>
               </div>
               <div className="flex items-center gap-3">
                 <span className="font-client text-sm text-paid">{formatCurrency(item.price)}</span>
-                <button onClick={() => handleEditItem(item)} className="font-mono-ui text-[9px] text-foreground-faint hover:text-foreground transition-colors active:scale-95">
+                <button onClick={() => handleEditItem(item)} className="font-mono-ui text-xs text-foreground-faint">
                   EDITAR
                 </button>
-                <button onClick={() => handleDelete(item.id)} className="font-mono-ui text-[9px] text-overdue hover:text-overdue/80 transition-colors active:scale-95">
-                  ✕
+                <button onClick={() => handleDelete(item.id)} className="font-mono-ui text-xs text-overdue">
+                  EXCLUIR
                 </button>
               </div>
             </div>)))}

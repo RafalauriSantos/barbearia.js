@@ -13,14 +13,14 @@ import {
 import { useNavigate } from "react-router-dom";
 export default function AppPage() {
 	const [currentDate, setCurrentDate] = useState(new Date());
-	const [refresh, setRefresh] = useState(0);
+	const [, setRefresh] = useState(0);
 	const [dialogOpen, setDialogOpen] = useState(false);
 	const [editingAppt, setEditingAppt] = useState();
 	const navigate = useNavigate();
 	const dayKey = formatDayKey(currentDate);
 	const appointments = getAppointmentsForDay(dayKey);
 	const summary = getDaySummary(dayKey);
-	const reload = () => setRefresh(refresh + 1);
+	const reload = () => setRefresh((value) => value + 1);
 	const prevDay = () => {
 		const d = new Date(currentDate);
 		d.setDate(d.getDate() - 1);
@@ -39,7 +39,6 @@ export default function AppPage() {
 		setEditingAppt(appt);
 		setDialogOpen(true);
 	};
-	void refresh;
 	return (
 		<div className="app-shell flex flex-col min-h-[100dvh] bg-background">
 			<AppHeader
@@ -53,7 +52,7 @@ export default function AppPage() {
 
 			<div className="flex-1 overflow-y-auto pb-32">
 				{appointments.length === 0 ?
-					<div className="flex flex-col items-center justify-center py-16 gap-3 animate-fade-up">
+					<div className="flex flex-col items-center justify-center py-16 gap-2">
 						<span className="font-mono-ui text-[10px] text-foreground-faint tracking-widest">
 							NENHUM ATENDIMENTO
 						</span>
@@ -61,11 +60,10 @@ export default function AppPage() {
 							Use o input abaixo ou o botão + para adicionar
 						</span>
 					</div>
-				:	appointments.map((appt, i) => (
+				: 	appointments.map((appt) => (
 						<AppointmentRow
 							key={appt.id}
 							appointment={appt}
-							index={i}
 							onUpdate={reload}
 							onEdit={() => openEdit(appt)}
 						/>

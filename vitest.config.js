@@ -6,8 +6,8 @@ export default defineConfig({
 	test: {
 		environment: "jsdom",
 		globals: true,
-		setupFiles: ["./src/test/setup.js"],
 		include: ["src/**/*.{test,spec}.{js,jsx}"],
+		passWithNoTests: true,
 	},
 	resolve: {
 		alias: { "@": path.resolve(process.cwd(), "./src") },

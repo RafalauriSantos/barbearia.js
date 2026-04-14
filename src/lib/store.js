@@ -198,49 +198,11 @@ export function isToday(date) {
 	const today = new Date();
 	return date.toDateString() === today.toDateString();
 }
-export function parseSmartInput(input, dayKey) {
-	let text = input.trim();
-	if (!text) return null;
-	let barber_name;
-	const barberMatch = text.match(/\s+@(\S+)/);
-	if (barberMatch) {
-		barber_name = barberMatch[1];
-		text = text.replace(barberMatch[0], "");
-	}
-	let prazo_date;
-	let status = "normal";
-	const prazoMatch = text.match(/\s+(\d+)d\s*$/);
-	if (prazoMatch) {
-		const days = parseInt(prazoMatch[1]);
-		const d = new Date();
-		d.setDate(d.getDate() + days);
-		prazo_date = formatDayKey(d);
-		status = "fiado";
-		text = text.replace(prazoMatch[0], "");
-	}
-	const timeMatch = text.match(/^(\d{1,2})[h:](\d{0,2})\s+/);
-	let time_slot = "";
-	if (timeMatch) {
-		const h = timeMatch[1];
-		const m = timeMatch[2] || "00";
-		time_slot = `${h}h${m.padStart(2, "0")}`;
-		text = text.replace(timeMatch[0], "");
-	}
-	let value = 0;
-	const valueMatch = text.match(/\s+(\d+(?:[.,]\d{1,2})?)\s*$/);
-	if (valueMatch) {
-		value = parseFloat(valueMatch[1].replace(",", "."));
-		text = text.replace(valueMatch[0], "");
-	}
-	const client_name = text.trim();
-	if (!client_name) return null;
-	return {
-		client_name,
-		time_slot,
-		value,
-		status,
-		barber_name,
-		prazo_date,
-		day_key: dayKey,
-	};
+
+export function clearAllData() {
+	localStorage.removeItem(APPT_KEY);
+	localStorage.removeItem(SVC_KEY);
+	localStorage.removeItem(PROD_KEY);
+	localStorage.removeItem(EXP_KEY);
+	localStorage.removeItem(PROFILE_KEY);
 }

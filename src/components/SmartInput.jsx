@@ -28,13 +28,13 @@ export function SmartInput({ dayKey, onAdd }) {
 		<div className="flex items-center gap-2 w-full">
 			<input
 				type="time"
-				className="w-24 bg-transparent text-foreground font-mono text-sm outline-none"
+				className="w-24 bg-secondary text-foreground text-sm px-2 py-1.5 rounded border border-border"
 				value={timeValue}
 				onChange={(e) => setTimeValue(e.target.value)}
 				onKeyDown={handleKeyDown}
 			/>
 			<input
-				className="flex-1 bg-transparent text-foreground font-mono text-sm tracking-wider outline-none placeholder:text-foreground-faint/50 min-w-0"
+				className="flex-1 bg-secondary text-foreground text-sm px-2 py-1.5 rounded border border-border min-w-0"
 				placeholder="Cliente"
 				value={clientName}
 				onChange={(e) => setClientName(e.target.value)}
@@ -44,7 +44,7 @@ export function SmartInput({ dayKey, onAdd }) {
 			<input
 				type="number"
 				step="0.01"
-				className="w-20 bg-transparent text-foreground font-mono text-sm text-right tracking-wider outline-none placeholder:text-foreground-faint/50"
+				className="w-20 bg-secondary text-foreground text-sm text-right px-2 py-1.5 rounded border border-border"
 				placeholder="0.00"
 				value={value}
 				onChange={(e) => setValue(e.target.value)}
@@ -52,8 +52,8 @@ export function SmartInput({ dayKey, onAdd }) {
 			/>
 			<button
 				onClick={handleSubmit}
-				className="w-8 h-8 rounded-full border border-border flex items-center justify-center text-foreground-faint hover:text-foreground hover:bg-secondary transition-colors active:scale-95 shrink-0">
-				↵
+				className="px-3 py-1.5 rounded border border-border text-sm bg-card shrink-0">
+				OK
 			</button>
 		</div>
 	);

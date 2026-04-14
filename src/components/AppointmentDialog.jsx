@@ -39,16 +39,16 @@ export function AppointmentDialog({ dayKey, appointment, onClose, onSave }) {
 			className="fixed inset-0 z-[100] flex items-end justify-center bg-black/60"
 			onClick={onClose}>
 			<div
-				className="app-shell bg-background-deep rounded-t-xl border-t border-border animate-fade-up w-full"
+				className="app-shell bg-background-deep border-t border-border w-full"
 				onClick={(e) => e.stopPropagation()}>
 				<div className="px-4 pt-4 pb-2 flex items-center justify-between">
-					<h2 className="font-logo text-foreground text-base tracking-wider">
+					<h2 className="font-logo text-foreground text-base">
 						{appointment ? "EDITAR" : "NOVO AGENDAMENTO"}
 					</h2>
 					<button
 						onClick={onClose}
-						className="text-foreground-faint hover:text-foreground text-lg active:scale-95">
-						✕
+						className="text-foreground-faint text-sm border border-border rounded px-2 py-1">
+						FECHAR
 					</button>
 				</div>
 
@@ -61,7 +61,7 @@ export function AppointmentDialog({ dayKey, appointment, onClose, onSave }) {
 							type="text"
 							value={clientName}
 							onChange={(e) => setClientName(e.target.value)}
-							className="w-full bg-secondary text-foreground font-mono text-sm px-3 py-2.5 rounded outline-none focus:ring-1 focus:ring-ring placeholder:text-foreground-faint/40"
+							className="w-full bg-secondary text-foreground text-sm px-3 py-2 rounded border border-border"
 							placeholder="Nome do cliente"
 							autoFocus
 						/>
@@ -76,7 +76,7 @@ export function AppointmentDialog({ dayKey, appointment, onClose, onSave }) {
 								type="time"
 								value={timeSlot}
 								onChange={(e) => setTimeSlot(e.target.value)}
-								className="w-full bg-secondary text-foreground font-mono text-sm px-3 py-2.5 rounded outline-none focus:ring-1 focus:ring-ring"
+								className="w-full bg-secondary text-foreground text-sm px-3 py-2 rounded border border-border"
 							/>
 						</div>
 						<div className="flex-1">
@@ -88,7 +88,7 @@ export function AppointmentDialog({ dayKey, appointment, onClose, onSave }) {
 								step="0.01"
 								value={value}
 								onChange={(e) => setValue(e.target.value)}
-								className="w-full bg-secondary text-foreground font-mono text-sm px-3 py-2.5 rounded outline-none focus:ring-1 focus:ring-ring placeholder:text-foreground-faint/40"
+								className="w-full bg-secondary text-foreground text-sm px-3 py-2 rounded border border-border"
 								placeholder="40.00"
 							/>
 						</div>
@@ -102,11 +102,11 @@ export function AppointmentDialog({ dayKey, appointment, onClose, onSave }) {
 							<select
 								value={serviceId}
 								onChange={(e) => handleServiceChange(e.target.value)}
-								className="w-full bg-secondary text-foreground font-mono-ui text-xs px-3 py-2.5 rounded outline-none focus:ring-1 focus:ring-ring">
+								className="w-full bg-secondary text-foreground text-sm px-3 py-2 rounded border border-border">
 								<option value="">Nenhum</option>
 								{services.map((s) => (
 									<option key={s.id} value={s.id}>
-										{s.name} — R$ {s.price.toFixed(2)}
+										{s.name} - R$ {s.price.toFixed(2)}
 									</option>
 								))}
 							</select>
@@ -115,7 +115,7 @@ export function AppointmentDialog({ dayKey, appointment, onClose, onSave }) {
 
 					<button
 						type="submit"
-						className="w-full bg-foreground text-primary-foreground font-mono-ui text-xs py-3 rounded hover:opacity-90 transition-opacity active:scale-[0.98] mt-1">
+						className="w-full bg-foreground text-primary-foreground font-mono-ui text-sm py-2 rounded mt-1">
 						{appointment ? "SALVAR" : "ADICIONAR"}
 					</button>
 				</form>
