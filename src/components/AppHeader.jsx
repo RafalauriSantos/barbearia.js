@@ -1,6 +1,10 @@
 import { formatDateDisplay, isToday, loadProfile } from "@/lib/store";
+
+// Cabecalho da tela com dados do perfil e controle de data.
 export function AppHeader({ currentDate, onPrevDay, onNextDay, onSettings }) {
+	// Carrega dados basicos de exibicao do perfil.
 	const profile = loadProfile();
+	// Mostra "Hoje" quando a data atual esta selecionada.
 	const dateLabel =
 		isToday(currentDate) ?
 			`Hoje, ${formatDateDisplay(currentDate)}`

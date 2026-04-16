@@ -11,31 +11,40 @@ import {
 	formatDayKey,
 } from "@/lib/store";
 import { useNavigate } from "react-router-dom";
+
+// Tela principal da agenda do dia.
 export default function AppPage() {
+	// Estado principal da tela.
 	const [currentDate, setCurrentDate] = useState(new Date());
 	const [, setRefresh] = useState(0);
 	const [dialogOpen, setDialogOpen] = useState(false);
 	const [editingAppt, setEditingAppt] = useState();
 	const navigate = useNavigate();
+	// Busca os dados do dia selecionado.
 	const dayKey = formatDayKey(currentDate);
 	const appointments = getAppointmentsForDay(dayKey);
 	const summary = getDaySummary(dayKey);
+	// Força a tela a atualizar depois de salvar/editar/excluir.
 	const reload = () => setRefresh((value) => value + 1);
+	// Volta um dia na agenda.
 	const prevDay = () => {
 		const d = new Date(currentDate);
 		d.setDate(d.getDate() - 1);
 		setCurrentDate(d);
 	};
+	// Avanca um dia na agenda.
 	const nextDay = () => {
 		const d = new Date(currentDate);
 		d.setDate(d.getDate() + 1);
 		setCurrentDate(d);
 	};
 	const openNew = () => {
+		// Abre o modal para criar um novo agendamento.
 		setEditingAppt(undefined);
 		setDialogOpen(true);
 	};
 	const openEdit = (appt) => {
+		// Abre o modal com os dados já preenchidos.
 		setEditingAppt(appt);
 		setDialogOpen(true);
 	};
@@ -60,7 +69,7 @@ export default function AppPage() {
 							Use o input abaixo ou o botão + para adicionar
 						</span>
 					</div>
-				: 	appointments.map((appt) => (
+				:	appointments.map((appt) => (
 						<AppointmentRow
 							key={appt.id}
 							appointment={appt}

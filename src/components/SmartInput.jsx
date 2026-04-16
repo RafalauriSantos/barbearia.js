@@ -1,11 +1,14 @@
 import { useState } from "react";
 import { addAppointment } from "@/lib/store";
+
+// Campo rapido para criar atendimento direto na tela.
 export function SmartInput({ dayKey, onAdd }) {
 	const [clientName, setClientName] = useState("");
 	const [timeValue, setTimeValue] = useState("09:00");
 	const [value, setValue] = useState("");
 	const handleSubmit = () => {
 		if (!clientName.trim()) return;
+		// Cria agendamento rapido direto pelos campos da barra inferior.
 		addAppointment({
 			client_name: clientName.trim(),
 			time_slot: timeValue,
@@ -19,6 +22,7 @@ export function SmartInput({ dayKey, onAdd }) {
 		onAdd();
 	};
 	const handleKeyDown = (e) => {
+		// Permite salvar apertando Enter.
 		if (e.key === "Enter") {
 			e.preventDefault();
 			handleSubmit();

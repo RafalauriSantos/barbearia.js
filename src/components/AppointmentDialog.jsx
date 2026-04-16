@@ -1,11 +1,15 @@
 import { useState } from "react";
 import { loadServices, addAppointment, updateAppointment } from "@/lib/store";
+
+// Janela para criar ou editar um agendamento.
 export function AppointmentDialog({ dayKey, appointment, onClose, onSave }) {
 	const services = loadServices();
+	// Campos do formulario (novo ou edicao).
 	const [clientName, setClientName] = useState(appointment?.client_name || "");
 	const [timeSlot, setTimeSlot] = useState(appointment?.time_slot || "09:00");
 	const [serviceId, setServiceId] = useState(appointment?.service_id || "");
 	const [value, setValue] = useState(appointment?.value?.toString() || "");
+	// Quando escolhe servico, preenche o valor automaticamente.
 	const handleServiceChange = (id) => {
 		setServiceId(id);
 		if (id) {
@@ -17,6 +21,7 @@ export function AppointmentDialog({ dayKey, appointment, onClose, onSave }) {
 		e.preventDefault();
 		if (!clientName.trim()) return;
 		const svc = services.find((s) => s.id === serviceId);
+		// Monta os dados que serao salvos.
 		const data = {
 			client_name: clientName.trim(),
 			time_slot: timeSlot,
@@ -27,8 +32,10 @@ export function AppointmentDialog({ dayKey, appointment, onClose, onSave }) {
 			status: appointment?.status || "normal",
 		};
 		if (appointment) {
+			// Se ja existe, atualiza.
 			updateAppointment(appointment.id, data);
 		} else {
+			// Se nao existe, cria novo.
 			addAppointment(data);
 		}
 		onSave();

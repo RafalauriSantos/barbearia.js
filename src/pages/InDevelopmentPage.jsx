@@ -1,6 +1,7 @@
 import { BottomNav } from "@/components/BottomNav";
 
 export default function InDevelopmentPage({ title = "Tela" }) {
+	// Tela temporaria para rotas ainda nao finalizadas.
 	return (
 		<div className="app-shell flex flex-col min-h-[100dvh] bg-background">
 			<header className="sticky top-0 z-50 bg-background border-b border-border px-4 py-3">

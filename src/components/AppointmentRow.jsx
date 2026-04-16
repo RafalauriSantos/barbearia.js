@@ -5,9 +5,12 @@ import {
 	deleteAppointment,
 	loadServices,
 } from "@/lib/store";
+
+// Mostra uma linha do atendimento com botoes de acao.
 export function AppointmentRow({ appointment, onUpdate, onEdit }) {
 	const [expanded, setExpanded] = useState(false);
 	const [showServicePicker, setShowServicePicker] = useState(false);
+	// Regras visuais para destacar prazo e status.
 	const today = new Date().toISOString().slice(0, 10);
 	const isOverdue =
 		appointment.status === "fiado" &&
@@ -99,10 +102,13 @@ export function AppointmentRow({ appointment, onUpdate, onEdit }) {
 		</div>
 	);
 }
+
+// Editor rapido para mudar valor/status ou excluir.
 function InlineEditor({ appointment, onUpdate, onClose, onEdit }) {
 	const [value, setValue] = useState(appointment.value.toString());
 	const [status, setStatus] = useState(appointment.status);
 	const save = () => {
+		// Salva edicao rapida de valor e status.
 		updateAppointment(appointment.id, {
 			value: parseFloat(value) || 0,
 			status,
@@ -111,6 +117,7 @@ function InlineEditor({ appointment, onUpdate, onClose, onEdit }) {
 		onClose();
 	};
 	const handleDelete = () => {
+		// Remove o agendamento da lista.
 		deleteAppointment(appointment.id);
 		onUpdate();
 		onClose();
@@ -152,9 +159,12 @@ function InlineEditor({ appointment, onUpdate, onClose, onEdit }) {
 		</div>
 	);
 }
+
+// Lista de servicos para adicionar ao atendimento.
 function ServicePicker({ appointment, onUpdate, onClose }) {
 	const services = loadServices();
 	const handleSelect = (svc) => {
+		// Vincula o servico ao atendimento e soma o valor.
 		updateAppointment(appointment.id, {
 			service_id: svc.id,
 			service_name: svc.name,

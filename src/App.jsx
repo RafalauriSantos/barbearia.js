@@ -5,6 +5,9 @@ import SettingsPage from "./pages/SettingsPage";
 import ServicesPage from "./pages/ServicesPage";
 import InDevelopmentPage from "./pages/InDevelopmentPage";
 import NotFound from "./pages/NotFound";
+
+// Define as rotas principais do sistema.
+// Junta todas as telas e decide qual abrir por rota.
 const App = () => (
 	<BrowserRouter>
 		<Routes>

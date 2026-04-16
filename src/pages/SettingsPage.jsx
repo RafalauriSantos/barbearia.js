@@ -1,18 +1,23 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { clearAllData, loadProfile, saveProfile } from "@/lib/store";
+
+// Tela para editar dados basicos e resetar tudo.
 export default function SettingsPage() {
 	const navigate = useNavigate();
+	// Carrega dados salvos para preencher os campos.
 	const profile = loadProfile();
 	const [shopName, setShopName] = useState(profile?.shopName || "");
 	const [barberName, setBarberName] = useState(profile?.barberName || "");
 	const handleSaveProfile = () => {
+		// Salva nome da barbearia e nome do barbeiro.
 		const cleanShopName = shopName.trim();
 		const cleanBarberName = barberName.trim();
 		if (!cleanShopName || !cleanBarberName) return;
 		saveProfile({ shopName: cleanShopName, barberName: cleanBarberName });
 	};
 	const resetData = () => {
+		// Limpa os dados locais e volta para o inicio.
 		clearAllData();
 		navigate("/");
 	};
@@ -24,9 +29,7 @@ export default function SettingsPage() {
 					className="font-mono-ui text-xs text-foreground-faint">
 					VOLTAR
 				</button>
-				<span className="font-logo text-sm text-foreground">
-					CONFIGURAÇÕES
-				</span>
+				<span className="font-logo text-sm text-foreground">CONFIGURAÇÕES</span>
 				<div className="w-12" />
 			</header>
 
