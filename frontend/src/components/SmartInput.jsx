@@ -6,10 +6,10 @@ export function SmartInput({ dayKey, onAdd }) {
 	const [clientName, setClientName] = useState("");
 	const [timeValue, setTimeValue] = useState("09:00");
 	const [value, setValue] = useState("");
-	const handleSubmit = () => {
+	const handleSubmit = async () => {
 		if (!clientName.trim()) return;
 		// Cria agendamento rapido direto pelos campos da barra inferior.
-		addAppointment({
+		await addAppointment({
 			client_name: clientName.trim(),
 			time_slot: timeValue,
 			value: parseFloat(value) || 0,
@@ -19,7 +19,7 @@ export function SmartInput({ dayKey, onAdd }) {
 		setClientName("");
 		setTimeValue("09:00");
 		setValue("");
-		onAdd();
+		await onAdd();
 	};
 	const handleKeyDown = (e) => {
 		// Permite salvar apertando Enter.

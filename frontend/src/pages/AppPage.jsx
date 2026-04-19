@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { AppHeader } from "@/components/AppHeader";
 import { DaySummaryCard } from "@/components/DaySummaryCard";
 import { AppointmentRow } from "@/components/AppointmentRow";
@@ -7,7 +7,7 @@ import { AppointmentDialog } from "@/components/AppointmentDialog";
 import { BottomNav } from "@/components/BottomNav";
 import {
 	getAppointmentsForDay,
-	getDaySummary,
+	getDaySummaryFromAppointments,
 	formatDayKey,
 } from "@/lib/store";
 import { useNavigate } from "react-router-dom";
@@ -16,16 +16,27 @@ import { useNavigate } from "react-router-dom";
 export default function AppPage() {
 	// Estado principal da tela.
 	const [currentDate, setCurrentDate] = useState(new Date());
-	const [, setRefresh] = useState(0);
+	const [appointments, setAppointments] = useState([]);
 	const [dialogOpen, setDialogOpen] = useState(false);
 	const [editingAppt, setEditingAppt] = useState();
 	const navigate = useNavigate();
 	// Busca os dados do dia selecionado.
 	const dayKey = formatDayKey(currentDate);
-	const appointments = getAppointmentsForDay(dayKey);
-	const summary = getDaySummary(dayKey);
+	const summary = getDaySummaryFromAppointments(dayKey, appointments);
 	// Força a tela a atualizar depois de salvar/editar/excluir.
-	const reload = () => setRefresh((value) => value + 1);
+	const reload = async () => {
+		const list = await getAppointmentsForDay(dayKey);
+		setAppointments(list);
+	};
+
+	useEffect(() => {
+		async function carregarAgendamentos() {
+			const list = await getAppointmentsForDay(dayKey);
+			setAppointments(list);
+		}
+
+		carregarAgendamentos();
+	}, [dayKey]);
 	// Volta um dia na agenda.
 	const prevDay = () => {
 		const d = new Date(currentDate);

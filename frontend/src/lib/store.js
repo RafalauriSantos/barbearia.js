@@ -1,5 +1,7 @@
 import axios from "axios";
 
+const API_BASE_URL = "http://localhost:3000";
+
 // Chaves usadas para salvar dados no navegador.
 const APPT_KEY = "kurt_appointments";
 const SVC_KEY = "kurt_services";
@@ -70,6 +72,22 @@ function generateId() {
 }
 // ── Appointments ──
 
+function normalizeAppointment(raw) {
+	return {
+		id: raw.id,
+		client_name: raw.client_name || raw.cliente_nome || "",
+		day_key: raw.day_key || raw.data || "",
+		time_slot: raw.time_slot || raw.hora || "09:00",
+		value: Number(raw.value || 0),
+		status: raw.status || "normal",
+		service_id: raw.service_id,
+		service_name: raw.service_name,
+		prazo_date: raw.prazo_date,
+		barber_name: raw.barber_name,
+		barbearia_id: raw.barbearia_id || 1,
+	};
+}
+
 // Carrega todos os agendamentos salvos localmente.
 export function loadAppointments() {
 	return readList(APPT_KEY);
@@ -81,33 +99,51 @@ export function saveAppointments(appointments) {
 }
 
 // Envia um novo agendamento para o backend.
-export function addAppointment(appt) {
+export async function addAppointment(appt) {
 	// Converte os nomes do front para os nomes esperados pela API.
 	const payload = {
 		cliente_nome: appt.client_name,
 		data: appt.day_key,
 		hora: appt.time_slot,
 		barbearia_id: appt.barbearia_id || 1,
+		client_name: appt.client_name,
+		day_key: appt.day_key,
+		time_slot: appt.time_slot,
+		value: appt.value || 0,
+		status: appt.status || "normal",
+		service_id: appt.service_id,
+		service_name: appt.service_name,
+		prazo_date: appt.prazo_date,
+		barber_name: appt.barber_name,
 	};
 
 	// Envia o novo agendamento para o backend.
-	return axios.post("http://localhost:3000/agendamentos", payload);
+	const response = await axios.post(`${API_BASE_URL}/agendamentos`, payload);
+	return normalizeAppointment(response.data);
 }
 
 // Atualiza um agendamento local pelo id.
-export function updateAppointment(id, updates) {
-	return updateItem(APPT_KEY, id, updates);
+export async function updateAppointment(id, updates) {
+	const response = await axios.put(
+		`${API_BASE_URL}/agendamentos/${id}`,
+		updates,
+	);
+	return normalizeAppointment(response.data);
 }
 
 // Exclui um agendamento local pelo id.
-export function deleteAppointment(id) {
-	deleteItem(APPT_KEY, id);
+export async function deleteAppointment(id) {
+	await axios.delete(`${API_BASE_URL}/agendamentos/${id}`);
 }
 
 // Filtra os agendamentos de um dia e ordena por horario.
-export function getAppointmentsForDay(dayKey) {
-	return loadAppointments()
-		.filter((a) => a.day_key === dayKey)
+export async function getAppointmentsForDay(dayKey) {
+	const response = await axios.get(`${API_BASE_URL}/agendamentos`, {
+		params: { data: dayKey },
+	});
+
+	return response.data
+		.map(normalizeAppointment)
 		.sort((a, b) => a.time_slot.localeCompare(b.time_slot));
 }
 // ── Services ──
@@ -198,7 +234,7 @@ export function getExpensesForDay(dayKey) {
 // Monta os totais do dia para mostrar no resumo.
 export function getDaySummary(dayKey) {
 	// Junta agendamentos e despesas para montar o resumo do dia.
-	const appts = getAppointmentsForDay(dayKey);
+	const appts = loadAppointments().filter((a) => a.day_key === dayKey);
 	const expenses = getExpensesForDay(dayKey);
 	const today = new Date().toISOString().slice(0, 10);
 	let totalReceived = 0;
@@ -227,6 +263,47 @@ export function getDaySummary(dayKey) {
 	return {
 		totalReceived,
 		totalClients: appts.length,
+		totalIncome,
+		totalExpenses,
+		paid,
+		pending,
+		toCollect,
+		overdue,
+	};
+}
+
+// Monta os totais do dia com a lista de agendamentos recebida da API.
+export function getDaySummaryFromAppointments(dayKey, appointments) {
+	const expenses = getExpensesForDay(dayKey);
+	const today = new Date().toISOString().slice(0, 10);
+	let totalReceived = 0;
+	let paid = 0;
+	let pending = 0;
+	let toCollect = 0;
+	let overdue = 0;
+	let totalIncome = 0;
+
+	appointments.forEach((a) => {
+		totalIncome += Number(a.value || 0);
+		if (a.status === "paid") {
+			totalReceived += Number(a.value || 0);
+			paid++;
+		} else if (a.status === "fiado") {
+			toCollect += Number(a.value || 0);
+			if (a.prazo_date && a.prazo_date < today) {
+				overdue++;
+			} else {
+				pending++;
+			}
+		} else {
+			pending++;
+		}
+	});
+
+	const totalExpenses = expenses.reduce((sum, e) => sum + e.value, 0);
+	return {
+		totalReceived,
+		totalClients: appointments.length,
 		totalIncome,
 		totalExpenses,
 		paid,

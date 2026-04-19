@@ -17,7 +17,7 @@ export function AppointmentDialog({ dayKey, appointment, onClose, onSave }) {
 			if (svc) setValue(svc.price.toString());
 		}
 	};
-	const handleSubmit = (e) => {
+	const handleSubmit = async (e) => {
 		e.preventDefault();
 		if (!clientName.trim()) return;
 		const svc = services.find((s) => s.id === serviceId);
@@ -33,12 +33,12 @@ export function AppointmentDialog({ dayKey, appointment, onClose, onSave }) {
 		};
 		if (appointment) {
 			// Se ja existe, atualiza.
-			updateAppointment(appointment.id, data);
+			await updateAppointment(appointment.id, data);
 		} else {
 			// Se nao existe, cria novo.
-			addAppointment(data);
+			await addAppointment(data);
 		}
-		onSave();
+		await onSave();
 		onClose();
 	};
 	return (

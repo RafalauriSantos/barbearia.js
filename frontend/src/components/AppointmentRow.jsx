@@ -107,19 +107,19 @@ export function AppointmentRow({ appointment, onUpdate, onEdit }) {
 function InlineEditor({ appointment, onUpdate, onClose, onEdit }) {
 	const [value, setValue] = useState(appointment.value.toString());
 	const [status, setStatus] = useState(appointment.status);
-	const save = () => {
+	const save = async () => {
 		// Salva edicao rapida de valor e status.
-		updateAppointment(appointment.id, {
+		await updateAppointment(appointment.id, {
 			value: parseFloat(value) || 0,
 			status,
 		});
-		onUpdate();
+		await onUpdate();
 		onClose();
 	};
-	const handleDelete = () => {
+	const handleDelete = async () => {
 		// Remove o agendamento da lista.
-		deleteAppointment(appointment.id);
-		onUpdate();
+		await deleteAppointment(appointment.id);
+		await onUpdate();
 		onClose();
 	};
 	return (
@@ -163,14 +163,14 @@ function InlineEditor({ appointment, onUpdate, onClose, onEdit }) {
 // Lista de servicos para adicionar ao atendimento.
 function ServicePicker({ appointment, onUpdate, onClose }) {
 	const services = loadServices();
-	const handleSelect = (svc) => {
+	const handleSelect = async (svc) => {
 		// Vincula o servico ao atendimento e soma o valor.
-		updateAppointment(appointment.id, {
+		await updateAppointment(appointment.id, {
 			service_id: svc.id,
 			service_name: svc.name,
 			value: (appointment.value || 0) + svc.price,
 		});
-		onUpdate();
+		await onUpdate();
 		onClose();
 	};
 	if (services.length === 0) {
