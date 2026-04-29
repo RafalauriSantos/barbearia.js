@@ -3,7 +3,8 @@ import LandingPage from "./pages/LandingPage";
 import AppPage from "./pages/AppPage";
 import SettingsPage from "./pages/SettingsPage";
 import ServicesPage from "./pages/ServicesPage";
-import InDevelopmentPage from "./pages/InDevelopmentPage";
+import FinancialPage from "./pages/FinancialPage";
+import ExpensesPage from "./pages/ExpensesPage";
 import NotFound from "./pages/NotFound";
 
 // Define as rotas principais do sistema.
@@ -14,14 +15,8 @@ const App = () => (
 			<Route path="/" element={<LandingPage />} />
 			<Route path="/app" element={<AppPage />} />
 			<Route path="/services" element={<ServicesPage />} />
-			<Route
-				path="/financial"
-				element={<InDevelopmentPage title="Financeiro" />}
-			/>
-			<Route
-				path="/expenses"
-				element={<InDevelopmentPage title="Despesas" />}
-			/>
+			<Route path="/financial" element={<FinancialPage />} />
+			<Route path="/expenses" element={<ExpensesPage />} />
 			<Route path="/settings" element={<SettingsPage />} />
 			<Route path="*" element={<NotFound />} />
 		</Routes>

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { AppHeader } from "@/components/AppHeader";
 import { DaySummaryCard } from "@/components/DaySummaryCard";
 import { AppointmentRow } from "@/components/AppointmentRow";
@@ -17,26 +17,55 @@ export default function AppPage() {
 	// Estado principal da tela.
 	const [currentDate, setCurrentDate] = useState(new Date());
 	const [appointments, setAppointments] = useState([]);
+	const [summary, setSummary] = useState({
+		totalReceived: 0,
+		totalClients: 0,
+		totalIncome: 0,
+		totalExpenses: 0,
+		paid: 0,
+		pending: 0,
+		toCollect: 0,
+		overdue: 0,
+	});
+	const [isLoading, setIsLoading] = useState(true);
+	const [errorMessage, setErrorMessage] = useState("");
 	const [dialogOpen, setDialogOpen] = useState(false);
 	const [editingAppt, setEditingAppt] = useState();
 	const navigate = useNavigate();
 	// Busca os dados do dia selecionado.
 	const dayKey = formatDayKey(currentDate);
-	const summary = getDaySummaryFromAppointments(dayKey, appointments);
 	// Força a tela a atualizar depois de salvar/editar/excluir.
-	const reload = async () => {
-		const list = await getAppointmentsForDay(dayKey);
-		setAppointments(list);
-	};
-
-	useEffect(() => {
-		async function carregarAgendamentos() {
+	const reload = useCallback(async () => {
+		setIsLoading(true);
+		setErrorMessage("");
+		try {
 			const list = await getAppointmentsForDay(dayKey);
 			setAppointments(list);
+			const nextSummary = await getDaySummaryFromAppointments(dayKey, list);
+			setSummary(nextSummary);
+		} catch (error) {
+			setAppointments([]);
+			setSummary({
+				totalReceived: 0,
+				totalClients: 0,
+				totalIncome: 0,
+				totalExpenses: 0,
+				paid: 0,
+				pending: 0,
+				toCollect: 0,
+				overdue: 0,
+			});
+			setErrorMessage(
+				error.message || "Falha ao carregar os agendamentos do dia.",
+			);
+		} finally {
+			setIsLoading(false);
 		}
-
-		carregarAgendamentos();
 	}, [dayKey]);
+
+	useEffect(() => {
+		reload();
+	}, [reload]);
 	// Volta um dia na agenda.
 	const prevDay = () => {
 		const d = new Date(currentDate);
@@ -71,7 +100,27 @@ export default function AppPage() {
 			<DaySummaryCard summary={summary} />
 
 			<div className="flex-1 overflow-y-auto pb-32">
-				{appointments.length === 0 ?
+				{errorMessage && (
+					<div className="mx-4 mt-4 rounded border border-overdue/30 bg-overdue/10 px-3 py-2">
+						<p className="font-mono-ui text-[10px] text-overdue">ERRO</p>
+						<p className="font-client text-sm text-overdue mt-1">
+							{errorMessage}
+						</p>
+						<button
+							onClick={reload}
+							className="mt-2 font-mono-ui text-[10px] text-foreground border border-border rounded px-2 py-1">
+							TENTAR NOVAMENTE
+						</button>
+					</div>
+				)}
+
+				{isLoading ?
+					<div className="flex flex-col items-center justify-center py-16 gap-2">
+						<span className="font-mono-ui text-[10px] text-foreground-faint tracking-widest">
+							CARREGANDO AGENDA
+						</span>
+					</div>
+				: appointments.length === 0 ?
 					<div className="flex flex-col items-center justify-center py-16 gap-2">
 						<span className="font-mono-ui text-[10px] text-foreground-faint tracking-widest">
 							NENHUM ATENDIMENTO
@@ -93,9 +142,10 @@ export default function AppPage() {
 
 			{/* Smart input + add button */}
 			<div className="sticky bottom-[52px] bg-background border-t border-border px-3 py-2 flex items-center gap-2">
-				<SmartInput dayKey={dayKey} onAdd={reload} />
+				<SmartInput dayKey={dayKey} onAdd={reload} onError={setErrorMessage} />
 				<button
 					onClick={openNew}
+					disabled={isLoading}
 					className="w-9 h-9 rounded-full bg-paid text-primary-foreground flex items-center justify-center text-lg font-bold shrink-0 hover:opacity-90 transition-opacity active:scale-95">
 					+
 				</button>
@@ -109,6 +159,7 @@ export default function AppPage() {
 					appointment={editingAppt}
 					onClose={() => setDialogOpen(false)}
 					onSave={reload}
+					onError={setErrorMessage}
 				/>
 			)}
 		</div>

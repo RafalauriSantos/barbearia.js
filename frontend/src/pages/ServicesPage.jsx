@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
 	loadServices,
 	addService,
@@ -16,16 +16,39 @@ import { BottomNav } from "@/components/BottomNav";
 export default function ServicesPage() {
 	// Controla aba ativa e listas exibidas.
 	const [tab, setTab] = useState("services");
-	const [services, setServices] = useState(loadServices());
-	const [products, setProducts] = useState(loadProducts());
+	const [services, setServices] = useState([]);
+	const [products, setProducts] = useState([]);
+	const [isLoading, setIsLoading] = useState(true);
+	const [isSubmitting, setIsSubmitting] = useState(false);
+	const [errorMessage, setErrorMessage] = useState("");
 	const [editingId, setEditingId] = useState(null);
 	const [name, setName] = useState("");
 	const [price, setPrice] = useState("");
 	const [showForm, setShowForm] = useState(false);
-	// Recarrega a lista de servicos da memoria local.
-	const reloadServices = () => setServices(loadServices());
-	// Recarrega a lista de produtos da memoria local.
-	const reloadProducts = () => setProducts(loadProducts());
+
+	const reloadData = useCallback(async () => {
+		setIsLoading(true);
+		setErrorMessage("");
+		try {
+			const [nextServices, nextProducts] = await Promise.all([
+				loadServices(),
+				loadProducts(),
+			]);
+			setServices(nextServices);
+			setProducts(nextProducts);
+		} catch (error) {
+			setErrorMessage(error.message || "Falha ao carregar catalogo.");
+			setServices([]);
+			setProducts([]);
+		} finally {
+			setIsLoading(false);
+		}
+	}, []);
+
+	useEffect(() => {
+		reloadData();
+	}, [reloadData]);
+
 	// Limpa o formulario e sai do modo edicao.
 	const cancelEdit = () => {
 		setEditingId(null);
@@ -33,21 +56,30 @@ export default function ServicesPage() {
 		setPrice("");
 		setShowForm(false);
 	};
-	const handleAdd = (e) => {
+	const handleAdd = async (e) => {
 		e.preventDefault();
-		if (!name.trim()) return;
+		if (!name.trim() || isSubmitting) return;
+
+		setIsSubmitting(true);
+		setErrorMessage("");
+
 		// Cria novo servico ou produto.
 		const data = { name: name.trim(), price: parseFloat(price) || 0 };
-		if (tab === "services") {
-			addService(data);
-			reloadServices();
-		} else {
-			addProduct(data);
-			reloadProducts();
+		try {
+			if (tab === "services") {
+				await addService(data);
+			} else {
+				await addProduct(data);
+			}
+			await reloadData();
+			setName("");
+			setPrice("");
+			setShowForm(false);
+		} catch (error) {
+			setErrorMessage(error.message || "Falha ao salvar item.");
+		} finally {
+			setIsSubmitting(false);
 		}
-		setName("");
-		setPrice("");
-		setShowForm(false);
 	};
 	// Coloca um item no formulario para editar.
 	const handleEditItem = (item) => {
@@ -55,30 +87,48 @@ export default function ServicesPage() {
 		setName(item.name);
 		setPrice(item.price.toString());
 	};
-	const handleUpdate = (e) => {
+	const handleUpdate = async (e) => {
 		e.preventDefault();
-		if (!editingId || !name.trim()) return;
+		if (!editingId || !name.trim() || isSubmitting) return;
+
+		setIsSubmitting(true);
+		setErrorMessage("");
+
 		// Salva alteracoes do item em edicao.
 		const data = { name: name.trim(), price: parseFloat(price) || 0 };
-		if (tab === "services") {
-			updateService(editingId, data);
-			reloadServices();
-		} else {
-			updateProduct(editingId, data);
-			reloadProducts();
+		try {
+			if (tab === "services") {
+				await updateService(editingId, data);
+			} else {
+				await updateProduct(editingId, data);
+			}
+			await reloadData();
+			setEditingId(null);
+			setName("");
+			setPrice("");
+		} catch (error) {
+			setErrorMessage(error.message || "Falha ao atualizar item.");
+		} finally {
+			setIsSubmitting(false);
 		}
-		setEditingId(null);
-		setName("");
-		setPrice("");
 	};
-	const handleDelete = (id) => {
+	const handleDelete = async (id) => {
+		if (isSubmitting) return;
+
+		setIsSubmitting(true);
+		setErrorMessage("");
 		// Remove item da aba atual.
-		if (tab === "services") {
-			deleteService(id);
-			reloadServices();
-		} else {
-			deleteProduct(id);
-			reloadProducts();
+		try {
+			if (tab === "services") {
+				await deleteService(id);
+			} else {
+				await deleteProduct(id);
+			}
+			await reloadData();
+		} catch (error) {
+			setErrorMessage(error.message || "Falha ao excluir item.");
+		} finally {
+			setIsSubmitting(false);
 		}
 	};
 	// Troca entre aba de servicos e aba de produtos.
@@ -86,7 +136,10 @@ export default function ServicesPage() {
 		setTab(t);
 		cancelEdit();
 	};
-	const items = tab === "services" ? services : products;
+	const items = useMemo(
+		() => (tab === "services" ? services : products),
+		[tab, services, products],
+	);
 	const emptyLabel =
 		tab === "services" ?
 			"NENHUM SERVIÇO CADASTRADO"
@@ -136,6 +189,15 @@ export default function ServicesPage() {
 			</header>
 
 			<div className="flex-1 overflow-y-auto pb-20">
+				{errorMessage && (
+					<div className="mx-4 mt-4 rounded border border-overdue/30 bg-overdue/10 px-3 py-2">
+						<p className="font-mono-ui text-[10px] text-overdue">ERRO</p>
+						<p className="font-client text-sm text-overdue mt-1">
+							{errorMessage}
+						</p>
+					</div>
+				)}
+
 				{(showForm || editingId) && (
 					<form
 						onSubmit={editingId ? handleUpdate : handleAdd}
@@ -151,6 +213,7 @@ export default function ServicesPage() {
 								className="w-full bg-secondary text-foreground text-sm px-3 py-2 rounded border border-border"
 								placeholder={formPlaceholder}
 								autoFocus
+								disabled={isSubmitting}
 							/>
 						</div>
 						<div>
@@ -164,17 +227,24 @@ export default function ServicesPage() {
 								className="w-full bg-secondary text-foreground text-sm px-3 py-2 rounded border border-border"
 								placeholder="40,00"
 								inputMode="decimal"
+								disabled={isSubmitting}
 							/>
 						</div>
 						<div className="flex gap-2">
 							<button
 								type="submit"
+								disabled={isSubmitting}
 								className="flex-1 bg-foreground text-primary-foreground font-mono-ui text-sm py-2 rounded">
-								{editingId ? "SALVAR" : "ADICIONAR"}
+								{isSubmitting ?
+									"SALVANDO..."
+								: editingId ?
+									"SALVAR"
+								:	"ADICIONAR"}
 							</button>
 							<button
 								type="button"
 								onClick={cancelEdit}
+								disabled={isSubmitting}
 								className="font-mono-ui text-sm text-foreground-faint px-4 py-2 rounded border border-border">
 								CANCELAR
 							</button>
@@ -182,7 +252,13 @@ export default function ServicesPage() {
 					</form>
 				)}
 
-				{items.length === 0 && !showForm ?
+				{isLoading ?
+					<div className="flex flex-col items-center justify-center py-16 gap-3">
+						<span className="font-mono-ui text-xs text-foreground-faint">
+							CARREGANDO CATALOGO
+						</span>
+					</div>
+				: items.length === 0 && !showForm ?
 					<div className="flex flex-col items-center justify-center py-16 gap-3">
 						<span className="font-mono-ui text-xs text-foreground-faint">
 							{emptyLabel}
@@ -206,11 +282,13 @@ export default function ServicesPage() {
 								</span>
 								<button
 									onClick={() => handleEditItem(item)}
+									disabled={isSubmitting}
 									className="font-mono-ui text-xs text-foreground-faint">
 									EDITAR
 								</button>
 								<button
 									onClick={() => handleDelete(item.id)}
+									disabled={isSubmitting}
 									className="font-mono-ui text-xs text-overdue">
 									EXCLUIR
 								</button>

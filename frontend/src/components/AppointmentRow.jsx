@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
 	formatCurrency,
+	formatDayKey,
 	updateAppointment,
 	deleteAppointment,
 	loadServices,
@@ -11,7 +12,7 @@ export function AppointmentRow({ appointment, onUpdate, onEdit }) {
 	const [expanded, setExpanded] = useState(false);
 	const [showServicePicker, setShowServicePicker] = useState(false);
 	// Regras visuais para destacar prazo e status.
-	const today = new Date().toISOString().slice(0, 10);
+	const today = formatDayKey(new Date());
 	const isOverdue =
 		appointment.status === "fiado" &&
 		appointment.prazo_date &&
@@ -107,42 +108,71 @@ export function AppointmentRow({ appointment, onUpdate, onEdit }) {
 function InlineEditor({ appointment, onUpdate, onClose, onEdit }) {
 	const [value, setValue] = useState(appointment.value.toString());
 	const [status, setStatus] = useState(appointment.status);
+	const [isSubmitting, setIsSubmitting] = useState(false);
+	const [errorMessage, setErrorMessage] = useState("");
 	const save = async () => {
+		if (isSubmitting) return;
+		setIsSubmitting(true);
+		setErrorMessage("");
 		// Salva edicao rapida de valor e status.
-		await updateAppointment(appointment.id, {
-			value: parseFloat(value) || 0,
-			status,
-		});
-		await onUpdate();
-		onClose();
+		try {
+			await updateAppointment(appointment.id, {
+				value: parseFloat(value) || 0,
+				status,
+			});
+			await onUpdate();
+			onClose();
+		} catch (error) {
+			setErrorMessage(error.message || "Falha ao atualizar atendimento.");
+		} finally {
+			setIsSubmitting(false);
+		}
 	};
 	const handleDelete = async () => {
+		if (isSubmitting) return;
+		setIsSubmitting(true);
+		setErrorMessage("");
 		// Remove o agendamento da lista.
-		await deleteAppointment(appointment.id);
-		await onUpdate();
-		onClose();
+		try {
+			await deleteAppointment(appointment.id);
+			await onUpdate();
+			onClose();
+		} catch (error) {
+			setErrorMessage(error.message || "Falha ao excluir atendimento.");
+		} finally {
+			setIsSubmitting(false);
+		}
 	};
 	return (
 		<div className="animate-slide-down bg-background-deep px-4 py-3 flex items-center gap-2 flex-wrap">
+			{errorMessage && (
+				<p className="w-full font-mono-ui text-[10px] text-overdue">
+					{errorMessage}
+				</p>
+			)}
+
 			<input
 				className="bg-secondary text-foreground font-mono-ui text-xs px-2 py-1.5 rounded w-20 border border-border"
 				value={value}
 				onChange={(e) => setValue(e.target.value)}
 				inputMode="decimal"
 				placeholder="Valor"
+				disabled={isSubmitting}
 			/>
 			<select
 				className="bg-secondary text-foreground font-mono-ui text-[10px] px-2 py-1.5 rounded border border-border"
 				value={status}
-				onChange={(e) => setStatus(e.target.value)}>
+				onChange={(e) => setStatus(e.target.value)}
+				disabled={isSubmitting}>
 				<option value="normal">Normal</option>
 				<option value="paid">Pago</option>
 				<option value="fiado">Fiado</option>
 			</select>
 			<button
 				onClick={save}
+				disabled={isSubmitting}
 				className="font-mono-ui text-[10px] text-paid bg-paid/10 px-3 py-1.5 rounded border border-border">
-				OK
+				{isSubmitting ? "..." : "OK"}
 			</button>
 			{onEdit && (
 				<button
@@ -153,6 +183,7 @@ function InlineEditor({ appointment, onUpdate, onClose, onEdit }) {
 			)}
 			<button
 				onClick={handleDelete}
+				disabled={isSubmitting}
 				className="font-mono-ui text-[10px] text-overdue bg-overdue/10 px-2 py-1.5 rounded border border-border ml-auto">
 				EXCLUIR
 			</button>
@@ -162,17 +193,66 @@ function InlineEditor({ appointment, onUpdate, onClose, onEdit }) {
 
 // Lista de servicos para adicionar ao atendimento.
 function ServicePicker({ appointment, onUpdate, onClose }) {
-	const services = loadServices();
+	const [services, setServices] = useState([]);
+	const [isLoadingServices, setIsLoadingServices] = useState(true);
+	const [isSubmitting, setIsSubmitting] = useState(false);
+	const [errorMessage, setErrorMessage] = useState("");
+
+	useEffect(() => {
+		let mounted = true;
+
+		async function fetchServices() {
+			try {
+				const list = await loadServices();
+				if (mounted) {
+					setServices(list);
+				}
+			} catch {
+				if (mounted) {
+					setServices([]);
+				}
+			} finally {
+				if (mounted) {
+					setIsLoadingServices(false);
+				}
+			}
+		}
+
+		fetchServices();
+
+		return () => {
+			mounted = false;
+		};
+	}, []);
 	const handleSelect = async (svc) => {
+		if (isSubmitting) return;
+		setIsSubmitting(true);
+		setErrorMessage("");
 		// Vincula o servico ao atendimento e soma o valor.
-		await updateAppointment(appointment.id, {
-			service_id: svc.id,
-			service_name: svc.name,
-			value: (appointment.value || 0) + svc.price,
-		});
-		await onUpdate();
-		onClose();
+		try {
+			await updateAppointment(appointment.id, {
+				service_id: svc.id,
+				service_name: svc.name,
+				value: (appointment.value || 0) + svc.price,
+			});
+			await onUpdate();
+			onClose();
+		} catch (error) {
+			setErrorMessage(error.message || "Falha ao vincular servico.");
+		} finally {
+			setIsSubmitting(false);
+		}
 	};
+	if (isLoadingServices) {
+		return (
+			<div className="animate-slide-down bg-background-deep px-4 py-3">
+				<span className="font-mono-ui text-[10px] text-foreground-faint">
+					Carregando servicos...
+				</span>
+			</div>
+		);
+	}
+
 	if (services.length === 0) {
 		return (
 			<div className="animate-slide-down bg-background-deep px-4 py-3">
@@ -184,10 +264,16 @@ function ServicePicker({ appointment, onUpdate, onClose }) {
 	}
 	return (
 		<div className="animate-slide-down bg-background-deep px-4 py-2 flex flex-wrap gap-1.5">
+			{errorMessage && (
+				<p className="w-full font-mono-ui text-[10px] text-overdue">
+					{errorMessage}
+				</p>
+			)}
 			{services.map((svc) => (
 				<button
 					key={svc.id}
 					onClick={() => handleSelect(svc)}
+					disabled={isSubmitting}
 					className="font-mono-ui text-[10px] text-foreground bg-secondary px-2.5 py-1.5 rounded border border-border">
 					{svc.name} · R$ {svc.price.toFixed(2)}
 				</button>

@@ -1,14 +1,50 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { loadServices, addAppointment, updateAppointment } from "@/lib/store";
 
 // Janela para criar ou editar um agendamento.
-export function AppointmentDialog({ dayKey, appointment, onClose, onSave }) {
-	const services = loadServices();
+export function AppointmentDialog({
+	dayKey,
+	appointment,
+	onClose,
+	onSave,
+	onError,
+}) {
+	const [services, setServices] = useState([]);
+	const [isLoadingServices, setIsLoadingServices] = useState(true);
 	// Campos do formulario (novo ou edicao).
 	const [clientName, setClientName] = useState(appointment?.client_name || "");
 	const [timeSlot, setTimeSlot] = useState(appointment?.time_slot || "09:00");
 	const [serviceId, setServiceId] = useState(appointment?.service_id || "");
 	const [value, setValue] = useState(appointment?.value?.toString() || "");
+	const [isSubmitting, setIsSubmitting] = useState(false);
+	const [errorMessage, setErrorMessage] = useState("");
+
+	useEffect(() => {
+		let mounted = true;
+
+		async function fetchServices() {
+			try {
+				const list = await loadServices();
+				if (mounted) {
+					setServices(list);
+				}
+			} catch {
+				if (mounted) {
+					setServices([]);
+				}
+			} finally {
+				if (mounted) {
+					setIsLoadingServices(false);
+				}
+			}
+		}
+
+		fetchServices();
+
+		return () => {
+			mounted = false;
+		};
+	}, []);
 	// Quando escolhe servico, preenche o valor automaticamente.
 	const handleServiceChange = (id) => {
 		setServiceId(id);
@@ -19,7 +55,12 @@ export function AppointmentDialog({ dayKey, appointment, onClose, onSave }) {
 	};
 	const handleSubmit = async (e) => {
 		e.preventDefault();
-		if (!clientName.trim()) return;
+		if (!clientName.trim() || isSubmitting) return;
+
+		setIsSubmitting(true);
+		setErrorMessage("");
+		if (onError) onError("");
+
 		const svc = services.find((s) => s.id === serviceId);
 		// Monta os dados que serao salvos.
 		const data = {
@@ -31,15 +72,24 @@ export function AppointmentDialog({ dayKey, appointment, onClose, onSave }) {
 			day_key: dayKey,
 			status: appointment?.status || "normal",
 		};
-		if (appointment) {
-			// Se ja existe, atualiza.
-			await updateAppointment(appointment.id, data);
-		} else {
-			// Se nao existe, cria novo.
-			await addAppointment(data);
+
+		try {
+			if (appointment) {
+				// Se ja existe, atualiza.
+				await updateAppointment(appointment.id, data);
+			} else {
+				// Se nao existe, cria novo.
+				await addAppointment(data);
+			}
+			await onSave();
+			onClose();
+		} catch (error) {
+			const message = error.message || "Nao foi possivel salvar o agendamento.";
+			setErrorMessage(message);
+			if (onError) onError(message);
+		} finally {
+			setIsSubmitting(false);
 		}
-		await onSave();
-		onClose();
 	};
 	return (
 		<div
@@ -60,6 +110,12 @@ export function AppointmentDialog({ dayKey, appointment, onClose, onSave }) {
 				</div>
 
 				<form onSubmit={handleSubmit} className="px-4 pb-6 space-y-3">
+					{errorMessage && (
+						<p className="font-mono-ui text-[10px] text-overdue">
+							{errorMessage}
+						</p>
+					)}
+
 					<div>
 						<label className="font-mono-ui text-[10px] text-foreground-faint block mb-1">
 							CLIENTE
@@ -71,6 +127,7 @@ export function AppointmentDialog({ dayKey, appointment, onClose, onSave }) {
 							className="w-full bg-secondary text-foreground text-sm px-3 py-2 rounded border border-border"
 							placeholder="Nome do cliente"
 							autoFocus
+							disabled={isSubmitting}
 						/>
 					</div>
 
@@ -84,6 +141,7 @@ export function AppointmentDialog({ dayKey, appointment, onClose, onSave }) {
 								value={timeSlot}
 								onChange={(e) => setTimeSlot(e.target.value)}
 								className="w-full bg-secondary text-foreground text-sm px-3 py-2 rounded border border-border"
+								disabled={isSubmitting}
 							/>
 						</div>
 						<div className="flex-1">
@@ -97,11 +155,12 @@ export function AppointmentDialog({ dayKey, appointment, onClose, onSave }) {
 								onChange={(e) => setValue(e.target.value)}
 								className="w-full bg-secondary text-foreground text-sm px-3 py-2 rounded border border-border"
 								placeholder="40.00"
+								disabled={isSubmitting}
 							/>
 						</div>
 					</div>
 
-					{services.length > 0 && (
+					{!isLoadingServices && services.length > 0 && (
 						<div>
 							<label className="font-mono-ui text-[10px] text-foreground-faint block mb-1">
 								SERVIÇO (OPCIONAL)
@@ -109,7 +168,8 @@ export function AppointmentDialog({ dayKey, appointment, onClose, onSave }) {
 							<select
 								value={serviceId}
 								onChange={(e) => handleServiceChange(e.target.value)}
-								className="w-full bg-secondary text-foreground text-sm px-3 py-2 rounded border border-border">
+								className="w-full bg-secondary text-foreground text-sm px-3 py-2 rounded border border-border"
+								disabled={isSubmitting}>
 								<option value="">Nenhum</option>
 								{services.map((s) => (
 									<option key={s.id} value={s.id}>
@@ -122,8 +182,13 @@ export function AppointmentDialog({ dayKey, appointment, onClose, onSave }) {
 
 					<button
 						type="submit"
+						disabled={isSubmitting}
 						className="w-full bg-foreground text-primary-foreground font-mono-ui text-sm py-2 rounded mt-1">
-						{appointment ? "SALVAR" : "ADICIONAR"}
+						{isSubmitting ?
+							"SALVANDO..."
+						: appointment ?
+							"SALVAR"
+						:	"ADICIONAR"}
 					</button>
 				</form>
 			</div>

@@ -1,9 +1,35 @@
+import { useEffect, useState } from "react";
 import { formatDateDisplay, isToday, loadProfile } from "@/lib/store";
 
 // Cabecalho da tela com dados do perfil e controle de data.
 export function AppHeader({ currentDate, onPrevDay, onNextDay, onSettings }) {
-	// Carrega dados basicos de exibicao do perfil.
-	const profile = loadProfile();
+	const [profile, setProfile] = useState();
+
+	useEffect(() => {
+		let mounted = true;
+
+		async function loadProfileData() {
+			try {
+				const data = await loadProfile();
+				if (mounted) {
+					setProfile(data || {});
+				}
+			} catch {
+				if (mounted) {
+					setProfile({});
+				}
+			}
+		}
+
+		loadProfileData();
+		window.addEventListener("focus", loadProfileData);
+
+		return () => {
+			window.removeEventListener("focus", loadProfileData);
+			mounted = false;
+		};
+	}, []);
+
 	// Mostra "Hoje" quando a data atual esta selecionada.
 	const dateLabel =
 		isToday(currentDate) ?
