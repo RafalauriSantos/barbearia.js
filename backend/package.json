@@ -1,12 +1,25 @@
 {
 	"name": "backend",
 	"version": "1.0.0",
-	"main": "server.js",
+	"main": "src/index.js",
 	"scripts": {
-		"dev": "node --watch server.js"
+		"dev": "node --watch src/server.js",
+		"start": "node src/server.js",
+		"seed": "node scripts/seed.js",
+		"migrate": "knex migrate:latest",
+		"migrate:rollback": "knex migrate:rollback",
+		"test": "tap --no-coverage \"test/**/*.test.js\""
 	},
 	"dependencies": {
 		"@fastify/cors": "^10.1.0",
-		"fastify": "^5.8.5"
+		"@supabase/supabase-js": "^2.47.0",
+		"argon2": "^0.31.2",
+		"dotenv": "^16.3.1",
+		"fastify": "^5.8.5",
+		"jsonwebtoken": "^9.0.0",
+		"knex": "^3.1.0",
+		"pg": "^8.13.1",
+		"zod": "^3.23.2",
+		"tap": "^16.3.2"
 	}
 }
