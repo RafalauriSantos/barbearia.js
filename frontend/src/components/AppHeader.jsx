@@ -23,9 +23,11 @@ export function AppHeader({ currentDate, onPrevDay, onNextDay, onSettings }) {
 
 		loadProfileData();
 		window.addEventListener("focus", loadProfileData);
+		window.addEventListener("profile-updated", loadProfileData);
 
 		return () => {
 			window.removeEventListener("focus", loadProfileData);
+			window.removeEventListener("profile-updated", loadProfileData);
 			mounted = false;
 		};
 	}, []);

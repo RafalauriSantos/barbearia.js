@@ -8,6 +8,11 @@ import {
 	deleteExpense,
 	loadExpenses,
 } from "@/lib/store";
+import {
+	parseMoneyInput,
+	validateMoney,
+	validateRequiredText,
+} from "@/lib/validation";
 
 const initialForm = {
 	name: "",
@@ -21,6 +26,7 @@ export default function ExpensesPage() {
 	const [isLoading, setIsLoading] = useState(true);
 	const [isSubmitting, setIsSubmitting] = useState(false);
 	const [errorMessage, setErrorMessage] = useState("");
+	const [formError, setFormError] = useState("");
 
 	const dayKey = formatDayKey(currentDate);
 
@@ -61,14 +67,25 @@ export default function ExpensesPage() {
 
 	const handleCreateExpense = async (e) => {
 		e.preventDefault();
-		if (!form.name.trim() || isSubmitting) return;
+		if (isSubmitting) return;
+
+		const validationMessage =
+			validateRequiredText(form.name, "Nome da despesa", {
+				minLength: 3,
+				maxLength: 80,
+			}) || validateMoney(form.value, "Valor", { max: 99999.99 });
+		if (validationMessage) {
+			setFormError(validationMessage);
+			return;
+		}
 
 		setIsSubmitting(true);
 		setErrorMessage("");
+		setFormError("");
 		try {
 			await addExpense({
 				name: form.name.trim(),
-				value: Number(form.value || 0),
+				value: parseMoneyInput(form.value),
 				date: dayKey,
 			});
 			setForm(initialForm);
@@ -82,6 +99,7 @@ export default function ExpensesPage() {
 
 	const handleDelete = async (id) => {
 		if (isSubmitting) return;
+		if (!window.confirm("Excluir esta despesa?")) return;
 
 		setIsSubmitting(true);
 		setErrorMessage("");
@@ -138,23 +156,30 @@ export default function ExpensesPage() {
 						{errorMessage}
 					</p>
 				)}
+				{formError && (
+					<p className="font-mono-ui text-[10px] text-overdue">
+						{formError}
+					</p>
+				)}
 				<input
 					type="text"
 					value={form.name}
 					onChange={(e) =>
 						setForm((prev) => ({ ...prev, name: e.target.value }))
 					}
+					onInput={() => setFormError("")}
 					placeholder="Nome da despesa"
 					className="w-full bg-secondary text-foreground text-sm px-3 py-2 rounded border border-border"
 					disabled={isSubmitting}
 				/>
 				<input
-					type="number"
-					step="0.01"
+					type="text"
+					inputMode="decimal"
 					value={form.value}
 					onChange={(e) =>
 						setForm((prev) => ({ ...prev, value: e.target.value }))
 					}
+					onInput={() => setFormError("")}
 					placeholder="Valor"
 					className="w-full bg-secondary text-foreground text-sm px-3 py-2 rounded border border-border"
 					disabled={isSubmitting}

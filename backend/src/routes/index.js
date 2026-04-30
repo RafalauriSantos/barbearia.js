@@ -1,6 +1,19 @@
+const supabase = require("../lib/supabase");
+const { getDefaultBarbeariaId } = require("../lib/tenant");
+
 module.exports = async function (fastify, opts) {
 	// Health
 	fastify.get("/health", async () => ({ ok: true }));
+	fastify.get("/health/db", async () => {
+		const barbeariaId = getDefaultBarbeariaId();
+		const { data, error } = await supabase
+			.from("barbearias")
+			.select("id")
+			.eq("id", barbeariaId)
+			.maybeSingle();
+		if (error) throw error;
+		return { ok: true, barbearia_id: barbeariaId, barbearia_found: !!data };
+	});
 	fastify.get("/teste", async () => ({ ok: true }));
 
 	// Domain routes

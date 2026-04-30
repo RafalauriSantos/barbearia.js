@@ -3,6 +3,7 @@ const cors = require("@fastify/cors");
 const { ZodError } = require("zod");
 const { env } = require("./config/env");
 const { AppError } = require("./lib/errors");
+const supabase = require("./lib/supabase");
 
 async function registerDocs(app) {
 	if (env.NODE_ENV === "production") return;
@@ -59,6 +60,8 @@ async function buildApp() {
 	const app = fastify({
 		logger: env.NODE_ENV !== "test",
 	});
+
+	supabase.ensureConfigured();
 
 	await app.register(cors, {
 		origin: env.CORS_ORIGIN,

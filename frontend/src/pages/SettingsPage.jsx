@@ -52,6 +52,9 @@ export default function SettingsPage() {
 				shopName: cleanShopName,
 				barberName: cleanBarberName,
 			});
+
+			// Notify other parts of the app (header) that profile changed.
+			window.dispatchEvent(new Event("profile-updated"));
 		} catch (error) {
 			setErrorMessage(error.message || "Falha ao salvar perfil.");
 		} finally {

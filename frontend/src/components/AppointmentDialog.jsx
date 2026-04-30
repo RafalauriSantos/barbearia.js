@@ -1,5 +1,11 @@
 import { useEffect, useState } from "react";
 import { loadServices, addAppointment, updateAppointment } from "@/lib/store";
+import {
+	parseMoneyInput,
+	validateMoney,
+	validateRequiredText,
+	validateTime,
+} from "@/lib/validation";
 
 // Janela para criar ou editar um agendamento.
 export function AppointmentDialog({
@@ -55,7 +61,26 @@ export function AppointmentDialog({
 	};
 	const handleSubmit = async (e) => {
 		e.preventDefault();
-		if (!clientName.trim() || isSubmitting) return;
+		if (isSubmitting) return;
+
+		// Valor é opcional: valida somente se preenchido.
+		const moneyValidation =
+			String(value ?? "").trim() ?
+				validateMoney(value, "Valor", { max: 9999.99 })
+			:	"";
+
+		const validationMessage =
+			validateRequiredText(clientName, "Cliente", {
+				minLength: 2,
+				maxLength: 80,
+			}) ||
+			validateTime(timeSlot, "Horario") ||
+			moneyValidation;
+		if (validationMessage) {
+			setErrorMessage(validationMessage);
+			if (onError) onError(validationMessage);
+			return;
+		}
 
 		setIsSubmitting(true);
 		setErrorMessage("");
@@ -63,15 +88,16 @@ export function AppointmentDialog({
 
 		const svc = services.find((s) => s.id === serviceId);
 		// Monta os dados que serao salvos.
+		const parsedValue = parseMoneyInput(value);
 		const data = {
 			client_name: clientName.trim(),
 			time_slot: timeSlot,
-			value: parseFloat(value) || 0,
 			service_id: serviceId || undefined,
 			service_name: svc?.name,
 			day_key: dayKey,
 			status: appointment?.status || "normal",
 		};
+		if (Number.isFinite(parsedValue)) data.value = parsedValue;
 
 		try {
 			if (appointment) {
@@ -123,7 +149,10 @@ export function AppointmentDialog({
 						<input
 							type="text"
 							value={clientName}
-							onChange={(e) => setClientName(e.target.value)}
+							onChange={(e) => {
+								setClientName(e.target.value);
+								setErrorMessage("");
+							}}
 							className="w-full bg-secondary text-foreground text-sm px-3 py-2 rounded border border-border"
 							placeholder="Nome do cliente"
 							autoFocus
@@ -139,7 +168,10 @@ export function AppointmentDialog({
 							<input
 								type="time"
 								value={timeSlot}
-								onChange={(e) => setTimeSlot(e.target.value)}
+								onChange={(e) => {
+									setTimeSlot(e.target.value);
+									setErrorMessage("");
+								}}
 								className="w-full bg-secondary text-foreground text-sm px-3 py-2 rounded border border-border"
 								disabled={isSubmitting}
 							/>
@@ -149,10 +181,13 @@ export function AppointmentDialog({
 								VALOR (R$)
 							</label>
 							<input
-								type="number"
-								step="0.01"
+								type="text"
+								inputMode="decimal"
 								value={value}
-								onChange={(e) => setValue(e.target.value)}
+								onChange={(e) => {
+									setValue(e.target.value);
+									setErrorMessage("");
+								}}
 								className="w-full bg-secondary text-foreground text-sm px-3 py-2 rounded border border-border"
 								placeholder="40.00"
 								disabled={isSubmitting}

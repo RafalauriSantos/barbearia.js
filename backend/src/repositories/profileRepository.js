@@ -66,6 +66,35 @@ exports.upsert = async function (payload) {
 			.eq("id", barbeiroId)
 			.eq("barbearia_id", barbeariaId);
 		if (barberError) throw barberError;
+	} else if (!barbeiroId && payload.barberName !== undefined) {
+		// No explicit barber id configured: try to find an active barber for this shop
+		const { data: existingBarber, error: findError } = await supabase
+			.from("barbeiros")
+			.select("*")
+			.eq("barbearia_id", barbeariaId)
+			.eq("ativo", true)
+			.limit(1)
+			.maybeSingle();
+		if (findError) throw findError;
+
+		if (existingBarber) {
+			const { error: updateErr } = await supabase
+				.from("barbeiros")
+				.update({ nome: payload.barberName || "" })
+				.eq("id", existingBarber.id);
+			if (updateErr) throw updateErr;
+		} else {
+			const { error: insertErr } = await supabase
+				.from("barbeiros")
+				.insert([
+					{
+						nome: payload.barberName || "",
+						barbearia_id: barbeariaId,
+						ativo: true,
+					},
+				]);
+			if (insertErr) throw insertErr;
+		}
 	}
 
 	return {

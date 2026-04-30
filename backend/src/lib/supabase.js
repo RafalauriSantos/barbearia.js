@@ -21,11 +21,15 @@ function getSupabaseClient() {
 	return client;
 }
 
-module.exports = new Proxy(
-	{},
-	{
-		get(_target, property) {
-			return getSupabaseClient()[property];
-		},
+const localMethods = {
+	ensureConfigured() {
+		getSupabaseClient();
 	},
-);
+};
+
+module.exports = new Proxy(localMethods, {
+	get(target, property) {
+		if (property in target) return target[property];
+		return getSupabaseClient()[property];
+	},
+});

@@ -11,6 +11,11 @@ import {
 	formatCurrency,
 } from "@/lib/store";
 import { BottomNav } from "@/components/BottomNav";
+import {
+	parseMoneyInput,
+	validateMoney,
+	validateRequiredText,
+} from "@/lib/validation";
 
 // Tela para cadastrar servicos e produtos.
 export default function ServicesPage() {
@@ -21,6 +26,7 @@ export default function ServicesPage() {
 	const [isLoading, setIsLoading] = useState(true);
 	const [isSubmitting, setIsSubmitting] = useState(false);
 	const [errorMessage, setErrorMessage] = useState("");
+	const [formError, setFormError] = useState("");
 	const [editingId, setEditingId] = useState(null);
 	const [name, setName] = useState("");
 	const [price, setPrice] = useState("");
@@ -54,17 +60,32 @@ export default function ServicesPage() {
 		setEditingId(null);
 		setName("");
 		setPrice("");
+		setFormError("");
 		setShowForm(false);
+	};
+	const validateForm = () => {
+		const itemLabel = tab === "services" ? "Nome do servico" : "Nome do produto";
+		return (
+			validateRequiredText(name, itemLabel, { minLength: 3, maxLength: 60 }) ||
+			validateMoney(price, "Preco", { max: 9999.99 })
+		);
 	};
 	const handleAdd = async (e) => {
 		e.preventDefault();
-		if (!name.trim() || isSubmitting) return;
+		if (isSubmitting) return;
+
+		const validationMessage = validateForm();
+		if (validationMessage) {
+			setFormError(validationMessage);
+			return;
+		}
 
 		setIsSubmitting(true);
 		setErrorMessage("");
+		setFormError("");
 
 		// Cria novo servico ou produto.
-		const data = { name: name.trim(), price: parseFloat(price) || 0 };
+		const data = { name: name.trim(), price: parseMoneyInput(price) };
 		try {
 			if (tab === "services") {
 				await addService(data);
@@ -74,6 +95,7 @@ export default function ServicesPage() {
 			await reloadData();
 			setName("");
 			setPrice("");
+			setFormError("");
 			setShowForm(false);
 		} catch (error) {
 			setErrorMessage(error.message || "Falha ao salvar item.");
@@ -86,16 +108,25 @@ export default function ServicesPage() {
 		setEditingId(item.id);
 		setName(item.name);
 		setPrice(item.price.toString());
+		setFormError("");
+		setShowForm(true);
 	};
 	const handleUpdate = async (e) => {
 		e.preventDefault();
-		if (!editingId || !name.trim() || isSubmitting) return;
+		if (!editingId || isSubmitting) return;
+
+		const validationMessage = validateForm();
+		if (validationMessage) {
+			setFormError(validationMessage);
+			return;
+		}
 
 		setIsSubmitting(true);
 		setErrorMessage("");
+		setFormError("");
 
 		// Salva alteracoes do item em edicao.
-		const data = { name: name.trim(), price: parseFloat(price) || 0 };
+		const data = { name: name.trim(), price: parseMoneyInput(price) };
 		try {
 			if (tab === "services") {
 				await updateService(editingId, data);
@@ -106,6 +137,8 @@ export default function ServicesPage() {
 			setEditingId(null);
 			setName("");
 			setPrice("");
+			setFormError("");
+			setShowForm(false);
 		} catch (error) {
 			setErrorMessage(error.message || "Falha ao atualizar item.");
 		} finally {
@@ -114,6 +147,8 @@ export default function ServicesPage() {
 	};
 	const handleDelete = async (id) => {
 		if (isSubmitting) return;
+		const currentLabel = tab === "services" ? "servico" : "produto";
+		if (!window.confirm(`Excluir este ${currentLabel}?`)) return;
 
 		setIsSubmitting(true);
 		setErrorMessage("");
@@ -202,6 +237,11 @@ export default function ServicesPage() {
 					<form
 						onSubmit={editingId ? handleUpdate : handleAdd}
 						className="px-4 py-4 border-b border-border space-y-3 bg-background-deep">
+						{formError && (
+							<p className="font-mono-ui text-[10px] text-overdue">
+								{formError}
+							</p>
+						)}
 						<div>
 							<label className="font-mono-ui text-xs text-foreground-faint block mb-1">
 								{formLabel}
@@ -209,7 +249,10 @@ export default function ServicesPage() {
 							<input
 								type="text"
 								value={name}
-								onChange={(e) => setName(e.target.value)}
+								onChange={(e) => {
+									setName(e.target.value);
+									setFormError("");
+								}}
 								className="w-full bg-secondary text-foreground text-sm px-3 py-2 rounded border border-border"
 								placeholder={formPlaceholder}
 								autoFocus
@@ -223,7 +266,10 @@ export default function ServicesPage() {
 							<input
 								type="text"
 								value={price}
-								onChange={(e) => setPrice(e.target.value)}
+								onChange={(e) => {
+									setPrice(e.target.value);
+									setFormError("");
+								}}
 								className="w-full bg-secondary text-foreground text-sm px-3 py-2 rounded border border-border"
 								placeholder="40,00"
 								inputMode="decimal"

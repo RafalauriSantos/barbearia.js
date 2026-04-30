@@ -27,11 +27,20 @@ const envSchema = z
 		}
 	});
 
+// normalize CORS_ORIGIN: support literal 'true'/'false' env values
+function normalizeCorsOrigin(value) {
+	if (value === undefined) return true; // default
+	const v = String(value).trim();
+	if (v === "true") return true;
+	if (v === "false") return false;
+	return value; // keep as string origin
+}
+
 const parsed = envSchema.parse({
 	NODE_ENV: process.env.NODE_ENV,
 	HOST: process.env.HOST,
 	PORT: process.env.PORT,
-	CORS_ORIGIN: process.env.CORS_ORIGIN || true,
+	CORS_ORIGIN: normalizeCorsOrigin(process.env.CORS_ORIGIN),
 	SUPABASE_URL: process.env.SUPABASE_URL,
 	SUPABASE_SERVICE_KEY: process.env.SUPABASE_SERVICE_KEY,
 	SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY,
@@ -44,8 +53,7 @@ const parsed = envSchema.parse({
 const env = {
 	...parsed,
 	JWT_SECRET:
-		parsed.JWT_SECRET ||
-		"development-only-secret-change-before-production",
+		parsed.JWT_SECRET || "development-only-secret-change-before-production",
 };
 
 module.exports = { env };

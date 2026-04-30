@@ -14,11 +14,11 @@ Checklist de melhorias significativas do frontend para reduzir retrabalho antes 
 ## 2) Melhorias Importantes (Prioridade Media)
 
 - [x] Mover URL da API para variavel de ambiente (`VITE_API_URL`).
-- [ ] Fortalecer validacoes de formulario (campos obrigatorios, valores invalidos, limites).
+- [x] Fortalecer validacoes de formulario (campos obrigatorios, valores invalidos, limites).
 - [ ] Padronizar feedback de erro para o usuario (mensagens claras + estado visual).
 - [ ] Revisar acessibilidade basica (foco, labels, navegacao por teclado, `aria-*`).
 - [ ] Remover/limpar estilos legados nao utilizados em `src/App.css`.
-- [ ] Revisar padrao de confirmacao para acoes destrutivas (exclusao).
+- [x] Revisar padrao de confirmacao para acoes destrutivas (exclusao).
 
 ## 3) O Que Construir e Finalizar Antes do Backend
 
