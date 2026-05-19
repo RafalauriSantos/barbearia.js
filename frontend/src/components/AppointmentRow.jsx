@@ -7,6 +7,19 @@ import {
 	loadServices,
 } from "@/lib/store";
 
+function statusDotClass(statusColor) {
+	if (statusColor === "paid") return "bg-paid";
+	if (statusColor === "fiado") return "bg-fiado";
+	if (statusColor === "overdue") return "bg-overdue";
+	return "bg-foreground-faint";
+}
+
+function statusLabel(status) {
+	if (status === "paid") return "Pago";
+	if (status === "fiado") return "Fiado";
+	return "Pendente";
+}
+
 // Mostra uma linha do atendimento com botoes de acao.
 export function AppointmentRow({ appointment, onUpdate, onEdit }) {
 	const [expanded, setExpanded] = useState(false);
@@ -34,72 +47,85 @@ export function AppointmentRow({ appointment, onUpdate, onEdit }) {
 		const m = prazo.getMonth() + 1;
 		return `${d}/${m}`;
 	})();
+	const hasTags =
+		Boolean(appointment.service_name) ||
+		Boolean(appointment.barber_name) ||
+		Boolean(prazoLabel);
+	const metaLine =
+		hasTags ?
+			[
+				appointment.service_name,
+				appointment.barber_name,
+				prazoLabel ? `Fiado ate ${prazoLabel}` : null,
+			]
+				.filter(Boolean)
+				.join(" • ")
+		:	"";
 	return (
-		<div className="animate-row-in">
-			<div className="flex items-center gap-3 px-4 py-3.5 bg-background">
-				<span className="font-mono-ui text-xs text-foreground-faint w-12 shrink-0">
-					{appointment.time_slot}
-				</span>
-
-				<div className="flex-1 min-w-0 flex items-center gap-1.5">
-					<span className="font-client text-base text-foreground truncate">
-						{appointment.client_name}
-					</span>
-					{appointment.service_name && (
-						<span className="font-mono-ui text-[9px] text-foreground-faint truncate">
-							· {appointment.service_name}
+		<div className="animate-row-in px-4 py-2">
+			<div className="rounded-lg border border-border bg-card p-3">
+				<div className="flex items-center justify-between gap-3">
+					<div className="flex items-center gap-2">
+						<span
+							className={`h-2 w-2 rounded-full ${statusDotClass(statusColor)}`}></span>
+						<span className="rounded-md bg-background-deep px-2.5 py-1.5 font-mono-ui text-xs text-foreground">
+							{appointment.time_slot}
 						</span>
-					)}
-					<button
-						onClick={() => setShowServicePicker((prev) => !prev)}
-						className="px-2 py-1 rounded border border-border text-[10px] text-foreground-faint shrink-0">
-						SERVICO
-					</button>
+					</div>
+
+					<div className="text-right">
+						<p
+							className={`font-value text-base ${appointment.status === "paid" ? "text-paid" : "text-foreground"}`}>
+							{appointment.value > 0 ?
+								formatCurrency(appointment.value)
+							:	"R$ ·"}
+						</p>
+						<p className="mt-1 font-mono-ui text-[10px] uppercase text-foreground-faint">
+							{statusLabel(appointment.status)}
+						</p>
+					</div>
 				</div>
 
-				{appointment.barber_name && (
-					<span className="font-mono-ui text-[9px] text-foreground-faint bg-secondary px-2 py-0.5 rounded shrink-0">
-						{appointment.barber_name}
-					</span>
-				)}
+				<div className="mt-3 min-w-0">
+					<p className="truncate font-client text-base text-foreground">
+						{appointment.client_name}
+					</p>
+					{hasTags && (
+						<p className="mt-2 font-mono-ui text-[10px] text-foreground-faint">
+							{metaLine}
+						</p>
+					)}
+				</div>
 
-				<span
-					className={`font-client text-sm shrink-0 ${appointment.status === "paid" ? "text-paid" : "text-foreground"}`}>
-					{appointment.value > 0 ? formatCurrency(appointment.value) : "R$ ·"}
-				</span>
-
-				{prazoLabel && (
-					<span
-						className={`font-mono-ui text-[9px] px-1.5 py-0.5 rounded border shrink-0 ${isOverdue ? "text-overdue border-overdue/30 bg-overdue/10" : "text-fiado border-fiado/30 bg-fiado/10"}`}>
-						{prazoLabel}
-					</span>
-				)}
-
-				<div className={`w-2 h-2 rounded-full shrink-0 dot-${statusColor}`} />
 				<button
 					onClick={() => setExpanded((prev) => !prev)}
-					className="font-mono-ui text-[10px] text-foreground-faint px-2 py-1 rounded border border-border">
-					{expanded ? "FECHAR" : "AÇÕES"}
+					className="mt-3 w-full rounded-md border border-border bg-background-deep px-3 py-2 font-mono-ui text-[10px] text-foreground">
+					{expanded ? "Fechar" : "Ações"}
 				</button>
+
+				{expanded && (
+					<>
+						<button
+							onClick={() => setShowServicePicker((prev) => !prev)}
+							className="mt-3 w-full rounded-md border border-border bg-background-deep px-3 py-2 font-mono-ui text-[10px] text-foreground-faint">
+							Serviço/Produto
+						</button>
+						{showServicePicker && (
+							<ServicePicker
+								appointment={appointment}
+								onUpdate={onUpdate}
+								onClose={() => setShowServicePicker(false)}
+							/>
+						)}
+						<InlineEditor
+							appointment={appointment}
+							onUpdate={onUpdate}
+							onClose={() => setExpanded(false)}
+							onEdit={onEdit}
+						/>
+					</>
+				)}
 			</div>
-
-			{showServicePicker && (
-				<ServicePicker
-					appointment={appointment}
-					onUpdate={onUpdate}
-					onClose={() => setShowServicePicker(false)}
-				/>
-			)}
-			{expanded && (
-				<InlineEditor
-					appointment={appointment}
-					onUpdate={onUpdate}
-					onClose={() => setExpanded(false)}
-					onEdit={onEdit}
-				/>
-			)}
-
-			<div className="border-b border-border/50 mx-4" />
 		</div>
 	);
 }
@@ -144,7 +170,7 @@ function InlineEditor({ appointment, onUpdate, onClose, onEdit }) {
 		}
 	};
 	return (
-		<div className="animate-slide-down bg-background-deep px-4 py-3 flex items-center gap-2 flex-wrap">
+		<div className="animate-slide-down mt-3 flex flex-wrap items-center gap-2 rounded-md border border-border bg-background-deep p-3">
 			{errorMessage && (
 				<p className="w-full font-mono-ui text-[10px] text-overdue">
 					{errorMessage}
@@ -152,7 +178,7 @@ function InlineEditor({ appointment, onUpdate, onClose, onEdit }) {
 			)}
 
 			<input
-				className="bg-secondary text-foreground font-mono-ui text-xs px-2 py-1.5 rounded w-20 border border-border"
+				className="w-24 rounded-md border border-border bg-secondary px-3 py-2 font-mono-ui text-xs text-foreground"
 				value={value}
 				onChange={(e) => setValue(e.target.value)}
 				inputMode="decimal"
@@ -160,7 +186,7 @@ function InlineEditor({ appointment, onUpdate, onClose, onEdit }) {
 				disabled={isSubmitting}
 			/>
 			<select
-				className="bg-secondary text-foreground font-mono-ui text-[10px] px-2 py-1.5 rounded border border-border"
+				className="rounded-md border border-border bg-secondary px-3 py-2 font-mono-ui text-[10px] text-foreground"
 				value={status}
 				onChange={(e) => setStatus(e.target.value)}
 				disabled={isSubmitting}>
@@ -171,21 +197,21 @@ function InlineEditor({ appointment, onUpdate, onClose, onEdit }) {
 			<button
 				onClick={save}
 				disabled={isSubmitting}
-				className="font-mono-ui text-[10px] text-paid bg-paid/10 px-3 py-1.5 rounded border border-border">
+				className="rounded-md border border-paid/30 bg-paid/10 px-3 py-2 font-mono-ui text-[10px] text-paid">
 				{isSubmitting ? "..." : "OK"}
 			</button>
 			{onEdit && (
 				<button
 					onClick={onEdit}
-					className="font-mono-ui text-[10px] text-foreground-faint px-2 py-1.5 rounded border border-border">
-					EDITAR
+					className="rounded-md border border-border px-3 py-2 font-mono-ui text-[10px] text-foreground-faint">
+					Editar
 				</button>
 			)}
 			<button
 				onClick={handleDelete}
 				disabled={isSubmitting}
-				className="font-mono-ui text-[10px] text-overdue bg-overdue/10 px-2 py-1.5 rounded border border-border ml-auto">
-				EXCLUIR
+				className="ml-auto rounded-md border border-overdue/30 bg-overdue/10 px-3 py-2 font-mono-ui text-[10px] text-overdue">
+				Excluir
 			</button>
 		</div>
 	);
@@ -245,7 +271,7 @@ function ServicePicker({ appointment, onUpdate, onClose }) {
 	};
 	if (isLoadingServices) {
 		return (
-			<div className="animate-slide-down bg-background-deep px-4 py-3">
+			<div className="animate-slide-down mt-3 rounded-md border border-border bg-background-deep px-3 py-3">
 				<span className="font-mono-ui text-[10px] text-foreground-faint">
 					Carregando servicos...
 				</span>
@@ -255,7 +281,7 @@ function ServicePicker({ appointment, onUpdate, onClose }) {
 
 	if (services.length === 0) {
 		return (
-			<div className="animate-slide-down bg-background-deep px-4 py-3">
+			<div className="animate-slide-down mt-3 rounded-md border border-border bg-background-deep px-3 py-3">
 				<span className="font-mono-ui text-[10px] text-foreground-faint">
 					Nenhum serviço cadastrado. Vá em Serviços para adicionar.
 				</span>
@@ -263,7 +289,7 @@ function ServicePicker({ appointment, onUpdate, onClose }) {
 		);
 	}
 	return (
-		<div className="animate-slide-down bg-background-deep px-4 py-2 flex flex-wrap gap-1.5">
+		<div className="animate-slide-down mt-3 flex flex-wrap gap-2 rounded-md border border-border bg-background-deep p-3">
 			{errorMessage && (
 				<p className="w-full font-mono-ui text-[10px] text-overdue">
 					{errorMessage}
@@ -274,7 +300,7 @@ function ServicePicker({ appointment, onUpdate, onClose }) {
 					key={svc.id}
 					onClick={() => handleSelect(svc)}
 					disabled={isSubmitting}
-					className="font-mono-ui text-[10px] text-foreground bg-secondary px-2.5 py-1.5 rounded border border-border">
+					className="rounded-md border border-border bg-secondary px-3 py-2 font-mono-ui text-[10px] text-foreground">
 					{svc.name} · R$ {svc.price.toFixed(2)}
 				</button>
 			))}

@@ -1,27 +1,16 @@
 import { useCallback, useEffect, useState } from "react";
 import { BottomNav } from "@/components/BottomNav";
+import { FinancialSummaryCompact } from "@/components/FinancialSummaryCompact";
 import {
 	formatCurrency,
 	formatDateDisplay,
 	formatDayKey,
-	getAppointmentsForDay,
-	getDaySummaryFromAppointments,
+	loadFinancialSummary,
 } from "@/lib/store";
-
-const emptySummary = {
-	totalReceived: 0,
-	totalClients: 0,
-	totalIncome: 0,
-	totalExpenses: 0,
-	paid: 0,
-	pending: 0,
-	toCollect: 0,
-	overdue: 0,
-};
 
 export default function FinancialPage() {
 	const [currentDate, setCurrentDate] = useState(new Date());
-	const [summary, setSummary] = useState(emptySummary);
+	const [summary, setSummary] = useState(null);
 	const [isLoading, setIsLoading] = useState(true);
 	const [errorMessage, setErrorMessage] = useState("");
 
@@ -31,14 +20,13 @@ export default function FinancialPage() {
 		setIsLoading(true);
 		setErrorMessage("");
 		try {
-			const appointments = await getAppointmentsForDay(dayKey);
-			const nextSummary = await getDaySummaryFromAppointments(
-				dayKey,
-				appointments,
-			);
+			const nextSummary = await loadFinancialSummary({
+				start_date: dayKey,
+				end_date: dayKey,
+			});
 			setSummary(nextSummary);
 		} catch (error) {
-			setSummary(emptySummary);
+			setSummary(null);
 			setErrorMessage(error.message || "Falha ao carregar resumo financeiro.");
 		} finally {
 			setIsLoading(false);
@@ -61,102 +49,105 @@ export default function FinancialPage() {
 		setCurrentDate(d);
 	};
 
-	const lucro = summary.totalIncome - summary.totalExpenses;
+	const isAdminSummary = summary?.type === "admin";
+	const totalPago =
+		isAdminSummary ? summary.total_pago_geral : summary?.total_pago || 0;
+	const parteBarbearia =
+		isAdminSummary ? summary.total_barbearia : summary?.parte_barbearia || 0;
+	const parteBarbeiros =
+		isAdminSummary ? summary.total_barbeiros : summary?.parte_barbeiro || 0;
+	const quantidade =
+		isAdminSummary ?
+			summary.quantidade_atendimentos_pagos
+		:	summary?.quantidade_atendimentos || 0;
 
 	return (
 		<div className="app-shell flex flex-col min-h-[100dvh] bg-background">
-			<header className="sticky top-0 z-50 bg-background border-b border-border">
-				<div className="px-4 py-3 flex items-center justify-between">
-					<h1 className="font-logo text-foreground text-base">FINANCEIRO</h1>
-					<span className="font-mono-ui text-xs text-foreground-faint">
-						{formatDateDisplay(currentDate)}
-					</span>
+			<header className="sticky top-0 z-50 border-b border-border bg-background/95 px-4 pb-3 pt-4 backdrop-blur">
+				<div className="flex items-start justify-between gap-3">
+					<div>
+						<p className="font-mono-ui text-[10px] uppercase text-foreground-faint">
+							Caixa
+						</p>
+						<h1 className="mt-1 font-logo text-xl leading-tight text-foreground">
+							Financeiro
+						</h1>
+					</div>
 				</div>
-				<div className="px-4 pb-3 flex items-center justify-center gap-3">
+				<div className="mt-4 flex items-center justify-between rounded-lg border border-border bg-background-deep p-1.5">
 					<button
 						onClick={prevDay}
-						className="w-7 h-7 flex items-center justify-center text-foreground-faint hover:text-foreground transition-colors">
+						className="flex h-9 w-10 items-center justify-center rounded-md text-xl text-foreground-faint hover:bg-secondary hover:text-foreground">
 						‹
 					</button>
-					<span className="font-mono-ui text-xs text-foreground-faint">
+					<span className="min-w-0 flex-1 truncate px-2 text-center font-mono-ui text-xs text-foreground">
 						{formatDateDisplay(currentDate)}
 					</span>
 					<button
 						onClick={nextDay}
-						className="w-7 h-7 flex items-center justify-center text-foreground-faint hover:text-foreground transition-colors">
+						className="flex h-9 w-10 items-center justify-center rounded-md text-xl text-foreground-faint hover:bg-secondary hover:text-foreground">
 						›
 					</button>
 				</div>
 			</header>
 
-			<div className="flex-1 overflow-y-auto pb-20 px-4 py-4 space-y-3">
+			<div className="flex-1 overflow-y-auto pb-20">
 				{errorMessage && (
-					<div className="rounded border border-overdue/30 bg-overdue/10 px-3 py-2">
-						<p className="font-mono-ui text-[10px] text-overdue">ERRO</p>
-						<p className="font-client text-sm text-overdue mt-1">
+					<div className="mx-4 mt-4 rounded-lg border border-overdue/30 bg-overdue/10 px-4 py-3">
+						<p className="font-mono-ui text-[10px] text-overdue">Erro</p>
+						<p className="mt-1 font-client text-sm text-overdue">
 							{errorMessage}
 						</p>
 					</div>
 				)}
 
-				{isLoading ?
-					<div className="py-12 text-center font-mono-ui text-xs text-foreground-faint">
-						CARREGANDO RESUMO
+				<FinancialSummaryCompact
+					summary={summary}
+					isLoading={isLoading}
+					showBreakdown
+				/>
+
+				{!isLoading && summary && (
+					<div className="space-y-3 px-4 pb-6">
+						<div className="rounded-lg border border-border bg-card p-4">
+							<p className="font-mono-ui text-[10px] uppercase text-foreground-faint">
+								Total pago
+							</p>
+							<p className="mt-1 font-value text-3xl leading-none text-paid">
+								{formatCurrency(totalPago)}
+							</p>
+						</div>
+
+						<div className="grid grid-cols-2 gap-3">
+							<div className="rounded-lg border border-border bg-card p-4">
+								<p className="font-mono-ui text-[10px] uppercase text-foreground-faint">
+									Barbearia
+								</p>
+								<p className="mt-1 font-value text-xl text-foreground">
+									{formatCurrency(parteBarbearia)}
+								</p>
+							</div>
+
+							<div className="rounded-lg border border-border bg-card p-4">
+								<p className="font-mono-ui text-[10px] uppercase text-foreground-faint">
+									{isAdminSummary ? "Equipe" : "Comissão"}
+								</p>
+								<p className="mt-1 font-value text-xl text-foreground">
+									{formatCurrency(parteBarbeiros)}
+								</p>
+							</div>
+						</div>
+
+						<div className="rounded-lg border border-border bg-background-deep p-4">
+							<p className="font-mono-ui text-[10px] uppercase text-foreground-faint">
+								Base do resumo
+							</p>
+							<p className="mt-2 font-client text-sm text-foreground-faint">
+								{quantidade} atendimentos pagos entram no financeiro deste dia.
+							</p>
+						</div>
 					</div>
-				:	<>
-						<div className="rounded border border-border bg-card px-4 py-3">
-							<p className="font-mono-ui text-xs text-foreground-faint">
-								RECEBIDO
-							</p>
-							<p className="font-value text-2xl text-paid">
-								{formatCurrency(summary.totalReceived)}
-							</p>
-						</div>
-
-						<div className="rounded border border-border bg-card px-4 py-3">
-							<p className="font-mono-ui text-xs text-foreground-faint">
-								FATURAMENTO
-							</p>
-							<p className="font-value text-2xl text-foreground">
-								{formatCurrency(summary.totalIncome)}
-							</p>
-						</div>
-
-						<div className="rounded border border-border bg-card px-4 py-3">
-							<p className="font-mono-ui text-xs text-foreground-faint">
-								DESPESAS
-							</p>
-							<p className="font-value text-2xl text-overdue">
-								{formatCurrency(summary.totalExpenses)}
-							</p>
-						</div>
-
-						<div className="rounded border border-border bg-card px-4 py-3">
-							<p className="font-mono-ui text-xs text-foreground-faint">
-								LUCRO ESTIMADO
-							</p>
-							<p
-								className={`font-value text-2xl ${lucro >= 0 ? "text-paid" : "text-overdue"}`}>
-								{formatCurrency(lucro)}
-							</p>
-						</div>
-
-						<div className="rounded border border-border bg-background-deep px-4 py-3 grid grid-cols-2 gap-2">
-							<p className="font-client text-sm text-foreground-faint">
-								Clientes: {summary.totalClients}
-							</p>
-							<p className="font-client text-sm text-foreground-faint">
-								Pagos: {summary.paid}
-							</p>
-							<p className="font-client text-sm text-foreground-faint">
-								Pendentes: {summary.pending}
-							</p>
-							<p className="font-client text-sm text-foreground-faint">
-								A cobrar: {formatCurrency(summary.toCollect)}
-							</p>
-						</div>
-					</>
-				}
+				)}
 			</div>
 
 			<BottomNav />

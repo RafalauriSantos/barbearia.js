@@ -1,0 +1,183 @@
+const FinancialRepository = require("../repositories/financialRepository");
+const BarbersRepository = require("../repositories/barbersRepository");
+const { AppError } = require("../lib/errors");
+
+function isAdmin(user) {
+	return user?.role === "admin";
+}
+
+function roundMoney(value) {
+	return Math.round((Number(value || 0) + Number.EPSILON) * 100) / 100;
+}
+
+function assertBarbeariaContext(user) {
+	if (!user?.barbearia_id) {
+		throw new AppError(
+			403,
+			"BARBEARIA_CONTEXT_REQUIRED",
+			"Usuario sem barbearia vinculada.",
+		);
+	}
+}
+
+function assertBarberContext(user) {
+	if (!user?.barbeiro_id) {
+		throw new AppError(
+			403,
+			"BARBER_CONTEXT_REQUIRED",
+			"Usuario sem barbeiro vinculado.",
+		);
+	}
+}
+
+async function assertBarberBelongsToShop(barbeiroId, barbeariaId) {
+	const barber = await BarbersRepository.findByIdInBarbearia(
+		barbeiroId,
+		barbeariaId,
+	);
+	if (!barber) {
+		throw new AppError(
+			403,
+			"BARBER_FORBIDDEN",
+			"Barbeiro nao pertence a esta barbearia.",
+		);
+	}
+	return barber;
+}
+
+function getAppointmentTotal(row) {
+	return Number(row.total ?? row.valor_manual ?? 0);
+}
+
+function getBarberRow(row) {
+	if (Array.isArray(row.barbeiros)) return row.barbeiros[0] || null;
+	return row.barbeiros || null;
+}
+
+function createBucket({ barbeiroId, nome, comissaoPercent }) {
+	return {
+		barbeiro_id: barbeiroId,
+		nome: nome || "Sem barbeiro",
+		total_pago: 0,
+		comissao_percent: Number(comissaoPercent || 0),
+		parte_barbeiro: 0,
+		parte_barbearia: 0,
+		quantidade_atendimentos: 0,
+	};
+}
+
+function finalizeBucket(bucket) {
+	return {
+		...bucket,
+		total_pago: roundMoney(bucket.total_pago),
+		comissao_percent: roundMoney(bucket.comissao_percent),
+		parte_barbeiro: roundMoney(bucket.parte_barbeiro),
+		parte_barbearia: roundMoney(bucket.parte_barbearia),
+	};
+}
+
+function buildSummaryByBarber(rows) {
+	const buckets = new Map();
+
+	for (const row of rows) {
+		const barber = getBarberRow(row);
+		const barbeiroId = row.barbeiro_id || barber?.id || null;
+		const key = barbeiroId || "sem-barbeiro";
+		const total = getAppointmentTotal(row);
+		const comissaoPercent = Number(barber?.comissao_percent || 0);
+		const parteBarbeiro = (total * comissaoPercent) / 100;
+		const parteBarbearia = total - parteBarbeiro;
+
+		if (!buckets.has(key)) {
+			buckets.set(
+				key,
+				createBucket({
+					barbeiroId,
+					nome: barber?.nome,
+					comissaoPercent,
+				}),
+			);
+		}
+
+		const bucket = buckets.get(key);
+		bucket.total_pago += total;
+		bucket.parte_barbeiro += parteBarbeiro;
+		bucket.parte_barbearia += parteBarbearia;
+		bucket.quantidade_atendimentos += 1;
+	}
+
+	return Array.from(buckets.values()).map(finalizeBucket);
+}
+
+function buildAdminSummary(rows) {
+	const resumoPorBarbeiro = buildSummaryByBarber(rows);
+	const totalPagoGeral = rows.reduce((sum, row) => sum + getAppointmentTotal(row), 0);
+	const totalBarbeiros = resumoPorBarbeiro.reduce(
+		(sum, row) => sum + row.parte_barbeiro,
+		0,
+	);
+	const totalBarbearia = resumoPorBarbeiro.reduce(
+		(sum, row) => sum + row.parte_barbearia,
+		0,
+	);
+
+	return {
+		total_pago_geral: roundMoney(totalPagoGeral),
+		total_barbearia: roundMoney(totalBarbearia),
+		total_barbeiros: roundMoney(totalBarbeiros),
+		quantidade_atendimentos_pagos: rows.length,
+		resumo_por_barbeiro: resumoPorBarbeiro,
+	};
+}
+
+function buildBarberSummary(rows, fallbackBarber) {
+	const [summary] = buildSummaryByBarber(rows);
+	if (summary) return summary;
+
+	return createBucket({
+		barbeiroId: fallbackBarber.id,
+		nome: fallbackBarber.name || fallbackBarber.nome,
+		comissaoPercent: fallbackBarber.comissao_percent,
+	});
+}
+
+exports.getSummary = async function (query, user) {
+	assertBarbeariaContext(user);
+
+	const requestedBarberId = query.barbeiro_id || query.barber_id;
+	let targetBarberId = requestedBarberId || null;
+	let fallbackBarber = null;
+
+	if (isAdmin(user)) {
+		if (targetBarberId) {
+			await assertBarberBelongsToShop(targetBarberId, user.barbearia_id);
+		}
+	} else {
+		assertBarberContext(user);
+		if (targetBarberId && targetBarberId !== user.barbeiro_id) {
+			throw new AppError(
+				403,
+				"FINANCIAL_FORBIDDEN",
+				"Voce nao pode consultar financeiro de outro barbeiro.",
+			);
+		}
+		targetBarberId = user.barbeiro_id;
+		fallbackBarber = await assertBarberBelongsToShop(
+			user.barbeiro_id,
+			user.barbearia_id,
+		);
+	}
+
+	const rows = await FinancialRepository.findPaidAppointments({
+		barbeariaId: user.barbearia_id,
+		barbeiroId: targetBarberId,
+		startDate: query.start_date,
+		endDate: query.end_date,
+	});
+
+	if (isAdmin(user)) {
+		return buildAdminSummary(rows);
+	}
+
+	return buildBarberSummary(rows, fallbackBarber);
+};

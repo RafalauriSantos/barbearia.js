@@ -13,9 +13,17 @@ const envSchema = z
 		SUPABASE_SERVICE_KEY: z.string().optional(),
 		SUPABASE_ANON_KEY: z.string().optional(),
 		DATABASE_URL: z.string().optional(),
+		DATABASE_SSL: z.coerce.boolean().default(false),
 		JWT_SECRET: z.string().min(32).optional(),
 		DEFAULT_BARBEARIA_ID: z.string().uuid().optional(),
 		DEFAULT_BARBEIRO_ID: z.string().uuid().optional(),
+		APP_URL: z.string().url().default("http://localhost:5173"),
+		SMTP_HOST: z.string().optional(),
+		SMTP_PORT: z.coerce.number().int().positive().optional(),
+		SMTP_SECURE: z.coerce.boolean().default(false),
+		SMTP_USER: z.string().optional(),
+		SMTP_PASS: z.string().optional(),
+		EMAIL_FROM: z.string().default("Kash Flow <no-reply@localhost>"),
 	})
 	.superRefine((env, ctx) => {
 		if (env.NODE_ENV === "production" && !env.JWT_SECRET) {
@@ -36,6 +44,14 @@ function normalizeCorsOrigin(value) {
 	return value; // keep as string origin
 }
 
+function normalizeBoolean(value, fallback = false) {
+	if (value === undefined) return fallback;
+	const v = String(value).trim();
+	if (v === "true") return true;
+	if (v === "false") return false;
+	return fallback;
+}
+
 const parsed = envSchema.parse({
 	NODE_ENV: process.env.NODE_ENV,
 	HOST: process.env.HOST,
@@ -45,9 +61,17 @@ const parsed = envSchema.parse({
 	SUPABASE_SERVICE_KEY: process.env.SUPABASE_SERVICE_KEY,
 	SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY,
 	DATABASE_URL: process.env.DATABASE_URL,
+	DATABASE_SSL: normalizeBoolean(process.env.DATABASE_SSL, false),
 	JWT_SECRET: process.env.JWT_SECRET,
 	DEFAULT_BARBEARIA_ID: process.env.DEFAULT_BARBEARIA_ID,
 	DEFAULT_BARBEIRO_ID: process.env.DEFAULT_BARBEIRO_ID,
+	APP_URL: process.env.APP_URL,
+	SMTP_HOST: process.env.SMTP_HOST,
+	SMTP_PORT: process.env.SMTP_PORT,
+	SMTP_SECURE: normalizeBoolean(process.env.SMTP_SECURE, false),
+	SMTP_USER: process.env.SMTP_USER,
+	SMTP_PASS: process.env.SMTP_PASS,
+	EMAIL_FROM: process.env.EMAIL_FROM,
 });
 
 const env = {

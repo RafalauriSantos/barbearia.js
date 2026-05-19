@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
 import { formatDateDisplay, isToday, loadProfile } from "@/lib/store";
+import { useAuth } from "@/context/AuthContext";
 
 // Cabecalho da tela com dados do perfil e controle de data.
 export function AppHeader({ currentDate, onPrevDay, onNextDay, onSettings }) {
 	const [profile, setProfile] = useState();
+	const { user } = useAuth();
 
 	useEffect(() => {
 		let mounted = true;
@@ -38,34 +40,39 @@ export function AppHeader({ currentDate, onPrevDay, onNextDay, onSettings }) {
 			`Hoje, ${formatDateDisplay(currentDate)}`
 		:	formatDateDisplay(currentDate);
 	return (
-		<header className="sticky top-0 z-50 bg-background border-b border-border">
-			<div className="flex items-center justify-between px-4 py-3">
-				<span className="font-mono-ui text-xs text-foreground-faint truncate max-w-[120px]">
-					{profile?.shopName?.toUpperCase() || "KURT"}
-				</span>
-				<span className="font-client text-sm text-foreground">
-					{profile?.barberName || "Barbeiro"}
-				</span>
-				<button
-					onClick={onSettings}
-					className="h-8 px-2 rounded border border-border text-xs"
-					aria-label="Configurações">
-					CONFIG
-				</button>
+		<header className="sticky top-0 z-50 border-b border-border bg-background/95 px-4 py-3 backdrop-blur">
+			<div className="flex items-center justify-between gap-3">
+				<div className="min-w-0">
+					<h1 className="truncate font-logo text-lg leading-tight text-foreground">
+						{profile?.shopName || "Kurt"}
+					</h1>
+				</div>
+				<div className="flex items-center gap-2">
+					<span className="max-w-[118px] truncate rounded-md border border-border bg-card px-2.5 py-1.5 font-client text-xs text-foreground-faint">
+						{user?.nome || profile?.barberName || "Usuário"}
+					</span>
+					<button
+						onClick={onSettings}
+						className="flex h-9 w-9 items-center justify-center rounded-md border border-border bg-card text-sm text-foreground"
+						aria-label="Configurações">
+						⚙
+					</button>
+				</div>
 			</div>
-
-			<div className="flex items-center justify-center px-4 pb-3 gap-3">
+			<div className="mt-3 flex items-center justify-between rounded-lg border border-border bg-background-deep p-1">
 				<button
 					onClick={onPrevDay}
-					className="w-7 h-7 flex items-center justify-center text-foreground-faint hover:text-foreground transition-colors active:scale-95">
+					className="flex h-8 w-10 items-center justify-center rounded-md text-xl text-foreground-faint transition-colors hover:bg-secondary hover:text-foreground active:scale-95"
+					aria-label="Dia anterior">
 					‹
 				</button>
-				<span className="font-mono-ui text-xs text-foreground-faint">
+				<span className="min-w-0 flex-1 truncate px-2 text-center font-mono-ui text-[11px] text-foreground">
 					{dateLabel}
 				</span>
 				<button
 					onClick={onNextDay}
-					className="w-7 h-7 flex items-center justify-center text-foreground-faint hover:text-foreground transition-colors active:scale-95">
+					className="flex h-8 w-10 items-center justify-center rounded-md text-xl text-foreground-faint transition-colors hover:bg-secondary hover:text-foreground active:scale-95"
+					aria-label="Próximo dia">
 					›
 				</button>
 			</div>

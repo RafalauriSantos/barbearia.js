@@ -1,9 +1,5 @@
 const { randomUUID } = require("crypto");
 const supabase = require("../lib/supabase");
-const {
-	getDefaultBarbeariaId,
-	getDefaultBarbeiroId,
-} = require("../lib/tenant");
 
 function paymentStatusToApi(status) {
 	if (status === "pago") return "paid";
@@ -70,6 +66,9 @@ function toAppointmentDatabase(payload) {
 		...(payload.forma_pagamento_id !== undefined ?
 			{ forma_pagamento_id: payload.forma_pagamento_id || null }
 		:	{}),
+		...(payload.barbeiro_id !== undefined ?
+			{ barbeiro_id: payload.barbeiro_id || null }
+		:	{}),
 	};
 }
 
@@ -91,34 +90,36 @@ async function upsertAppointmentService(appointmentId, payload) {
 	if (error) throw error;
 }
 
-exports.findAll = async function ({ date } = {}) {
+exports.findAll = async function ({ date, barbeariaId, barbeiroId } = {}) {
 	let query = supabase
 		.from("agendamentos")
 		.select("*, agendamento_servicos(*), barbeiros(nome), formas_pagamento(codigo,nome)")
-		.eq("barbearia_id", getDefaultBarbeariaId());
+		.eq("barbearia_id", barbeariaId);
 	if (date) query = query.eq("data", date);
+	if (barbeiroId) query = query.eq("barbeiro_id", barbeiroId);
 
 	const { data, error } = await query.order("data", { ascending: true });
 	if (error) throw error;
 	return (data || []).map(toApi);
 };
 
-exports.findById = async function (id) {
-	const { data, error } = await supabase
+exports.findById = async function (id, { barbeariaId } = {}) {
+	let query = supabase
 		.from("agendamentos")
 		.select("*, agendamento_servicos(*), barbeiros(nome), formas_pagamento(codigo,nome)")
-		.eq("id", id)
-		.eq("barbearia_id", getDefaultBarbeariaId())
-		.single();
+		.eq("id", id);
+	if (barbeariaId) query = query.eq("barbearia_id", barbeariaId);
+
+	const { data, error } = await query.single();
 	if (error && error.code !== "PGRST116") throw error;
 	return data ? toApi(data) : null;
 };
 
-exports.create = async function (payload) {
+exports.create = async function (payload, { barbeariaId, barbeiroId }) {
 	const row = {
 		id: payload.id || randomUUID(),
-		barbearia_id: getDefaultBarbeariaId(),
-		barbeiro_id: getDefaultBarbeiroId(),
+		barbearia_id: barbeariaId,
+		barbeiro_id: barbeiroId,
 		status_atendimento: "agendado",
 		status_pagamento: paymentStatusToDatabase(payload.status),
 		valor_manual: Number(payload.value || 0),
@@ -134,24 +135,24 @@ exports.create = async function (payload) {
 	if (error) throw error;
 
 	await upsertAppointmentService(data.id, payload);
-	return exports.findById(data.id);
+	return exports.findById(data.id, { barbeariaId });
 };
 
-exports.update = async function (id, updates) {
+exports.update = async function (id, updates, { barbeariaId }) {
 	const { data, error } = await supabase
 		.from("agendamentos")
 		.update(toAppointmentDatabase(updates))
 		.eq("id", id)
-		.eq("barbearia_id", getDefaultBarbeariaId())
+		.eq("barbearia_id", barbeariaId)
 		.select()
 		.single();
 	if (error) throw error;
 
 	await upsertAppointmentService(id, updates);
-	return exports.findById(data.id);
+	return exports.findById(data.id, { barbeariaId });
 };
 
-exports.remove = async function (id) {
+exports.remove = async function (id, { barbeariaId }) {
 	await supabase.from("agendamento_servicos").delete().eq("agendamento_id", id);
 	await supabase.from("agendamento_produtos").delete().eq("agendamento_id", id);
 
@@ -159,7 +160,7 @@ exports.remove = async function (id) {
 		.from("agendamentos")
 		.delete()
 		.eq("id", id)
-		.eq("barbearia_id", getDefaultBarbeariaId());
+		.eq("barbearia_id", barbeariaId);
 	if (error) throw error;
 	return true;
 };

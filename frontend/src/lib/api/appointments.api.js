@@ -18,11 +18,12 @@ function normalizeAppointment(raw) {
 		service_name: raw.service_name,
 		prazo_date: raw.prazo_date,
 		barber_name: raw.barber_name,
-		barbearia_id: raw.barbearia_id || 1,
+		barbearia_id: raw.barbearia_id,
+		barbeiro_id: raw.barbeiro_id,
 	};
 }
 
-function toApiPayload(appt, options = { includeDefaults: false }) {
+function toApiPayload(appt) {
 	const payload = {};
 
 	addIfDefined(payload, "cliente_nome", appt.client_name);
@@ -37,19 +38,19 @@ function toApiPayload(appt, options = { includeDefaults: false }) {
 	addIfDefined(payload, "service_name", appt.service_name);
 	addIfDefined(payload, "prazo_date", appt.prazo_date);
 	addIfDefined(payload, "barber_name", appt.barber_name);
-
-	if (appt.barbearia_id !== undefined) {
-		payload.barbearia_id = appt.barbearia_id;
-	} else if (options.includeDefaults) {
-		payload.barbearia_id = 1;
-	}
+	addIfDefined(payload, "barbeiro_id", appt.barbeiro_id);
 
 	return payload;
 }
 
-export async function listAppointmentsByDay(dayKey) {
+export async function listAppointmentsByDay(dayKey, filters = {}) {
+	const params = { data: dayKey };
+	if (filters.barbeiro_id) {
+		params.barbeiro_id = filters.barbeiro_id;
+	}
+
 	const response = await apiClient.get("/agendamentos", {
-		params: { data: dayKey },
+		params,
 	});
 
 	return response.data
@@ -58,15 +59,12 @@ export async function listAppointmentsByDay(dayKey) {
 }
 
 export async function createAppointment(appt) {
-	const response = await apiClient.post(
-		"/agendamentos",
-		toApiPayload(appt, { includeDefaults: true }),
-	);
+	const response = await apiClient.post("/agendamentos", toApiPayload(appt));
 	return normalizeAppointment(response.data);
 }
 
 export async function updateAppointmentById(id, updates) {
-	const response = await apiClient.put(
+	const response = await apiClient.patch(
 		`/agendamentos/${id}`,
 		toApiPayload(updates),
 	);

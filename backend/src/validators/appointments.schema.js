@@ -5,6 +5,7 @@ const appointmentSchema = z.object({
 	data: z.string().min(1).optional(),
 	hora: z.string().min(1).optional(),
 	barbearia_id: z.union([z.string(), z.number()]).optional(),
+	barbeiro_id: z.string().min(1).optional(),
 	client_name: z.string().min(1).optional(),
 	day_key: z.string().min(1).optional(),
 	time_slot: z.string().min(1).optional(),
@@ -16,6 +17,13 @@ const appointmentSchema = z.object({
 	barber_name: z.string().optional(),
 	forma_pagamento_id: z.string().uuid().nullable().optional(),
 	forma_pagamento: z.string().optional(),
+});
+
+const listQuerySchema = z.object({
+	data: z.string().min(1).optional(),
+	day_key: z.string().min(1).optional(),
+	barbeiro_id: z.string().min(1).optional(),
+	barber_id: z.string().min(1).optional(),
 });
 
 const createSchema = appointmentSchema.superRefine((payload, ctx) => {
@@ -50,4 +58,12 @@ function validateUpdateAppointment(body) {
 	return appointmentSchema.parse(body);
 }
 
-module.exports = { validateCreateAppointment, validateUpdateAppointment };
+function validateListAppointmentsQuery(query) {
+	return listQuerySchema.parse(query);
+}
+
+module.exports = {
+	validateCreateAppointment,
+	validateUpdateAppointment,
+	validateListAppointmentsQuery,
+};

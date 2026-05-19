@@ -64,7 +64,8 @@ export default function ServicesPage() {
 		setShowForm(false);
 	};
 	const validateForm = () => {
-		const itemLabel = tab === "services" ? "Nome do servico" : "Nome do produto";
+		const itemLabel =
+			tab === "services" ? "Nome do servico" : "Nome do produto";
 		return (
 			validateRequiredText(name, itemLabel, { minLength: 3, maxLength: 60 }) ||
 			validateMoney(price, "Preco", { max: 9999.99 })
@@ -188,159 +189,194 @@ export default function ServicesPage() {
 		tab === "services" ? "Ex: Corte + Barba" : "Ex: Pomada, Shampoo";
 	return (
 		<div className="app-shell flex flex-col min-h-[100dvh] bg-background">
-			<header className="sticky top-0 z-50 bg-background border-b border-border">
-				<div className="px-4 py-3 flex items-center justify-between">
-					<h1 className="font-logo text-foreground text-base">CATALOGO</h1>
+			<header className="sticky top-0 z-50 border-b border-border bg-background/95 px-4 pb-3 pt-4 backdrop-blur">
+				<div className="flex items-start justify-between gap-3">
+					<div>
+						<p className="font-mono-ui text-[10px] uppercase text-foreground-faint">
+							Serviços e produtos
+						</p>
+						<h1 className="mt-1 font-logo text-xl leading-tight text-foreground">
+							Catálogo
+						</h1>
+					</div>
 					<button
 						onClick={() => {
 							cancelEdit();
 							setShowForm(true);
 						}}
-						className="font-mono-ui text-xs border border-border px-3 py-1.5 rounded">
-						+ NOVO
+						className="rounded-md bg-foreground px-3 py-2 font-mono-ui text-[10px] text-primary-foreground">
+						+ Novo
 					</button>
 				</div>
 
-				<div className="flex border-t border-border">
+				<div className="mt-4 grid grid-cols-2 gap-1 rounded-lg border border-border bg-background-deep p-1">
 					<button
 						onClick={() => switchTab("services")}
-						className={`flex-1 py-2.5 font-mono-ui text-xs ${
+						className={`rounded-md py-2.5 font-mono-ui text-xs ${
 							tab === "services" ?
-								"text-foreground border-b-2 border-foreground"
+								"bg-secondary text-foreground"
 							:	"text-foreground-faint"
 						}`}>
-						SERVICOS
+						Serviços
 					</button>
 					<button
 						onClick={() => switchTab("products")}
-						className={`flex-1 py-2.5 font-mono-ui text-xs ${
+						className={`rounded-md py-2.5 font-mono-ui text-xs ${
 							tab === "products" ?
-								"text-foreground border-b-2 border-foreground"
+								"bg-secondary text-foreground"
 							:	"text-foreground-faint"
 						}`}>
-						PRODUTOS
+						Produtos
 					</button>
 				</div>
 			</header>
 
-			<div className="flex-1 overflow-y-auto pb-20">
+			{(showForm || editingId) && (
+				<div
+					className="fixed inset-0 z-[100] flex items-end justify-center bg-black/70 px-0 backdrop-blur-sm"
+					onClick={cancelEdit}>
+					<div
+						className="max-h-[92dvh] w-full max-w-[480px] overflow-y-auto rounded-t-lg border-x border-t border-border bg-background"
+						onClick={(event) => event.stopPropagation()}>
+						<div className="flex items-center justify-between px-4 pb-3 pt-4">
+							<div>
+								<p className="font-mono-ui text-[10px] uppercase text-foreground-faint">
+									{tab === "services" ? "Serviços" : "Produtos"}
+								</p>
+								<h2 className="mt-1 font-logo text-lg text-foreground">
+									{editingId ? "Editar item" : "Novo item"}
+								</h2>
+							</div>
+							<button
+								onClick={cancelEdit}
+								className="rounded-md border border-border bg-card px-3 py-2 font-mono-ui text-[10px] text-foreground-faint">
+								Fechar
+							</button>
+						</div>
+
+						<form
+							onSubmit={editingId ? handleUpdate : handleAdd}
+							className="space-y-3 px-4 pb-6">
+							{formError && (
+								<p className="rounded-md border border-overdue/30 bg-overdue/10 px-3 py-2 font-mono-ui text-[10px] text-overdue">
+									{formError}
+								</p>
+							)}
+							<div className="rounded-lg border border-border bg-card p-4">
+								<label className="block mb-1 font-mono-ui text-[10px] text-foreground-faint">
+									{formLabel}
+								</label>
+								<input
+									type="text"
+									value={name}
+									onChange={(e) => {
+										setName(e.target.value);
+										setFormError("");
+									}}
+									className="w-full rounded-md border border-border bg-secondary px-3 py-3 text-sm text-foreground"
+									placeholder={formPlaceholder}
+									autoFocus
+									disabled={isSubmitting}
+								/>
+							</div>
+							<div className="rounded-lg border border-border bg-card p-4">
+								<label className="block mb-1 font-mono-ui text-[10px] text-foreground-faint">
+									Preço (R$)
+								</label>
+								<input
+									type="text"
+									value={price}
+									onChange={(e) => {
+										setPrice(e.target.value);
+										setFormError("");
+									}}
+									className="w-full rounded-md border border-border bg-secondary px-3 py-3 text-sm text-foreground"
+									placeholder="40,00"
+									inputMode="decimal"
+									disabled={isSubmitting}
+								/>
+							</div>
+							<div className="flex gap-2">
+								<button
+									type="submit"
+									disabled={isSubmitting}
+									className="flex-1 rounded-md bg-foreground py-3 font-mono-ui text-sm text-primary-foreground disabled:opacity-60">
+									{isSubmitting ?
+										"Salvando..."
+									: editingId ?
+										"Salvar"
+									:	"Adicionar"}
+								</button>
+								<button
+									type="button"
+									onClick={cancelEdit}
+									disabled={isSubmitting}
+									className="rounded-md border border-border px-4 py-3 font-mono-ui text-sm text-foreground-faint">
+									Cancelar
+								</button>
+							</div>
+						</form>
+					</div>
+				</div>
+			)}
+
+			<div className="flex-1 overflow-y-auto pb-24">
 				{errorMessage && (
-					<div className="mx-4 mt-4 rounded border border-overdue/30 bg-overdue/10 px-3 py-2">
-						<p className="font-mono-ui text-[10px] text-overdue">ERRO</p>
-						<p className="font-client text-sm text-overdue mt-1">
+					<div className="mx-4 mt-4 rounded-lg border border-overdue/30 bg-overdue/10 px-4 py-3">
+						<p className="font-mono-ui text-[10px] text-overdue">Erro</p>
+						<p className="mt-1 font-client text-sm text-overdue">
 							{errorMessage}
 						</p>
 					</div>
 				)}
 
-				{(showForm || editingId) && (
-					<form
-						onSubmit={editingId ? handleUpdate : handleAdd}
-						className="px-4 py-4 border-b border-border space-y-3 bg-background-deep">
-						{formError && (
-							<p className="font-mono-ui text-[10px] text-overdue">
-								{formError}
-							</p>
-						)}
-						<div>
-							<label className="font-mono-ui text-xs text-foreground-faint block mb-1">
-								{formLabel}
-							</label>
-							<input
-								type="text"
-								value={name}
-								onChange={(e) => {
-									setName(e.target.value);
-									setFormError("");
-								}}
-								className="w-full bg-secondary text-foreground text-sm px-3 py-2 rounded border border-border"
-								placeholder={formPlaceholder}
-								autoFocus
-								disabled={isSubmitting}
-							/>
-						</div>
-						<div>
-							<label className="font-mono-ui text-xs text-foreground-faint block mb-1">
-								PRECO (R$)
-							</label>
-							<input
-								type="text"
-								value={price}
-								onChange={(e) => {
-									setPrice(e.target.value);
-									setFormError("");
-								}}
-								className="w-full bg-secondary text-foreground text-sm px-3 py-2 rounded border border-border"
-								placeholder="40,00"
-								inputMode="decimal"
-								disabled={isSubmitting}
-							/>
-						</div>
-						<div className="flex gap-2">
-							<button
-								type="submit"
-								disabled={isSubmitting}
-								className="flex-1 bg-foreground text-primary-foreground font-mono-ui text-sm py-2 rounded">
-								{isSubmitting ?
-									"SALVANDO..."
-								: editingId ?
-									"SALVAR"
-								:	"ADICIONAR"}
-							</button>
-							<button
-								type="button"
-								onClick={cancelEdit}
-								disabled={isSubmitting}
-								className="font-mono-ui text-sm text-foreground-faint px-4 py-2 rounded border border-border">
-								CANCELAR
-							</button>
-						</div>
-					</form>
-				)}
-
 				{isLoading ?
-					<div className="flex flex-col items-center justify-center py-16 gap-3">
+					<div className="mx-4 mt-4 rounded-lg border border-border bg-card px-4 py-12 text-center">
 						<span className="font-mono-ui text-xs text-foreground-faint">
-							CARREGANDO CATALOGO
+							Carregando catálogo
 						</span>
 					</div>
 				: items.length === 0 && !showForm ?
-					<div className="flex flex-col items-center justify-center py-16 gap-3">
+					<div className="mx-4 mt-4 rounded-lg border border-border bg-card px-4 py-12 text-center">
 						<span className="font-mono-ui text-xs text-foreground-faint">
 							{emptyLabel}
 						</span>
-						<span className="font-client text-sm text-foreground-faint/60">
+						<span className="mt-2 block font-client text-sm text-foreground-faint">
 							{emptyHint}
 						</span>
 					</div>
-				:	items.map((item) => (
-						<div
-							key={item.id}
-							className="flex items-center justify-between px-4 py-3.5 border-b border-border/50">
-							<div className="flex-1 min-w-0">
-								<span className="font-client text-base text-foreground">
-									{item.name}
-								</span>
+				:	<div className="space-y-2 px-4 py-4">
+						{items.map((item) => (
+							<div
+								key={item.id}
+								className="rounded-lg border border-border bg-card p-4">
+								<div className="flex items-start justify-between gap-3">
+									<div className="min-w-0 flex-1">
+										<p className="truncate font-client text-base text-foreground">
+											{item.name}
+										</p>
+										<p className="mt-1 font-value text-lg text-paid">
+											{formatCurrency(item.price)}
+										</p>
+									</div>
+									<div className="flex shrink-0 gap-2">
+										<button
+											onClick={() => handleEditItem(item)}
+											disabled={isSubmitting}
+											className="rounded-md border border-border px-3 py-2 font-mono-ui text-[10px] text-foreground-faint">
+											Editar
+										</button>
+										<button
+											onClick={() => handleDelete(item.id)}
+											disabled={isSubmitting}
+											className="rounded-md border border-overdue/30 bg-overdue/10 px-3 py-2 font-mono-ui text-[10px] text-overdue">
+											Excluir
+										</button>
+									</div>
+								</div>
 							</div>
-							<div className="flex items-center gap-3">
-								<span className="font-client text-sm text-paid">
-									{formatCurrency(item.price)}
-								</span>
-								<button
-									onClick={() => handleEditItem(item)}
-									disabled={isSubmitting}
-									className="font-mono-ui text-xs text-foreground-faint">
-									EDITAR
-								</button>
-								<button
-									onClick={() => handleDelete(item.id)}
-									disabled={isSubmitting}
-									className="font-mono-ui text-xs text-overdue">
-									EXCLUIR
-								</button>
-							</div>
-						</div>
-					))
+						))}
+					</div>
 				}
 			</div>
 

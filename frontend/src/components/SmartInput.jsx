@@ -1,35 +1,33 @@
 import { useState } from "react";
 import { addAppointment } from "@/lib/store";
-import {
-	parseMoneyInput,
-	validateMoney,
-	validateRequiredText,
-	validateTime,
-} from "@/lib/validation";
+import { validateRequiredText, validateTime } from "@/lib/validation";
 
 // Campo rapido para criar atendimento direto na tela.
-export function SmartInput({ dayKey, onAdd, onError }) {
+export function SmartInput({
+	dayKey,
+	barbeiroId,
+	onAdd,
+	onError,
+	requireBarberSelection = false,
+}) {
 	const [clientName, setClientName] = useState("");
 	const [timeValue, setTimeValue] = useState("09:00");
-	const [value, setValue] = useState("");
 	const [isSubmitting, setIsSubmitting] = useState(false);
 	const [errorMessage, setErrorMessage] = useState("");
 	const handleSubmit = async () => {
 		if (isSubmitting) return;
-
-		// Valor é opcional: valida somente se preenchido.
-		const moneyValidation =
-			String(value ?? "").trim() ?
-				validateMoney(value, "Valor", { max: 9999.99 })
-			:	"";
+		if (requireBarberSelection && !barbeiroId) {
+			const message = "Selecione uma agenda para adicionar atendimento.";
+			setErrorMessage(message);
+			if (onError) onError(message);
+			return;
+		}
 
 		const validationMessage =
 			validateRequiredText(clientName, "Cliente", {
 				minLength: 2,
 				maxLength: 80,
-			}) ||
-			validateTime(timeValue, "Horario") ||
-			moneyValidation;
+			}) || validateTime(timeValue, "Horario");
 		if (validationMessage) {
 			setErrorMessage(validationMessage);
 			if (onError) onError(validationMessage);
@@ -42,20 +40,17 @@ export function SmartInput({ dayKey, onAdd, onError }) {
 
 		try {
 			// Cria agendamento rapido direto pelos campos da barra inferior.
-			// Envia `value` apenas se for um número válido.
-			const parsedValue = parseMoneyInput(value);
 			const payload = {
 				client_name: clientName.trim(),
 				time_slot: timeValue,
 				status: "normal",
 				day_key: dayKey,
 			};
-			if (Number.isFinite(parsedValue)) payload.value = parsedValue;
+			if (barbeiroId) payload.barbeiro_id = barbeiroId;
 
 			await addAppointment(payload);
 			setClientName("");
 			setTimeValue("09:00");
-			setValue("");
 			await onAdd();
 		} catch (error) {
 			const message =
@@ -75,10 +70,10 @@ export function SmartInput({ dayKey, onAdd, onError }) {
 	};
 	return (
 		<div className="w-full">
-			<div className="flex items-center gap-2 w-full">
+			<div className="grid w-full grid-cols-[84px_1fr_auto] items-center gap-2 rounded-xl border border-border bg-background-deep p-2">
 				<input
 					type="time"
-					className="w-24 bg-secondary text-foreground text-sm px-2 py-1.5 rounded border border-border"
+					className="h-11 rounded-md border border-border bg-secondary px-2 text-sm text-foreground"
 					value={timeValue}
 					onChange={(e) => {
 						setTimeValue(e.target.value);
@@ -88,8 +83,8 @@ export function SmartInput({ dayKey, onAdd, onError }) {
 					disabled={isSubmitting}
 				/>
 				<input
-					className="flex-1 bg-secondary text-foreground text-sm px-2 py-1.5 rounded border border-border min-w-0"
-					placeholder="Cliente"
+					className="h-11 min-w-0 rounded-md border border-border bg-secondary px-3 text-sm text-foreground"
+					placeholder="Nome do cliente"
 					value={clientName}
 					onChange={(e) => {
 						setClientName(e.target.value);
@@ -99,28 +94,15 @@ export function SmartInput({ dayKey, onAdd, onError }) {
 					autoComplete="off"
 					disabled={isSubmitting}
 				/>
-				<input
-					type="text"
-					inputMode="decimal"
-					className="w-20 bg-secondary text-foreground text-sm text-right px-2 py-1.5 rounded border border-border"
-					placeholder="0.00"
-					value={value}
-					onChange={(e) => {
-						setValue(e.target.value);
-						setErrorMessage("");
-					}}
-					onKeyDown={handleKeyDown}
-					disabled={isSubmitting}
-				/>
 				<button
 					onClick={handleSubmit}
 					disabled={isSubmitting}
-					className="px-3 py-1.5 rounded border border-border text-sm bg-card shrink-0">
-					{isSubmitting ? "..." : "OK"}
+					className="flex h-11 w-11 items-center justify-center rounded-md bg-foreground text-lg font-bold text-primary-foreground transition-opacity hover:opacity-90 active:scale-95 disabled:opacity-60">
+					{isSubmitting ? "..." : "+"}
 				</button>
 			</div>
 			{errorMessage && (
-				<p className="font-mono-ui text-[10px] text-overdue mt-1">
+				<p className="mt-2 font-mono-ui text-[10px] text-overdue">
 					{errorMessage}
 				</p>
 			)}

@@ -1,10 +1,12 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/context/AuthContext";
 import { clearAllData, loadProfile, saveProfile } from "@/lib/store";
 
 // Tela para editar dados basicos e resetar tudo.
 export default function SettingsPage() {
 	const navigate = useNavigate();
+	const { logout, user } = useAuth();
 	const [shopName, setShopName] = useState("");
 	const [barberName, setBarberName] = useState("");
 	const [isLoading, setIsLoading] = useState(true);
@@ -77,75 +79,121 @@ export default function SettingsPage() {
 
 		navigate("/");
 	};
+
+	const handleLogout = () => {
+		logout();
+		navigate("/login", { replace: true });
+	};
+
 	return (
 		<div className="app-shell min-h-[100dvh] bg-background">
-			<header className="sticky top-0 z-50 bg-background border-b border-border px-4 py-3 flex items-center justify-between">
+			<header className="sticky top-0 z-50 flex items-center justify-between border-b border-border bg-background/95 px-4 py-4 backdrop-blur">
 				<button
 					onClick={() => navigate("/app")}
-					className="font-mono-ui text-xs text-foreground-faint">
-					VOLTAR
+					className="rounded-md border border-border bg-card px-3 py-2 font-mono-ui text-[10px] text-foreground-faint">
+					Voltar
 				</button>
-				<span className="font-logo text-sm text-foreground">CONFIGURAÇÕES</span>
+				<span className="font-logo text-base text-foreground">
+					Configurações
+				</span>
 				<div className="w-12" />
 			</header>
 
-			<div className="px-4 py-6 space-y-6">
+			<div className="space-y-4 px-4 py-5">
 				{errorMessage && (
-					<div className="rounded border border-overdue/30 bg-overdue/10 px-3 py-2">
-						<p className="font-mono-ui text-[10px] text-overdue">ERRO</p>
-						<p className="font-client text-sm text-overdue mt-1">
+					<div className="rounded-lg border border-overdue/30 bg-overdue/10 px-4 py-3">
+						<p className="font-mono-ui text-[10px] text-overdue">Erro</p>
+						<p className="mt-1 font-client text-sm text-overdue">
 							{errorMessage}
 						</p>
 					</div>
 				)}
 
 				{isLoading && (
-					<p className="font-mono-ui text-xs text-foreground-faint">
+					<p className="rounded-lg border border-border bg-card px-4 py-3 font-mono-ui text-xs text-foreground-faint">
 						Carregando perfil...
 					</p>
 				)}
 
-				<section>
-					<label className="font-mono-ui text-xs text-foreground-faint block mb-2">
-						NOME NO KURT
+				<section className="rounded-lg border border-border bg-card p-4">
+					<p className="font-mono-ui text-[10px] uppercase text-foreground-faint">
+						Dados da barbearia
+					</p>
+					<label className="mt-4 block font-mono-ui text-[10px] text-foreground-faint">
+						Nome exibido no topo
 					</label>
 					<input
 						type="text"
 						value={shopName}
 						onChange={(e) => setShopName(e.target.value)}
-						onBlur={handleSaveProfile}
-						className="w-full bg-secondary text-foreground text-sm px-3 py-2 rounded border border-border"
+						className="mt-1 w-full rounded-md border border-border bg-secondary px-3 py-3 text-sm text-foreground"
 						disabled={isSaving || isLoading}
 					/>
 				</section>
 
-				<section>
-					<label className="font-mono-ui text-xs text-foreground-faint block mb-2">
-						SEU NOME
+				<section className="rounded-lg border border-border bg-card p-4">
+					<p className="font-mono-ui text-[10px] uppercase text-foreground-faint">
+						Dados do usuário
+					</p>
+					<label className="mt-4 block font-mono-ui text-[10px] text-foreground-faint">
+						Nome na agenda
 					</label>
 					<input
 						type="text"
 						value={barberName}
 						onChange={(e) => setBarberName(e.target.value)}
-						onBlur={handleSaveProfile}
-						className="w-full bg-secondary text-foreground text-sm px-3 py-2 rounded border border-border"
+						className="mt-1 w-full rounded-md border border-border bg-secondary px-3 py-3 text-sm text-foreground"
 						disabled={isSaving || isLoading}
 					/>
+					<div className="mt-4 rounded-md bg-background-deep px-3 py-3">
+						<p className="font-mono-ui text-[10px] text-foreground-faint">
+							Conta logada
+						</p>
+						<p className="mt-1 truncate font-client text-sm text-foreground">
+							{user?.nome || user?.email || "Usuario"}
+						</p>
+						<p className="mt-1 font-mono-ui text-[10px] text-foreground-faint">
+							{user?.role || "perfil"} · {user?.email || "sem email"}
+						</p>
+					</div>
 				</section>
 
+				<p className="px-1 font-mono-ui text-[10px] text-foreground-faint">
+					Use o botao abaixo para salvar as alteracoes.
+				</p>
 				<button
 					onClick={handleSaveProfile}
 					disabled={isSaving || isLoading}
-					className="w-full bg-foreground text-primary-foreground font-mono-ui text-sm py-2 rounded">
-					{isSaving ? "SALVANDO..." : "SALVAR"}
+					className="w-full rounded-md bg-foreground px-4 py-3 font-mono-ui text-sm text-primary-foreground disabled:opacity-60">
+					{isSaving ? "Salvando..." : "Salvar alterações"}
 				</button>
 
-				<button
-					onClick={resetData}
-					disabled={isSaving}
-					className="w-full font-mono-ui text-sm text-overdue border border-overdue/30 py-2 rounded">
-					RESETAR DADOS
-				</button>
+				<section className="rounded-lg border border-border bg-card p-4">
+					<p className="font-mono-ui text-[10px] uppercase text-foreground-faint">
+						Sessão
+					</p>
+					<button
+						onClick={handleLogout}
+						disabled={isSaving}
+						className="mt-3 w-full rounded-md border border-border bg-background-deep px-4 py-3 font-mono-ui text-sm text-foreground">
+						Sair da conta
+					</button>
+				</section>
+
+				<section className="rounded-lg border border-overdue/30 bg-overdue/10 p-4">
+					<p className="font-mono-ui text-[10px] uppercase text-overdue">
+						Ações perigosas
+					</p>
+					<p className="mt-2 font-client text-sm text-foreground-faint">
+						Use somente se precisar limpar os dados locais deste ambiente.
+					</p>
+					<button
+						onClick={resetData}
+						disabled={isSaving}
+						className="mt-4 w-full rounded-md border border-overdue/40 bg-background px-4 py-3 font-mono-ui text-sm text-overdue disabled:opacity-60">
+						Resetar dados
+					</button>
+				</section>
 			</div>
 		</div>
 	);

@@ -5,11 +5,15 @@ import { AppointmentRow } from "@/components/AppointmentRow";
 import { SmartInput } from "@/components/SmartInput";
 import { AppointmentDialog } from "@/components/AppointmentDialog";
 import { BottomNav } from "@/components/BottomNav";
+import { FinancialSummaryCompact } from "@/components/FinancialSummaryCompact";
 import {
-	getAppointmentsForDay,
+	getAppointmentsForDayWithFilters,
 	getDaySummaryFromAppointments,
 	formatDayKey,
+	loadBarbers,
+	loadFinancialSummary,
 } from "@/lib/store";
+import { useAuth } from "@/context/AuthContext";
 import { useNavigate } from "react-router-dom";
 
 // Tela principal da agenda do dia.
@@ -31,20 +35,76 @@ export default function AppPage() {
 	const [errorMessage, setErrorMessage] = useState("");
 	const [dialogOpen, setDialogOpen] = useState(false);
 	const [editingAppt, setEditingAppt] = useState();
+	const [financialSummary, setFinancialSummary] = useState(null);
+	const [showFinancial, setShowFinancial] = useState(false);
+	const [barbers, setBarbers] = useState([]);
+	const [agendaKey, setAgendaKey] = useState("mine");
 	const navigate = useNavigate();
+	const { user } = useAuth();
+	const isAdmin = user?.role === "admin";
 	// Busca os dados do dia selecionado.
 	const dayKey = formatDayKey(currentDate);
+	const ownBarberId = user?.barbeiro_id || "";
+	const selectedBarberId = agendaKey === "mine" ? ownBarberId : agendaKey;
+	const shouldSelectAgenda = isAdmin && !selectedBarberId;
+	const selectedBarberName =
+		agendaKey === "mine" ?
+			user?.nome || user?.email || "Minha agenda"
+		:	barbers.find((barber) => barber.id === agendaKey)?.name || "Agenda";
+
+	useEffect(() => {
+		if (!isAdmin) return;
+		if (!ownBarberId && agendaKey === "mine") {
+			setAgendaKey("");
+		}
+	}, [agendaKey, isAdmin, ownBarberId]);
+
+	useEffect(() => {
+		if (!isAdmin) return;
+		loadBarbers()
+			.then((list) => setBarbers(list))
+			.catch((error) => {
+				setBarbers([]);
+				setErrorMessage(error.message || "Falha ao carregar barbeiros.");
+			});
+	}, [isAdmin]);
+
 	// Força a tela a atualizar depois de salvar/editar/excluir.
 	const reload = useCallback(async () => {
 		setIsLoading(true);
 		setErrorMessage("");
+		if (!selectedBarberId) {
+			setAppointments([]);
+			setFinancialSummary(null);
+			setSummary({
+				totalReceived: 0,
+				totalClients: 0,
+				totalIncome: 0,
+				totalExpenses: 0,
+				paid: 0,
+				pending: 0,
+				toCollect: 0,
+				overdue: 0,
+			});
+			setIsLoading(false);
+			return;
+		}
 		try {
-			const list = await getAppointmentsForDay(dayKey);
+			const list = await getAppointmentsForDayWithFilters(dayKey, {
+				barbeiro_id: selectedBarberId,
+			});
 			setAppointments(list);
 			const nextSummary = await getDaySummaryFromAppointments(dayKey, list);
 			setSummary(nextSummary);
+			const nextFinancialSummary = await loadFinancialSummary({
+				start_date: dayKey,
+				end_date: dayKey,
+				barbeiro_id: selectedBarberId,
+			});
+			setFinancialSummary(nextFinancialSummary);
 		} catch (error) {
 			setAppointments([]);
+			setFinancialSummary(null);
 			setSummary({
 				totalReceived: 0,
 				totalClients: 0,
@@ -61,7 +121,7 @@ export default function AppPage() {
 		} finally {
 			setIsLoading(false);
 		}
-	}, [dayKey]);
+	}, [dayKey, selectedBarberId]);
 
 	useEffect(() => {
 		reload();
@@ -78,16 +138,12 @@ export default function AppPage() {
 		d.setDate(d.getDate() + 1);
 		setCurrentDate(d);
 	};
-	const openNew = () => {
-		// Abre o modal para criar um novo agendamento.
-		setEditingAppt(undefined);
-		setDialogOpen(true);
-	};
 	const openEdit = (appt) => {
 		// Abre o modal com os dados já preenchidos.
 		setEditingAppt(appt);
 		setDialogOpen(true);
 	};
+
 	return (
 		<div className="app-shell flex flex-col min-h-[100dvh] bg-background">
 			<AppHeader
@@ -97,36 +153,77 @@ export default function AppPage() {
 				onSettings={() => navigate("/settings")}
 			/>
 
+			{isAdmin && (
+				<div className="px-4 pt-3">
+					<div className="flex items-center justify-between rounded-lg border border-border bg-card px-3 py-2">
+						<p className="font-mono-ui text-[10px] uppercase text-foreground-faint">
+							Agenda: {selectedBarberName}
+						</p>
+						<select
+							value={agendaKey}
+							onChange={(e) => {
+								setAgendaKey(e.target.value);
+								setErrorMessage("");
+							}}
+							className="rounded-md border border-border bg-background-deep px-3 py-2 font-mono-ui text-[10px] text-foreground">
+							<option value="mine">Minha agenda</option>
+							{barbers.map((barber) => (
+								<option key={barber.id} value={barber.id}>
+									{barber.name}
+								</option>
+							))}
+						</select>
+					</div>
+				</div>
+			)}
+
 			<DaySummaryCard summary={summary} />
+			<div className="px-4 pt-2">
+				<button
+					onClick={() => setShowFinancial((prev) => !prev)}
+					className="rounded-md border border-border bg-card px-3 py-2 font-mono-ui text-[10px] text-foreground-faint">
+					{showFinancial ? "Fechar financeiro" : "Ver financeiro"}
+				</button>
+			</div>
+			{showFinancial && (
+				<FinancialSummaryCompact
+					summary={financialSummary}
+					isLoading={isLoading}
+				/>
+			)}
 
 			<div className="flex-1 overflow-y-auto pb-32">
 				{errorMessage && (
-					<div className="mx-4 mt-4 rounded border border-overdue/30 bg-overdue/10 px-3 py-2">
-						<p className="font-mono-ui text-[10px] text-overdue">ERRO</p>
-						<p className="font-client text-sm text-overdue mt-1">
+					<div className="mx-4 mt-4 rounded-lg border border-overdue/30 bg-overdue/10 px-4 py-3">
+						<p className="font-mono-ui text-[10px] text-overdue">Erro</p>
+						<p className="mt-1 font-client text-sm text-overdue">
 							{errorMessage}
 						</p>
 						<button
 							onClick={reload}
-							className="mt-2 font-mono-ui text-[10px] text-foreground border border-border rounded px-2 py-1">
-							TENTAR NOVAMENTE
+							className="mt-3 rounded-md border border-border px-3 py-2 font-mono-ui text-[10px] text-foreground">
+							Tentar novamente
 						</button>
 					</div>
 				)}
 
 				{isLoading ?
-					<div className="flex flex-col items-center justify-center py-16 gap-2">
-						<span className="font-mono-ui text-[10px] text-foreground-faint tracking-widest">
-							CARREGANDO AGENDA
+					<div className="mx-4 mt-4 rounded-lg border border-border bg-card px-4 py-12 text-center">
+						<span className="font-mono-ui text-xs text-foreground-faint">
+							Carregando agenda
 						</span>
 					</div>
 				: appointments.length === 0 ?
-					<div className="flex flex-col items-center justify-center py-16 gap-2">
-						<span className="font-mono-ui text-[10px] text-foreground-faint tracking-widest">
-							NENHUM ATENDIMENTO
+					<div className="mx-4 mt-4 rounded-lg border border-border bg-card px-4 py-6 text-center">
+						<span className="font-mono-ui text-xs text-foreground-faint">
+							{shouldSelectAgenda ?
+								"Selecione uma agenda"
+							:	"Nenhum atendimento hoje"}
 						</span>
-						<span className="font-client text-sm text-foreground-faint/60">
-							Use o input abaixo ou o botão + para adicionar
+						<span className="mt-2 block font-client text-sm text-foreground-faint">
+							{shouldSelectAgenda ?
+								"Escolha um barbeiro para ver a agenda."
+							:	"Adicione o primeiro cliente abaixo."}
 						</span>
 					</div>
 				:	appointments.map((appt) => (
@@ -141,14 +238,14 @@ export default function AppPage() {
 			</div>
 
 			{/* Smart input + add button */}
-			<div className="sticky bottom-[52px] bg-background border-t border-border px-3 py-2 flex items-center gap-2">
-				<SmartInput dayKey={dayKey} onAdd={reload} onError={setErrorMessage} />
-				<button
-					onClick={openNew}
-					disabled={isLoading}
-					className="w-9 h-9 rounded-full bg-paid text-primary-foreground flex items-center justify-center text-lg font-bold shrink-0 hover:opacity-90 transition-opacity active:scale-95">
-					+
-				</button>
+			<div className="sticky bottom-[76px] border-t border-border bg-background/95 px-3 py-3 backdrop-blur">
+				<SmartInput
+					dayKey={dayKey}
+					barbeiroId={selectedBarberId}
+					onAdd={reload}
+					onError={setErrorMessage}
+					requireBarberSelection={isAdmin}
+				/>
 			</div>
 
 			<BottomNav />
@@ -157,6 +254,10 @@ export default function AppPage() {
 				<AppointmentDialog
 					dayKey={dayKey}
 					appointment={editingAppt}
+					barbers={[]}
+					canChooseBarber={false}
+					defaultBarberId={selectedBarberId}
+					forcedBarberId={selectedBarberId}
 					onClose={() => setDialogOpen(false)}
 					onSave={reload}
 					onError={setErrorMessage}

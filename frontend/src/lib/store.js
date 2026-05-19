@@ -24,6 +24,13 @@ import {
 	deleteExpenseById,
 } from "@/lib/api/expenses.api";
 import { getProfile, updateProfile, resetAllData } from "@/lib/api/profile.api";
+import {
+	listBarbers,
+	createBarber,
+	inviteBarber,
+	updateBarber,
+} from "@/lib/api/barbers.api";
+import { getFinancialSummary } from "@/lib/api/financial.api";
 
 // Chaves usadas para salvar dados no navegador.
 const APPT_KEY = "kurt_appointments";
@@ -61,6 +68,30 @@ export async function deleteAppointment(id) {
 // Filtra os agendamentos de um dia e ordena por horario.
 export async function getAppointmentsForDay(dayKey) {
 	return listAppointmentsByDay(dayKey);
+}
+
+export async function getAppointmentsForDayWithFilters(dayKey, filters = {}) {
+	return listAppointmentsByDay(dayKey, filters);
+}
+
+export async function loadBarbers() {
+	return listBarbers();
+}
+
+export async function addBarber(payload) {
+	return createBarber(payload);
+}
+
+export async function saveBarber(id, payload) {
+	return updateBarber(id, payload);
+}
+
+export async function sendBarberInvite(id, payload) {
+	return inviteBarber(id, payload);
+}
+
+export async function loadFinancialSummary(params = {}) {
+	return getFinancialSummary(params);
 }
 // ── Services ──
 

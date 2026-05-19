@@ -2,19 +2,30 @@ const AuthService = require("../services/authService");
 const {
 	validateRegister,
 	validateLogin,
+	validateVerifyEmail,
 } = require("../validators/auth.schema");
 const jwt = require("jsonwebtoken");
 const { env } = require("../config/env");
 
 function toPublicUser(user) {
-	const { password_hash, senha_hash, ...publicUser } = user;
-	return publicUser;
+	return {
+		id: user.id,
+		nome: user.nome || user.name || "",
+		email: user.email,
+		role: user.role || "admin",
+		barbearia_id: user.barbearia_id || null,
+		barbeiro_id: user.barbeiro_id || null,
+	};
 }
 
 exports.register = async (request, reply) => {
 	const payload = validateRegister(request.body);
-	const user = await AuthService.register(payload);
-	return reply.code(201).send({ user: toPublicUser(user) });
+	const { user, verificationUrl } = await AuthService.register(payload);
+	return reply.code(201).send({
+		user: toPublicUser(user),
+		email_verification_required: true,
+		verificationUrl: env.NODE_ENV === "production" ? undefined : verificationUrl,
+	});
 };
 
 exports.login = async (request, reply) => {
@@ -53,4 +64,15 @@ exports.refresh = async (request, reply) => {
 	} catch (err) {
 		return reply.code(401).send({ error: "Invalid refresh token" });
 	}
+};
+
+exports.me = async (request, reply) => {
+	const user = await AuthService.getCurrentUser(request.user.userId);
+	return reply.send(toPublicUser(user));
+};
+
+exports.verifyEmail = async (request, reply) => {
+	const payload = validateVerifyEmail(request.body);
+	const user = await AuthService.verifyEmail(payload.token);
+	return reply.send({ ok: true, user: toPublicUser(user) });
 };

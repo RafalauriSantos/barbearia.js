@@ -10,6 +10,7 @@ CREATE TABLE IF NOT EXISTS public.usuarios (
     nome varchar NOT NULL,
     email varchar NOT NULL UNIQUE,
     senha_hash varchar NOT NULL,
+    email_verificado_em timestamptz,
     criado_em timestamptz NOT NULL DEFAULT now(),
     atualizado_em timestamptz NOT NULL DEFAULT now()
 );
@@ -25,6 +26,8 @@ CREATE TABLE IF NOT EXISTS public.barbearias (
 CREATE TABLE IF NOT EXISTS public.barbeiros (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid (),
     barbearia_id uuid NOT NULL REFERENCES public.barbearias (id) ON DELETE CASCADE,
+    usuario_id uuid REFERENCES public.usuarios (id) ON DELETE SET NULL,
+    email varchar,
     nome varchar NOT NULL,
     cargo varchar NOT NULL DEFAULT 'barbeiro',
     comissao_percent numeric(5, 2) NOT NULL DEFAULT 50.00 CHECK (
@@ -124,6 +127,19 @@ CREATE TABLE IF NOT EXISTS public.agendamento_produtos (
     UNIQUE (agendamento_id, produto_id)
 );
 
+CREATE TABLE IF NOT EXISTS public.convites_barbeiros (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid (),
+    barbearia_id uuid NOT NULL REFERENCES public.barbearias (id) ON DELETE CASCADE,
+    barbeiro_id uuid NOT NULL REFERENCES public.barbeiros (id) ON DELETE CASCADE,
+    email varchar NOT NULL,
+    token_hash varchar NOT NULL UNIQUE,
+    expira_em timestamptz NOT NULL,
+    aceito_em timestamptz,
+    revogado_em timestamptz,
+    criado_por_usuario_id uuid REFERENCES public.usuarios (id) ON DELETE SET NULL,
+    criado_em timestamptz NOT NULL DEFAULT now()
+);
+
 -- Preparada para evoluir o app para multiplos pagamentos/parciais sem quebrar agendamentos.
 CREATE TABLE IF NOT EXISTS public.pagamentos (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid (),
@@ -158,6 +174,10 @@ CREATE INDEX IF NOT EXISTS idx_barbearias_usuario_dono ON public.barbearias (usu
 
 CREATE INDEX IF NOT EXISTS idx_barbeiros_barbearia_ativo ON public.barbeiros (barbearia_id, ativo);
 
+CREATE UNIQUE INDEX IF NOT EXISTS idx_barbeiros_usuario_unique ON public.barbeiros (usuario_id) WHERE usuario_id IS NOT NULL;
+
+CREATE INDEX IF NOT EXISTS idx_barbeiros_barbearia_usuario ON public.barbeiros (barbearia_id, usuario_id);
+
 CREATE INDEX IF NOT EXISTS idx_servicos_barbearia_ativo ON public.servicos (barbearia_id, ativo);
 
 CREATE INDEX IF NOT EXISTS idx_produtos_barbearia_ativo ON public.produtos (barbearia_id, ativo);
@@ -176,6 +196,15 @@ CREATE INDEX IF NOT EXISTS idx_agendamentos_status_pagamento ON public.agendamen
 CREATE INDEX IF NOT EXISTS idx_agendamento_servicos_agendamento ON public.agendamento_servicos (agendamento_id);
 
 CREATE INDEX IF NOT EXISTS idx_agendamento_produtos_agendamento ON public.agendamento_produtos (agendamento_id);
+
+CREATE INDEX IF NOT EXISTS idx_convites_barbeiros_barbearia ON public.convites_barbeiros (barbearia_id, criado_em);
+
+CREATE INDEX IF NOT EXISTS idx_convites_barbeiros_barbeiro_status ON public.convites_barbeiros (
+    barbeiro_id,
+    aceito_em,
+    revogado_em,
+    expira_em
+);
 
 CREATE INDEX IF NOT EXISTS idx_pagamentos_barbearia_criado ON public.pagamentos (barbearia_id, criado_em);
 

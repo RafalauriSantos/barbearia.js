@@ -1,4 +1,5 @@
 import axios from "axios";
+import { getAccessToken } from "@/lib/auth";
 
 export const API_BASE_URL =
 	import.meta.env.VITE_API_URL || "http://localhost:3000";
@@ -17,6 +18,15 @@ export const apiClient = axios.create({
 	timeout: 10000,
 });
 
+apiClient.interceptors.request.use((config) => {
+	const token = getAccessToken();
+	if (token) {
+		config.headers = config.headers || {};
+		config.headers.Authorization = `Bearer ${token}`;
+	}
+	return config;
+});
+
 apiClient.interceptors.response.use(
 	(response) => response,
 	(error) => {
@@ -24,6 +34,7 @@ apiClient.interceptors.response.use(
 		const details = error?.response?.data;
 		const message =
 			details?.erro ||
+			details?.error ||
 			details?.message ||
 			error?.message ||
 			"Nao foi possivel concluir a requisicao.";
