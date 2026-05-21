@@ -6,6 +6,7 @@ import { SmartInput } from "@/components/SmartInput";
 import { AppointmentDialog } from "@/components/AppointmentDialog";
 import { BottomNav } from "@/components/BottomNav";
 import { FinancialSummaryCompact } from "@/components/FinancialSummaryCompact";
+import { EmptyState } from "@/components/ScreenPrimitives";
 import {
 	getAppointmentsForDayWithFilters,
 	getDaySummaryFromAppointments,
@@ -62,12 +63,20 @@ export default function AppPage() {
 	useEffect(() => {
 		if (!isAdmin) return;
 		loadBarbers()
-			.then((list) => setBarbers(list))
+			.then((list) => {
+				setBarbers(list);
+				setAgendaKey((current) => {
+					if (!ownBarberId && (!current || current === "mine") && list[0]?.id) {
+						return list[0].id;
+					}
+					return current;
+				});
+			})
 			.catch((error) => {
 				setBarbers([]);
 				setErrorMessage(error.message || "Falha ao carregar barbeiros.");
 			});
-	}, [isAdmin]);
+	}, [isAdmin, ownBarberId]);
 
 	// Força a tela a atualizar depois de salvar/editar/excluir.
 	const reload = useCallback(async () => {
@@ -157,7 +166,7 @@ export default function AppPage() {
 				<div className="px-4 pt-3">
 					<div className="flex items-center justify-between rounded-lg border border-border bg-card px-3 py-2">
 						<p className="font-mono-ui text-[10px] uppercase text-foreground-faint">
-							Agenda: {selectedBarberName}
+							Agenda ativa: {selectedBarberName}
 						</p>
 						<select
 							value={agendaKey}
@@ -166,7 +175,8 @@ export default function AppPage() {
 								setErrorMessage("");
 							}}
 							className="rounded-md border border-border bg-background-deep px-3 py-2 font-mono-ui text-[10px] text-foreground">
-							<option value="mine">Minha agenda</option>
+							{!ownBarberId && <option value="">Escolha</option>}
+							{ownBarberId && <option value="mine">Minha agenda</option>}
 							{barbers.map((barber) => (
 								<option key={barber.id} value={barber.id}>
 									{barber.name}
@@ -181,8 +191,8 @@ export default function AppPage() {
 			<div className="px-4 pt-2">
 				<button
 					onClick={() => setShowFinancial((prev) => !prev)}
-					className="rounded-md border border-border bg-card px-3 py-2 font-mono-ui text-[10px] text-foreground-faint">
-					{showFinancial ? "Fechar financeiro" : "Ver financeiro"}
+					className="rounded-md border border-border bg-card px-3 py-2 font-mono-ui text-[10px] text-foreground-faint transition-colors hover:text-foreground">
+					{showFinancial ? "Ocultar caixa" : "Caixa do dia"}
 				</button>
 			</div>
 			{showFinancial && (
@@ -195,8 +205,8 @@ export default function AppPage() {
 			<div className="flex-1 overflow-y-auto pb-32">
 				{errorMessage && (
 					<div className="mx-4 mt-4 rounded-lg border border-overdue/30 bg-overdue/10 px-4 py-3">
-						<p className="font-mono-ui text-[10px] text-overdue">Erro</p>
-						<p className="mt-1 font-client text-sm text-overdue">
+						<p className="font-mono-ui text-[10px] uppercase text-overdue">Erro</p>
+						<p className="mt-1 font-client text-sm leading-snug text-overdue">
 							{errorMessage}
 						</p>
 						<button
@@ -214,17 +224,19 @@ export default function AppPage() {
 						</span>
 					</div>
 				: appointments.length === 0 ?
-					<div className="mx-4 mt-4 rounded-lg border border-border bg-card px-4 py-6 text-center">
-						<span className="font-mono-ui text-xs text-foreground-faint">
-							{shouldSelectAgenda ?
-								"Selecione uma agenda"
-							:	"Nenhum atendimento hoje"}
-						</span>
-						<span className="mt-2 block font-client text-sm text-foreground-faint">
-							{shouldSelectAgenda ?
-								"Escolha um barbeiro para ver a agenda."
-							:	"Adicione o primeiro cliente abaixo."}
-						</span>
+					<div className="mx-4 mt-4">
+						<EmptyState
+							title={
+								shouldSelectAgenda ?
+									"Selecione uma agenda"
+								:	"Nenhum atendimento hoje"
+							}
+							hint={
+								shouldSelectAgenda ?
+									"Escolha um barbeiro para ver a agenda."
+								:	"Adicione o primeiro cliente abaixo."
+							}
+						/>
 					</div>
 				:	appointments.map((appt) => (
 						<AppointmentRow

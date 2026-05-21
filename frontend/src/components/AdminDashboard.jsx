@@ -2,6 +2,11 @@ import { useMemo, useState } from "react";
 import { AppointmentDialog } from "@/components/AppointmentDialog";
 import { FinancialSummaryCompact } from "@/components/FinancialSummaryCompact";
 import {
+	EmptyState,
+	IconButton,
+	Notice,
+} from "@/components/ScreenPrimitives";
+import {
 	addBarber,
 	formatCurrency,
 	sendBarberInvite,
@@ -116,7 +121,7 @@ export function AdminDashboard({
 			setSendInviteNow(true);
 			setPanelMessage(
 				created.inviteUrl ?
-					`Convite criado: ${created.inviteUrl}`
+					"Barbeiro salvo. Enviamos o convite por email."
 				:	"Barbeiro salvo.",
 			);
 			await onReload();
@@ -139,7 +144,7 @@ export function AdminDashboard({
 			const result = await sendBarberInvite(barber.id, { email: barber.email });
 			setPanelMessage(
 				result.inviteUrl ?
-					`Convite criado: ${result.inviteUrl}`
+					"Convite enviado por email."
 				:	"Convite enviado.",
 			);
 			await onReload();
@@ -158,8 +163,8 @@ export function AdminDashboard({
 
 				{errorMessage && (
 					<div className="mx-4 mb-3 rounded-lg border border-overdue/30 bg-overdue/10 px-4 py-3">
-						<p className="font-mono-ui text-[10px] text-overdue">Erro</p>
-						<p className="mt-1 font-client text-sm text-overdue">
+						<p className="font-mono-ui text-[10px] uppercase text-overdue">Erro</p>
+						<p className="mt-1 font-client text-sm leading-snug text-overdue">
 							{errorMessage}
 						</p>
 						<button
@@ -180,12 +185,13 @@ export function AdminDashboard({
 								{appointments.length} atendimentos no dia
 							</p>
 						</div>
-						<button
+						<IconButton
+							label="Gerenciar equipe"
 							type="button"
 							onClick={() => setTeamSheetOpen(true)}
-							className="rounded-md border border-border bg-card px-3 py-2 font-mono-ui text-[10px] text-foreground-faint">
-							Gerenciar equipe
-						</button>
+						>
+							∷
+						</IconButton>
 					</div>
 
 					<div className="flex gap-2 overflow-x-auto pb-1">
@@ -224,17 +230,18 @@ export function AdminDashboard({
 							Carregando equipe
 						</div>
 					: barbers.length === 0 ?
-						<div className="rounded-lg border border-border bg-card px-4 py-10 text-center">
-							<p className="font-mono-ui text-xs text-foreground-faint">
-								Nenhum barbeiro cadastrado
-							</p>
-							<button
-								type="button"
-								onClick={() => setTeamSheetOpen(true)}
-								className="mt-4 rounded-md bg-foreground px-4 py-3 font-mono-ui text-xs text-primary-foreground">
-								Gerenciar equipe
-							</button>
-						</div>
+						<EmptyState
+							title="Nenhum barbeiro cadastrado"
+							hint="Cadastre a equipe para separar agenda e comissão."
+							action={
+								<IconButton
+									label="Gerenciar equipe"
+									onClick={() => setTeamSheetOpen(true)}
+									tone="primary">
+									+
+								</IconButton>
+							}
+						/>
 					:	visibleBarbers.map((barber) => {
 							const rows = grouped.get(barber.id) || [];
 							const total = getBarberTotal(rows);
@@ -335,12 +342,13 @@ export function AdminDashboard({
 									Gerenciar equipe
 								</h2>
 							</div>
-							<button
+							<IconButton
+								label="Fechar"
 								type="button"
 								onClick={() => setTeamSheetOpen(false)}
-								className="rounded-md border border-border bg-card px-3 py-2 font-mono-ui text-[10px] text-foreground-faint">
-								Fechar
-							</button>
+							>
+								×
+							</IconButton>
 						</div>
 
 						<div className="space-y-3 px-4 py-4">
@@ -423,14 +431,9 @@ export function AdminDashboard({
 							</form>
 
 							{(panelMessage || panelError) && (
-								<p
-									className={`break-words rounded-md border px-3 py-2 font-client text-xs ${
-										panelError ?
-											"border-overdue/30 bg-overdue/10 text-overdue"
-										:	"border-paid/30 bg-paid/10 text-paid"
-									}`}>
+								<Notice tone={panelError ? "error" : "success"}>
 									{panelError || panelMessage}
-								</p>
+								</Notice>
 							)}
 
 							<div className="space-y-2">

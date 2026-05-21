@@ -1,6 +1,13 @@
 import { useCallback, useEffect, useState } from "react";
 import { BottomNav } from "@/components/BottomNav";
 import {
+	DateStepper,
+	EmptyState,
+	IconButton,
+	Notice,
+	ScreenHeader,
+} from "@/components/ScreenPrimitives";
+import {
 	formatCurrency,
 	formatDayKey,
 	formatDateDisplay,
@@ -117,36 +124,23 @@ export default function ExpensesPage() {
 
 	return (
 		<div className="app-shell flex flex-col min-h-[100dvh] bg-background">
-			<header className="sticky top-0 z-50 border-b border-border bg-background/95 px-4 pb-3 pt-4 backdrop-blur">
-				<div className="flex items-start justify-between gap-3">
-					<div>
-						<p className="font-mono-ui text-[10px] uppercase text-foreground-faint">
-							Saídas
-						</p>
-						<h1 className="mt-1 font-logo text-xl leading-tight text-foreground">
-							Despesas
-						</h1>
-					</div>
-					<span className="rounded-md border border-border bg-card px-2.5 py-1.5 font-mono-ui text-[10px] text-foreground-faint">
-						{formatDateDisplay(currentDate)}
-					</span>
-				</div>
-				<div className="mt-4 flex items-center justify-between rounded-lg border border-border bg-background-deep p-1.5">
-					<button
-						onClick={prevDay}
-						className="flex h-9 w-10 items-center justify-center rounded-md text-xl text-foreground-faint hover:bg-secondary hover:text-foreground">
-						‹
-					</button>
-					<span className="min-w-0 flex-1 truncate px-2 text-center font-mono-ui text-xs text-foreground">
-						{formatDateDisplay(currentDate)}
-					</span>
-					<button
-						onClick={nextDay}
-						className="flex h-9 w-10 items-center justify-center rounded-md text-xl text-foreground-faint hover:bg-secondary hover:text-foreground">
-						›
-					</button>
-				</div>
-			</header>
+			<ScreenHeader
+				eyebrow="Saídas"
+				title="Despesas"
+				action={
+					<IconButton
+						label="Adicionar despesa"
+						onClick={() => setShowForm(true)}
+						tone="primary">
+						+
+					</IconButton>
+				}>
+				<DateStepper
+					label={formatDateDisplay(currentDate)}
+					onPrev={prevDay}
+					onNext={nextDay}
+				/>
+			</ScreenHeader>
 
 			<div className="px-4 pt-4">
 				<div className="rounded-lg border border-border bg-card p-4">
@@ -159,58 +153,78 @@ export default function ExpensesPage() {
 				</div>
 			</div>
 
-			<div className="px-4 pt-3">
-				<button
-					onClick={() => setShowForm((prev) => !prev)}
-					className="rounded-md bg-foreground px-3 py-2 font-mono-ui text-[10px] text-primary-foreground">
-					{showForm ? "Fechar" : "Adicionar despesa"}
-				</button>
-			</div>
-
 			{showForm && (
-				<form
-					onSubmit={handleCreateExpense}
-					className="mx-4 mt-4 space-y-3 rounded-lg border border-border bg-card p-4">
-					{errorMessage && (
-						<p className="rounded-md border border-overdue/30 bg-overdue/10 px-3 py-2 font-mono-ui text-[10px] text-overdue">
-							{errorMessage}
-						</p>
-					)}
-					{formError && (
-						<p className="rounded-md border border-overdue/30 bg-overdue/10 px-3 py-2 font-mono-ui text-[10px] text-overdue">
-							{formError}
-						</p>
-					)}
-					<input
-						type="text"
-						value={form.name}
-						onChange={(e) =>
-							setForm((prev) => ({ ...prev, name: e.target.value }))
-						}
-						onInput={() => setFormError("")}
-						placeholder="Nome da despesa"
-						className="w-full rounded-md border border-border bg-secondary px-3 py-3 text-sm text-foreground"
-						disabled={isSubmitting}
-					/>
-					<input
-						type="text"
-						inputMode="decimal"
-						value={form.value}
-						onChange={(e) =>
-							setForm((prev) => ({ ...prev, value: e.target.value }))
-						}
-						onInput={() => setFormError("")}
-						placeholder="Valor"
-						className="w-full rounded-md border border-border bg-secondary px-3 py-3 text-sm text-foreground"
-						disabled={isSubmitting}
-					/>
-					<button
-						type="submit"
-						disabled={isSubmitting}
-						className="w-full rounded-md bg-foreground py-3 font-mono-ui text-sm text-primary-foreground disabled:opacity-60">
-						{isSubmitting ? "Salvando..." : "Adicionar despesa"}
-					</button>
-				</form>
+				<div
+					className="fixed inset-0 z-[100] flex items-end justify-center bg-black/70 px-0 backdrop-blur-sm"
+					onClick={() => setShowForm(false)}>
+					<form
+						onSubmit={handleCreateExpense}
+						className="max-h-[92dvh] w-full max-w-[480px] space-y-3 overflow-y-auto rounded-t-lg border-x border-t border-border bg-background px-4 pb-6 pt-4"
+						onClick={(event) => event.stopPropagation()}>
+						<div className="flex items-center justify-between gap-3">
+							<div>
+								<p className="font-mono-ui text-[10px] uppercase text-foreground-faint">
+									Saída do dia
+								</p>
+								<h2 className="mt-1 font-logo text-lg text-foreground">
+									Nova despesa
+								</h2>
+							</div>
+							<IconButton label="Fechar" onClick={() => setShowForm(false)}>
+								×
+							</IconButton>
+						</div>
+						{errorMessage && (
+							<Notice tone="error" title="Erro">
+								{errorMessage}
+							</Notice>
+						)}
+						{formError && (
+							<Notice tone="error" title="Erro">
+								{formError}
+							</Notice>
+						)}
+						<div className="rounded-lg border border-border bg-card p-4">
+							<label className="mb-1 block font-mono-ui text-[10px] text-foreground-faint">
+								Nome da despesa
+							</label>
+							<input
+								type="text"
+								value={form.name}
+								onChange={(e) =>
+									setForm((prev) => ({ ...prev, name: e.target.value }))
+								}
+								onInput={() => setFormError("")}
+								placeholder="Aluguel, compra, manutenção"
+								className="w-full rounded-md border border-border bg-secondary px-3 py-3 text-sm text-foreground"
+								disabled={isSubmitting}
+							/>
+						</div>
+						<div className="rounded-lg border border-border bg-card p-4">
+							<label className="mb-1 block font-mono-ui text-[10px] text-foreground-faint">
+								Valor
+							</label>
+							<input
+								type="text"
+								inputMode="decimal"
+								value={form.value}
+								onChange={(e) =>
+									setForm((prev) => ({ ...prev, value: e.target.value }))
+								}
+								onInput={() => setFormError("")}
+								placeholder="120,00"
+								className="w-full rounded-md border border-border bg-secondary px-3 py-3 text-sm text-foreground"
+								disabled={isSubmitting}
+							/>
+						</div>
+						<button
+							type="submit"
+							disabled={isSubmitting}
+							className="w-full rounded-md bg-foreground py-3 font-mono-ui text-sm text-primary-foreground disabled:opacity-60">
+							{isSubmitting ? "Salvando..." : "Adicionar despesa"}
+						</button>
+					</form>
+				</div>
 			)}
 
 			<div className="flex-1 overflow-y-auto pb-24">
@@ -219,8 +233,11 @@ export default function ExpensesPage() {
 						Carregando despesas
 					</div>
 				: expenses.length === 0 ?
-					<div className="mx-4 mt-4 rounded-lg border border-border bg-card px-4 py-12 text-center font-mono-ui text-xs text-foreground-faint">
-						Nenhuma despesa neste dia
+					<div className="mx-4 mt-4">
+						<EmptyState
+							title="Nenhuma despesa neste dia"
+							hint="Registre apenas saídas que afetam o caixa do dia."
+						/>
 					</div>
 				:	<div className="space-y-2 px-4 py-4">
 						{expenses.map((item) => (

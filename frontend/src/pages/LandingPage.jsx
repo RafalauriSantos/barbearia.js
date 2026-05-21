@@ -1,24 +1,86 @@
 import { useNavigate } from "react-router-dom";
+
 export default function LandingPage() {
 	const navigate = useNavigate();
-	// Entra na tela principal da agenda.
-	const handleStart = () => navigate("/app");
-	return (
-		<div className="min-h-[100dvh] bg-background flex flex-col items-center justify-center px-6 py-10">
-			<div className="text-center w-full max-w-sm border border-border rounded p-6 bg-card">
-				<p className="font-mono-ui text-xs text-foreground-faint mb-2">
-					AGENDA MINIMALISTA
-				</p>
-				<h1 className="font-logo text-3xl text-foreground">Kash Flow</h1>
-				<p className="font-client text-sm text-muted-foreground mt-3 leading-relaxed">
-					Agenda rapida para registrar clientes e pagamentos do dia.
-				</p>
+	const handleStart = () => navigate("/login");
 
-				<button
-					onClick={handleStart}
-					className="w-full bg-foreground text-primary-foreground font-mono-ui text-sm px-6 py-2.5 rounded mt-6">
-					ENTRAR
-				</button>
+	return (
+		<div className="min-h-[100dvh] bg-background-deep px-4 py-4 text-foreground">
+			<div className="mx-auto flex min-h-[calc(100dvh-32px)] w-full max-w-[480px] flex-col overflow-hidden rounded-lg border border-border bg-background shadow-2xl shadow-black/30">
+				<section className="flex flex-1 flex-col px-5 pb-5 pt-6">
+					<div className="flex items-center justify-between gap-3">
+						<div>
+							<p className="font-mono-ui text-[10px] uppercase text-paid">
+								Kash Flow
+							</p>
+							<h1 className="mt-2 font-logo text-4xl leading-[0.95] text-foreground">
+								Agenda e caixa da barbearia.
+							</h1>
+						</div>
+						<span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md border border-paid/40 bg-paid/10 font-value text-xl text-paid">
+							K
+						</span>
+					</div>
+
+					<p className="mt-4 max-w-[22rem] font-client text-sm leading-relaxed text-foreground-faint">
+						Controle o dia por horário, barbeiro e pagamento sem abrir uma tela
+						pesada de gestão.
+					</p>
+
+					<div className="mt-6 rounded-lg border border-border bg-card p-3">
+						<div className="flex items-center justify-between border-b border-border pb-3">
+							<div>
+								<p className="font-mono-ui text-[10px] uppercase text-foreground-faint">
+									Hoje
+								</p>
+								<p className="font-logo text-lg text-foreground">Agenda</p>
+							</div>
+							<p className="font-value text-xl text-paid">R$ 420</p>
+						</div>
+
+						<div className="mt-3 space-y-2">
+							{[
+								["09:00", "Corte", "Pago"],
+								["10:30", "Barba", "Aberto"],
+								["14:00", "Corte + Barba", "Fiado"],
+							].map(([time, service, status]) => (
+								<div
+									key={time}
+									className="grid grid-cols-[56px_1fr_auto] items-center gap-3 rounded-md bg-background-deep px-3 py-3">
+									<span className="font-mono-ui text-xs text-foreground">
+										{time}
+									</span>
+									<span className="truncate font-client text-sm text-foreground-faint">
+										{service}
+									</span>
+									<span
+										className={`rounded-full border px-2 py-0.5 font-mono-ui text-[9px] ${
+											status === "Pago" ?
+												"border-paid/30 bg-paid/10 text-paid"
+											: status === "Fiado" ?
+												"border-fiado/30 bg-fiado/10 text-fiado"
+											:	"border-border text-foreground-faint"
+										}`}>
+										{status}
+									</span>
+								</div>
+							))}
+						</div>
+					</div>
+
+					<div className="mt-auto pt-6">
+						<button
+							onClick={handleStart}
+							className="w-full rounded-md bg-foreground px-6 py-3 font-mono-ui text-sm text-primary-foreground transition-transform active:scale-[0.99]">
+							Criar acesso
+						</button>
+						<button
+							onClick={() => navigate("/login")}
+							className="mt-2 w-full rounded-md border border-border px-6 py-3 font-mono-ui text-xs text-foreground-faint">
+							Entrar na conta
+						</button>
+					</div>
+				</section>
 			</div>
 		</div>
 	);

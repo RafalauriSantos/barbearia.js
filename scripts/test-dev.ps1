@@ -81,39 +81,13 @@ function Remove-TemporaryAuthUser {
 	)
 
 	$backendDir = Join-Path (Split-Path -Parent $PSScriptRoot) "backend"
-	$cleanupScript = @'
-require("dotenv").config();
-const { createClient } = require("@supabase/supabase-js");
-
-const email = process.env.TEST_AUTH_EMAIL_TO_DELETE;
-const key = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_ANON_KEY;
-
-if (!email || !process.env.SUPABASE_URL || !key) {
-	process.exit(0);
-}
-
-const supabase = createClient(process.env.SUPABASE_URL, key, {
-	auth: { persistSession: false },
-});
-
-(async () => {
-	const { error } = await supabase
-		.from("usuarios")
-		.delete()
-		.eq("email", email);
-
-	if (error) {
-		console.error(error.message);
-		process.exit(1);
-	}
-})();
-'@
+	$cleanupScript = Join-Path $backendDir "scripts\cleanup-test-auth-user.js"
 
 	$previousValue = $env:TEST_AUTH_EMAIL_TO_DELETE
 	$env:TEST_AUTH_EMAIL_TO_DELETE = $Email
 	try {
 		Push-Location $backendDir
-		& node -e $cleanupScript | Out-Null
+		& node $cleanupScript | Out-Null
 		return $LASTEXITCODE -eq 0
 	} finally {
 		Pop-Location
@@ -203,7 +177,7 @@ function Test-HttpPage {
 }
 
 Write-Host ""
-Write-Host "Testing TCC local app..." -ForegroundColor Cyan
+Write-Host "testando o tcc ..." -ForegroundColor Cyan
 Write-Host ""
 
 Test-HttpPage -Name "Frontend /" -Url "http://127.0.0.1:5173/"
@@ -234,5 +208,5 @@ if ($failed -eq 0) {
 }
 
 Write-Host "$failed check(s) failed." -ForegroundColor Red
-Write-Host "Run .\rodar-tudo.cmd first, then run this test again." -ForegroundColor Yellow
+Write-Host "Use .\validar-tudo.cmd to start and test automatically, or run .\rodar-tudo.cmd before .\testar-tudo.cmd." -ForegroundColor Yellow
 exit 1

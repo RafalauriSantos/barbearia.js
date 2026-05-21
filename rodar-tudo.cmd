@@ -6,7 +6,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File "%ROOT%scripts\start-dev.ps1
 
 if errorlevel 1 (
 	echo.
-	echo Failed to start the project.
+	echo Falha ao iniciar o projeto.
 	pause
 )
 

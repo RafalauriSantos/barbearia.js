@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { loadServices, addAppointment, updateAppointment } from "@/lib/store";
+import { IconButton } from "@/components/ScreenPrimitives";
 import {
 	parseMoneyInput,
 	validateMoney,
@@ -152,11 +153,9 @@ export function AppointmentDialog({
 							{appointment ? "Editar atendimento" : "Novo atendimento"}
 						</h2>
 					</div>
-					<button
-						onClick={onClose}
-						className="rounded-md border border-border bg-card px-3 py-2 font-mono-ui text-[10px] text-foreground-faint">
-						Fechar
-					</button>
+					<IconButton label="Fechar" onClick={onClose}>
+						×
+					</IconButton>
 				</div>
 
 				<form onSubmit={handleSubmit} className="space-y-3 px-4 pb-6">

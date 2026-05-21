@@ -14,7 +14,6 @@ module.exports = async function (fastify, opts) {
 		if (error) throw error;
 		return { ok: true, barbearia_id: barbeariaId, barbearia_found: !!data };
 	});
-	fastify.get("/teste", async () => ({ ok: true }));
 
 	// Domain routes
 	fastify.register(require("./services"), { prefix: "/services" });

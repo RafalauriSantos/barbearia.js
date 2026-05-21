@@ -103,6 +103,6 @@ Write-Host ""
 Write-Host "Current listening ports:" -ForegroundColor Cyan
 & (Join-Path $PSScriptRoot "status-dev.ps1")
 Write-Host ""
-Write-Host "To stop later, close the Backend and Frontend terminal windows." -ForegroundColor Gray
+Write-Host "To stop later, run .\fechar-portas.cmd from the project root." -ForegroundColor Gray
 
 Start-Process "http://localhost:5173"

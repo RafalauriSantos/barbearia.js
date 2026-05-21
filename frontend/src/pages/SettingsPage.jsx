@@ -1,6 +1,11 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
+import {
+	IconButton,
+	Notice,
+	ScreenHeader,
+} from "@/components/ScreenPrimitives";
 import { clearAllData, loadProfile, saveProfile } from "@/lib/store";
 
 // Tela para editar dados basicos e resetar tudo.
@@ -87,26 +92,21 @@ export default function SettingsPage() {
 
 	return (
 		<div className="app-shell min-h-[100dvh] bg-background">
-			<header className="sticky top-0 z-50 flex items-center justify-between border-b border-border bg-background/95 px-4 py-4 backdrop-blur">
-				<button
-					onClick={() => navigate("/app")}
-					className="rounded-md border border-border bg-card px-3 py-2 font-mono-ui text-[10px] text-foreground-faint">
-					Voltar
-				</button>
-				<span className="font-logo text-base text-foreground">
-					Configurações
-				</span>
-				<div className="w-12" />
-			</header>
+			<ScreenHeader
+				eyebrow="Conta"
+				title="Configurações"
+				action={
+					<IconButton label="Voltar" onClick={() => navigate("/app")}>
+						‹
+					</IconButton>
+				}
+			/>
 
 			<div className="space-y-4 px-4 py-5">
 				{errorMessage && (
-					<div className="rounded-lg border border-overdue/30 bg-overdue/10 px-4 py-3">
-						<p className="font-mono-ui text-[10px] text-overdue">Erro</p>
-						<p className="mt-1 font-client text-sm text-overdue">
-							{errorMessage}
-						</p>
-					</div>
+					<Notice tone="error" title="Erro">
+						{errorMessage}
+					</Notice>
 				)}
 
 				{isLoading && (
@@ -158,9 +158,6 @@ export default function SettingsPage() {
 					</div>
 				</section>
 
-				<p className="px-1 font-mono-ui text-[10px] text-foreground-faint">
-					Use o botao abaixo para salvar as alteracoes.
-				</p>
 				<button
 					onClick={handleSaveProfile}
 					disabled={isSaving || isLoading}

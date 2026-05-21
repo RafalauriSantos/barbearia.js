@@ -2,6 +2,9 @@ import { useState } from "react";
 import { Navigate, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 
+const SIGNUP_SUCCESS_MESSAGE =
+	"Conta criada. Enviamos um link de confirmação para seu email. Verifique sua caixa de entrada ou spam.";
+
 export default function LoginPage() {
 	const { isAuthenticated, isLoading, login, signup } = useAuth();
 	const navigate = useNavigate();
@@ -35,15 +38,11 @@ export default function LoginPage() {
 		setSuccessMessage("");
 		try {
 			if (mode === "signup") {
-				const result = await signup({ email: cleanEmail, password });
+				await signup({ email: cleanEmail, password });
 				setMode("login");
 				setPassword("");
 				setConfirmPassword("");
-				setSuccessMessage(
-					result.verificationUrl ?
-						`Conta criada. Confirme o email pelo link enviado. Em dev: ${result.verificationUrl}`
-					:	"Conta criada. Confirme seu email pelo link enviado antes de entrar.",
-				);
+				setSuccessMessage(SIGNUP_SUCCESS_MESSAGE);
 				return;
 			} else {
 				await login({ email: cleanEmail, password });
@@ -64,22 +63,28 @@ export default function LoginPage() {
 	const isSignup = mode === "signup";
 
 	return (
-		<div className="min-h-[100dvh] bg-background-deep px-4 py-6">
-			<div className="mx-auto flex min-h-[calc(100dvh-48px)] w-full max-w-[480px] flex-col justify-center bg-background px-4">
-				<div className="mb-6">
-					<p className="font-mono-ui text-[10px] uppercase text-foreground-faint">
-						Barbearia financeira
-					</p>
-					<h1 className="mt-2 font-logo text-4xl leading-none text-foreground">
-						Kash Flow
-					</h1>
-					<p className="mt-3 max-w-xs font-client text-sm leading-relaxed text-foreground-faint">
-						Agenda, caixa e equipe em um painel compacto para o dia a dia.
-					</p>
+		<div className="min-h-[100dvh] bg-background-deep px-4 py-4">
+			<div className="mx-auto flex min-h-[calc(100dvh-32px)] w-full max-w-[480px] flex-col justify-center rounded-lg border border-border bg-background px-5 py-6 shadow-2xl shadow-black/30">
+				<div className="mb-6 flex items-start justify-between gap-4">
+					<div>
+						<p className="font-mono-ui text-[10px] uppercase text-paid">
+							Kash Flow
+						</p>
+						<h1 className="mt-2 font-logo text-4xl leading-none text-foreground">
+							Acesso da barbearia
+						</h1>
+						<p className="mt-3 max-w-xs font-client text-sm leading-relaxed text-foreground-faint">
+							Entre para abrir a agenda do dia, registrar pagamentos e acompanhar
+							a equipe.
+						</p>
+					</div>
+					<span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md border border-paid/40 bg-paid/10 font-value text-xl text-paid">
+						K
+					</span>
 				</div>
 
-				<div className="rounded-lg border border-border bg-card p-4">
-					<div className="grid grid-cols-2 gap-1 rounded-lg border border-border bg-background-deep p-1">
+				<div className="rounded-lg border border-border bg-card p-3">
+					<div className="grid grid-cols-2 gap-1 rounded-md border border-border bg-background-deep p-1">
 						<button
 							type="button"
 							onClick={() => {
@@ -89,7 +94,7 @@ export default function LoginPage() {
 							}}
 							className={`rounded-md px-3 py-2 font-mono-ui text-[10px] ${
 								!isSignup ?
-									"bg-secondary text-foreground"
+									"bg-foreground text-primary-foreground"
 								:	"text-foreground-faint"
 							}`}>
 							Entrar
@@ -103,17 +108,19 @@ export default function LoginPage() {
 							}}
 							className={`rounded-md px-3 py-2 font-mono-ui text-[10px] ${
 								isSignup ?
-									"bg-secondary text-foreground"
+									"bg-foreground text-primary-foreground"
 								:	"text-foreground-faint"
 							}`}>
 							Criar acesso
 						</button>
 					</div>
 
-					<form onSubmit={handleSubmit} className="mt-5 space-y-3 text-left">
+					<form onSubmit={handleSubmit} className="mt-4 space-y-3 text-left">
 						{errorMessage && (
 							<div className="rounded-md border border-overdue/30 bg-overdue/10 px-3 py-2">
-								<p className="font-mono-ui text-[10px] text-overdue">Erro</p>
+								<p className="font-mono-ui text-[10px] uppercase text-overdue">
+									Erro
+								</p>
 								<p className="mt-1 font-client text-sm text-overdue">
 									{errorMessage}
 								</p>
@@ -121,9 +128,14 @@ export default function LoginPage() {
 						)}
 
 						{successMessage && (
-							<div className="rounded-md border border-paid/30 bg-paid/10 px-3 py-2">
-								<p className="font-mono-ui text-[10px] text-paid">Sucesso</p>
-								<p className="mt-1 break-words font-client text-sm text-foreground">
+							<div
+								role="status"
+								aria-live="polite"
+								className="rounded-md border border-paid/30 bg-paid/10 px-3 py-2">
+								<p className="font-mono-ui text-[10px] uppercase text-paid">
+									Sucesso
+								</p>
+								<p className="mt-1 max-w-[34rem] font-client text-sm leading-snug text-foreground">
 									{successMessage}
 								</p>
 							</div>
@@ -141,7 +153,7 @@ export default function LoginPage() {
 									setErrorMessage("");
 									setSuccessMessage("");
 								}}
-								className="w-full rounded-md border border-border bg-secondary px-3 py-3 text-sm text-foreground"
+								className="w-full rounded-md border border-border bg-background-deep px-3 py-3 text-sm text-foreground"
 								autoComplete="email"
 								disabled={isSubmitting || isLoading}
 								required
@@ -160,7 +172,7 @@ export default function LoginPage() {
 									setErrorMessage("");
 									setSuccessMessage("");
 								}}
-								className="w-full rounded-md border border-border bg-secondary px-3 py-3 text-sm text-foreground"
+								className="w-full rounded-md border border-border bg-background-deep px-3 py-3 text-sm text-foreground"
 								autoComplete={isSignup ? "new-password" : "current-password"}
 								disabled={isSubmitting || isLoading}
 								minLength={isSignup ? 8 : 1}
@@ -181,7 +193,7 @@ export default function LoginPage() {
 										setErrorMessage("");
 										setSuccessMessage("");
 									}}
-									className="w-full rounded-md border border-border bg-secondary px-3 py-3 text-sm text-foreground"
+									className="w-full rounded-md border border-border bg-background-deep px-3 py-3 text-sm text-foreground"
 									autoComplete="new-password"
 									disabled={isSubmitting || isLoading}
 									minLength={8}
@@ -193,7 +205,7 @@ export default function LoginPage() {
 						<button
 							type="submit"
 							disabled={isSubmitting || isLoading}
-							className="w-full rounded-md bg-foreground px-6 py-3 font-mono-ui text-sm text-primary-foreground disabled:opacity-60">
+							className="w-full rounded-md bg-foreground px-6 py-3 font-mono-ui text-sm text-primary-foreground transition-transform disabled:opacity-60 active:scale-[0.99]">
 							{isSubmitting || isLoading ?
 								isSignup ?
 									"Criando..."

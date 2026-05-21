@@ -3,6 +3,12 @@ import { useNavigate } from "react-router-dom";
 import { BottomNav } from "@/components/BottomNav";
 import { AdminDashboard } from "@/components/AdminDashboard";
 import {
+	DateStepper,
+	EmptyState,
+	IconButton,
+	ScreenHeader,
+} from "@/components/ScreenPrimitives";
+import {
 	formatDateDisplay,
 	formatDayKey,
 	getAppointmentsForDayWithFilters,
@@ -79,30 +85,18 @@ export default function TeamPage() {
 	if (!isAdmin) {
 		return (
 			<div className="app-shell flex min-h-[100dvh] flex-col bg-background">
-				<header className="sticky top-0 z-50 border-b border-border bg-background/95 px-4 pb-3 pt-4 backdrop-blur">
-					<div className="flex items-start justify-between gap-3">
-						<div>
-							<p className="font-mono-ui text-[10px] uppercase text-foreground-faint">
-								Equipe
-							</p>
-							<h1 className="mt-1 font-logo text-xl leading-tight text-foreground">
-								Acesso restrito
-							</h1>
-						</div>
-						<button
-							onClick={() => navigate("/app")}
-							className="rounded-md border border-border bg-card px-3 py-2 font-mono-ui text-[10px] text-foreground-faint">
-							Voltar
-						</button>
-					</div>
-				</header>
+				<ScreenHeader
+					eyebrow="Equipe"
+					title="Acesso restrito"
+					action={
+						<IconButton label="Voltar" onClick={() => navigate("/app")}>
+							‹
+						</IconButton>
+					}
+				/>
 
 				<div className="flex-1 px-4 py-6">
-					<div className="rounded-lg border border-border bg-card px-4 py-6 text-center">
-						<p className="font-mono-ui text-xs text-foreground-faint">
-							Acesso restrito ao administrador.
-						</p>
-					</div>
+					<EmptyState title="Acesso restrito ao administrador." />
 				</div>
 
 				<BottomNav />
@@ -112,38 +106,22 @@ export default function TeamPage() {
 
 	return (
 		<div className="app-shell flex min-h-[100dvh] flex-col bg-background">
-			<header className="sticky top-0 z-50 border-b border-border bg-background/95 px-4 pb-3 pt-4 backdrop-blur">
-				<div className="flex items-start justify-between gap-3">
-					<div>
-						<p className="font-mono-ui text-[10px] uppercase text-foreground-faint">
-							Equipe
-						</p>
-						<h1 className="mt-1 font-logo text-xl leading-tight text-foreground">
-							Gestao
-						</h1>
-					</div>
-					<button
-						onClick={() => navigate("/settings")}
-						className="rounded-md border border-border bg-card px-3 py-2 font-mono-ui text-[10px] text-foreground-faint">
-						Configurar
-					</button>
-				</div>
-				<div className="mt-4 flex items-center justify-between rounded-lg border border-border bg-background-deep p-1.5">
-					<button
-						onClick={prevDay}
-						className="flex h-9 w-10 items-center justify-center rounded-md text-xl text-foreground-faint hover:bg-secondary hover:text-foreground">
-						‹
-					</button>
-					<span className="min-w-0 flex-1 truncate px-2 text-center font-mono-ui text-xs text-foreground">
-						{formatDateDisplay(currentDate)}
-					</span>
-					<button
-						onClick={nextDay}
-						className="flex h-9 w-10 items-center justify-center rounded-md text-xl text-foreground-faint hover:bg-secondary hover:text-foreground">
-						›
-					</button>
-				</div>
-			</header>
+			<ScreenHeader
+				eyebrow="Equipe"
+				title="Gestão"
+				action={
+					<IconButton
+						label="Configurações"
+						onClick={() => navigate("/settings")}>
+						⚙
+					</IconButton>
+				}>
+				<DateStepper
+					label={formatDateDisplay(currentDate)}
+					onPrev={prevDay}
+					onNext={nextDay}
+				/>
+			</ScreenHeader>
 
 			<AdminDashboard
 				dayKey={dayKey}

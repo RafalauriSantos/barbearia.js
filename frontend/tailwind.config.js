@@ -17,9 +17,9 @@ export default {
 		},
 		extend: {
 			fontFamily: {
-				logo: ['"Cormorant Garamond"', "serif"],
-				mono: ['"DM Mono"', "monospace"],
-				client: ['"Playfair Display"', "serif"],
+				logo: ['"Aptos Display"', '"Segoe UI"', "ui-sans-serif", "system-ui"],
+				mono: ['"SFMono-Regular"', "Consolas", "ui-monospace", "monospace"],
+				client: ['"Aptos"', '"Segoe UI"', "ui-sans-serif", "system-ui"],
 			},
 			colors: {
 				border: "hsl(var(--border))",

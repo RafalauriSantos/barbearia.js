@@ -12,6 +12,12 @@ import {
 } from "@/lib/store";
 import { BottomNav } from "@/components/BottomNav";
 import {
+	EmptyState,
+	IconButton,
+	Notice,
+	ScreenHeader,
+} from "@/components/ScreenPrimitives";
+import {
 	parseMoneyInput,
 	validateMoney,
 	validateRequiredText,
@@ -189,26 +195,20 @@ export default function ServicesPage() {
 		tab === "services" ? "Ex: Corte + Barba" : "Ex: Pomada, Shampoo";
 	return (
 		<div className="app-shell flex flex-col min-h-[100dvh] bg-background">
-			<header className="sticky top-0 z-50 border-b border-border bg-background/95 px-4 pb-3 pt-4 backdrop-blur">
-				<div className="flex items-start justify-between gap-3">
-					<div>
-						<p className="font-mono-ui text-[10px] uppercase text-foreground-faint">
-							Serviços e produtos
-						</p>
-						<h1 className="mt-1 font-logo text-xl leading-tight text-foreground">
-							Catálogo
-						</h1>
-					</div>
-					<button
+			<ScreenHeader
+				eyebrow="Serviços e produtos"
+				title="Catálogo"
+				action={
+					<IconButton
+						label="Novo item"
 						onClick={() => {
 							cancelEdit();
 							setShowForm(true);
 						}}
-						className="rounded-md bg-foreground px-3 py-2 font-mono-ui text-[10px] text-primary-foreground">
-						+ Novo
-					</button>
-				</div>
-
+						tone="primary">
+						+
+					</IconButton>
+				}>
 				<div className="mt-4 grid grid-cols-2 gap-1 rounded-lg border border-border bg-background-deep p-1">
 					<button
 						onClick={() => switchTab("services")}
@@ -229,7 +229,7 @@ export default function ServicesPage() {
 						Produtos
 					</button>
 				</div>
-			</header>
+			</ScreenHeader>
 
 			{(showForm || editingId) && (
 				<div
@@ -247,11 +247,12 @@ export default function ServicesPage() {
 									{editingId ? "Editar item" : "Novo item"}
 								</h2>
 							</div>
-							<button
+							<IconButton
+								label="Fechar"
 								onClick={cancelEdit}
-								className="rounded-md border border-border bg-card px-3 py-2 font-mono-ui text-[10px] text-foreground-faint">
-								Fechar
-							</button>
+							>
+								×
+							</IconButton>
 						</div>
 
 						<form
@@ -322,11 +323,10 @@ export default function ServicesPage() {
 
 			<div className="flex-1 overflow-y-auto pb-24">
 				{errorMessage && (
-					<div className="mx-4 mt-4 rounded-lg border border-overdue/30 bg-overdue/10 px-4 py-3">
-						<p className="font-mono-ui text-[10px] text-overdue">Erro</p>
-						<p className="mt-1 font-client text-sm text-overdue">
+					<div className="mx-4 mt-4">
+						<Notice tone="error" title="Erro">
 							{errorMessage}
-						</p>
+						</Notice>
 					</div>
 				)}
 
@@ -337,13 +337,8 @@ export default function ServicesPage() {
 						</span>
 					</div>
 				: items.length === 0 && !showForm ?
-					<div className="mx-4 mt-4 rounded-lg border border-border bg-card px-4 py-12 text-center">
-						<span className="font-mono-ui text-xs text-foreground-faint">
-							{emptyLabel}
-						</span>
-						<span className="mt-2 block font-client text-sm text-foreground-faint">
-							{emptyHint}
-						</span>
+					<div className="mx-4 mt-4">
+						<EmptyState title={emptyLabel} hint={emptyHint} />
 					</div>
 				:	<div className="space-y-2 px-4 py-4">
 						{items.map((item) => (
