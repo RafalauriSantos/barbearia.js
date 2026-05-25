@@ -60,7 +60,7 @@ export default function FinancialPage() {
 		:	summary?.quantidade_atendimentos || 0;
 
 	return (
-		<div className="app-shell flex flex-col min-h-[100dvh] bg-background">
+		<div className="app-shell flex flex-col overflow-hidden bg-background">
 			<ScreenHeader eyebrow="Caixa" title="Financeiro">
 				<DateStepper
 					label={formatDateDisplay(currentDate)}
@@ -69,7 +69,7 @@ export default function FinancialPage() {
 				/>
 			</ScreenHeader>
 
-			<div className="flex-1 overflow-y-auto pb-20">
+			<div className="min-h-0 flex-1 overflow-y-auto pb-4">
 				{errorMessage && (
 					<div className="mx-4 mt-4">
 						<Notice tone="error" title="Erro">

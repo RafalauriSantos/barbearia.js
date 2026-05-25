@@ -1,4 +1,5 @@
 import { useNavigate } from "react-router-dom";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 export default function LandingPage() {
 	const navigate = useNavigate();
@@ -6,7 +7,7 @@ export default function LandingPage() {
 
 	return (
 		<div className="min-h-[100dvh] bg-background-deep px-4 py-4 text-foreground">
-			<div className="mx-auto flex min-h-[calc(100dvh-32px)] w-full max-w-[480px] flex-col overflow-hidden rounded-lg border border-border bg-background shadow-2xl shadow-black/30">
+			<div className="mx-auto flex min-h-[calc(100dvh-32px)] w-full max-w-[960px] flex-col overflow-hidden rounded-lg border border-border bg-background shadow-2xl shadow-black/30">
 				<section className="flex flex-1 flex-col px-5 pb-5 pt-6">
 					<div className="flex items-center justify-between gap-3">
 						<div>
@@ -17,9 +18,12 @@ export default function LandingPage() {
 								Agenda e caixa da barbearia.
 							</h1>
 						</div>
-						<span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md border border-paid/40 bg-paid/10 font-value text-xl text-paid">
-							K
-						</span>
+						<div className="flex shrink-0 items-center gap-2">
+							<ThemeToggle className="h-11 w-11" />
+							<span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md border border-paid/40 bg-paid/10 font-value text-xl text-paid">
+								K
+							</span>
+						</div>
 					</div>
 
 					<p className="mt-4 max-w-[22rem] font-client text-sm leading-relaxed text-foreground-faint">
@@ -55,8 +59,7 @@ export default function LandingPage() {
 									</span>
 									<span
 										className={`rounded-full border px-2 py-0.5 font-mono-ui text-[9px] ${
-											status === "Pago" ?
-												"border-paid/30 bg-paid/10 text-paid"
+											status === "Pago" ? "border-paid/30 bg-paid/10 text-paid"
 											: status === "Fiado" ?
 												"border-fiado/30 bg-fiado/10 text-fiado"
 											:	"border-border text-foreground-faint"

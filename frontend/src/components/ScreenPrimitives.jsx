@@ -1,3 +1,5 @@
+import { ThemeToggle } from "@/components/ThemeToggle";
+
 export function IconButton({
 	label,
 	children,
@@ -27,9 +29,15 @@ export function IconButton({
 	);
 }
 
-export function ScreenHeader({ eyebrow, title, action, children }) {
+export function ScreenHeader({
+	eyebrow,
+	title,
+	action,
+	children,
+	showThemeToggle = true,
+}) {
 	return (
-		<header className="sticky top-0 z-50 border-b border-border bg-background/95 px-4 pb-3 pt-4 backdrop-blur">
+		<header className="z-50 shrink-0 border-b border-border bg-background/95 px-4 pb-3 pt-4 backdrop-blur">
 			<div className="flex items-start justify-between gap-3">
 				<div className="min-w-0">
 					{eyebrow && (
@@ -41,7 +49,10 @@ export function ScreenHeader({ eyebrow, title, action, children }) {
 						{title}
 					</h1>
 				</div>
-				{action}
+				<div className="flex shrink-0 items-center gap-2">
+					{showThemeToggle && <ThemeToggle />}
+					{action}
+				</div>
 			</div>
 			{children}
 		</header>
@@ -50,7 +61,7 @@ export function ScreenHeader({ eyebrow, title, action, children }) {
 
 export function DateStepper({ label, onPrev, onNext }) {
 	return (
-		<div className="mt-4 flex items-center justify-between rounded-lg border border-border bg-background-deep p-1">
+		<div className="mt-4 flex items-center justify-between rounded-lg border border-border bg-background-deep p-1 md:max-w-[520px]">
 			<IconButton label="Dia anterior" onClick={onPrev} tone="quiet">
 				‹
 			</IconButton>
@@ -98,3 +109,34 @@ export function EmptyState({ title, hint, action }) {
 	);
 }
 
+export function Skeleton({ className = "" }) {
+	return (
+		<div
+			aria-hidden="true"
+			className={`skeleton-shimmer rounded-md ${className}`}
+		/>
+	);
+}
+
+export function LoadingCard({ label = "Carregando", rows = 3 }) {
+	return (
+		<div className="rounded-lg border border-border bg-card p-4">
+			<p className="sr-only">{label}</p>
+			<div className="flex items-center justify-between gap-4">
+				<div className="min-w-0 flex-1">
+					<Skeleton className="h-3 w-24" />
+					<Skeleton className="mt-3 h-8 w-40 max-w-full" />
+				</div>
+				<Skeleton className="h-10 w-14 shrink-0" />
+			</div>
+			<div className="mt-4 space-y-2">
+				{Array.from({ length: rows }).map((_, index) => (
+					<Skeleton
+						key={index}
+						className={index === rows - 1 ? "h-10 w-4/5" : "h-10 w-full"}
+					/>
+				))}
+			</div>
+		</div>
+	);
+}

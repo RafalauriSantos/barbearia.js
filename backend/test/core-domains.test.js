@@ -166,7 +166,11 @@ t.test("core CRUD routes respond through layered modules", async (t) => {
 	t.equal(barbers.statusCode, 200);
 	t.equal(JSON.parse(barbers.payload)[0].name, "Renan");
 
-	const profile = await app.inject({ method: "GET", url: "/profile" });
+	const profile = await app.inject({
+		method: "GET",
+		url: "/profile",
+		headers: authHeaders,
+	});
 	t.equal(profile.statusCode, 200);
 	t.equal(JSON.parse(profile.payload).shopName, "Kurt");
 

@@ -110,22 +110,15 @@ function Test-AuthenticatedAppointments {
 			-Url "$apiBaseUrl/auth/register" `
 			-Body @{ email = $email; password = $password }
 
-		if (-not $register.verificationUrl) {
-			Add-Check -Name "API /agendamentos authenticated" -Passed $false -Details "missing verificationUrl"
+		if (-not $register.verificationCode) {
+			Add-Check -Name "API /agendamentos authenticated" -Passed $false -Details "missing verificationCode"
 			return
 		}
 
-		$tokenMatch = [regex]::Match($register.verificationUrl, "token=([^&]+)")
-		if (-not $tokenMatch.Success) {
-			Add-Check -Name "API /agendamentos authenticated" -Passed $false -Details "missing verification token"
-			return
-		}
-
-		$verifyToken = [uri]::UnescapeDataString($tokenMatch.Groups[1].Value)
 		Invoke-ApiJson `
 			-Method "POST" `
-			-Url "$apiBaseUrl/auth/verify-email" `
-			-Body @{ token = $verifyToken } | Out-Null
+			-Url "$apiBaseUrl/auth/verify-code" `
+			-Body @{ email = $email; code = $register.verificationCode } | Out-Null
 
 		$session = Invoke-ApiJson `
 			-Method "POST" `
@@ -138,6 +131,30 @@ function Test-AuthenticatedAppointments {
 		}
 
 		$headers = @{ Authorization = "Bearer $($session.accessToken)" }
+		Test-HttpJson `
+			-Name "API /profile authenticated" `
+			-Url "$apiBaseUrl/profile" `
+			-Headers $headers
+
+		try {
+			$profile = Invoke-ApiJson `
+				-Method "PUT" `
+				-Url "$apiBaseUrl/profile" `
+				-Headers $headers `
+				-Body @{ shopName = "Barbearia Check"; barberName = "Barbeiro Check" }
+
+			$profileOk = $profile.shopName -eq "Barbearia Check" -and $profile.barberName -eq "Barbeiro Check"
+			$profileDetails = if ($profileOk) { "ok" } else { "unexpected response" }
+			Add-Check -Name "API /profile update authenticated" -Passed $profileOk -Details $profileDetails
+		} catch {
+			$message = if ($_.Exception.Response) {
+				"HTTP $([int]$_.Exception.Response.StatusCode)"
+			} else {
+				$_.Exception.Message
+			}
+			Add-Check -Name "API /profile update authenticated" -Passed $false -Details $message
+		}
+
 		Test-HttpJson `
 			-Name "API /agendamentos authenticated" `
 			-Url "$apiBaseUrl/agendamentos" `
@@ -184,7 +201,6 @@ Test-HttpPage -Name "Frontend /" -Url "http://127.0.0.1:5173/"
 Test-HttpPage -Name "Frontend /app" -Url "http://127.0.0.1:5173/app"
 Test-HttpJson -Name "Backend /health" -Url "http://127.0.0.1:3000/health" -TimeoutSec 10
 Test-HttpJson -Name "Backend /health/db" -Url "http://127.0.0.1:3000/health/db" -TimeoutSec 25
-Test-HttpJson -Name "API /profile" -Url "http://127.0.0.1:3000/profile"
 Test-HttpJson -Name "API /services" -Url "http://127.0.0.1:3000/services"
 Test-HttpJson -Name "API /products" -Url "http://127.0.0.1:3000/products"
 Test-HttpJson -Name "API /expenses" -Url "http://127.0.0.1:3000/expenses"

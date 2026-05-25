@@ -5,6 +5,11 @@ export async function login(credentials) {
 	return response.data;
 }
 
+export async function refreshSession(refreshToken) {
+	const response = await apiClient.post("/auth/refresh", { refreshToken });
+	return response.data;
+}
+
 export async function register(credentials) {
 	const response = await apiClient.post("/auth/register", credentials);
 	return response.data;
@@ -12,6 +17,26 @@ export async function register(credentials) {
 
 export async function verifyEmail(token) {
 	const response = await apiClient.post("/auth/verify-email", { token });
+	return response.data;
+}
+
+export async function verifyEmailCode(payload) {
+	const response = await apiClient.post("/auth/verify-code", payload);
+	return response.data;
+}
+
+export async function resendEmailCode(payload) {
+	const response = await apiClient.post("/auth/resend-code", payload);
+	return response.data;
+}
+
+export async function requestPasswordReset(payload) {
+	const response = await apiClient.post("/auth/forgot-password", payload);
+	return response.data;
+}
+
+export async function resetPassword(payload) {
+	const response = await apiClient.post("/auth/reset-password", payload);
 	return response.data;
 }
 

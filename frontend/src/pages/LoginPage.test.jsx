@@ -22,10 +22,9 @@ afterEach(() => {
 });
 
 describe("LoginPage signup feedback", () => {
-	it("does not expose verification URLs returned by the backend", async () => {
+	it("does not expose verification codes returned by the backend", async () => {
 		authMock.signup.mockResolvedValueOnce({
-			verificationUrl:
-				"http://localhost:5173/verify-email?token=secret-token-value",
+			verificationCode: "123456",
 		});
 
 		const { container } = render(
@@ -52,12 +51,15 @@ describe("LoginPage signup feedback", () => {
 		await waitFor(() => {
 			expect(
 				screen.getByText(
-					"Conta criada. Enviamos um link de confirmação para seu email. Verifique sua caixa de entrada ou spam.",
+					"Conta criada. Enviamos um codigo de 6 digitos para seu email.",
 				),
 			).toBeTruthy();
 		});
 
 		expect(screen.queryByText(/verify-email/i)).toBeNull();
-		expect(screen.queryByText(/secret-token-value/i)).toBeNull();
+		expect(screen.queryByText(/123456/i)).toBeNull();
+		expect(
+			screen.getByRole("link", { name: "Esqueci minha senha" }),
+		).toBeTruthy();
 	});
 });

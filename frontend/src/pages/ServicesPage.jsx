@@ -14,6 +14,7 @@ import { BottomNav } from "@/components/BottomNav";
 import {
 	EmptyState,
 	IconButton,
+	LoadingCard,
 	Notice,
 	ScreenHeader,
 } from "@/components/ScreenPrimitives";
@@ -30,6 +31,8 @@ export default function ServicesPage() {
 	const [services, setServices] = useState([]);
 	const [products, setProducts] = useState([]);
 	const [isLoading, setIsLoading] = useState(true);
+	const [isRefreshing, setIsRefreshing] = useState(false);
+	const [hasLoaded, setHasLoaded] = useState(false);
 	const [isSubmitting, setIsSubmitting] = useState(false);
 	const [errorMessage, setErrorMessage] = useState("");
 	const [formError, setFormError] = useState("");
@@ -39,7 +42,8 @@ export default function ServicesPage() {
 	const [showForm, setShowForm] = useState(false);
 
 	const reloadData = useCallback(async () => {
-		setIsLoading(true);
+		setIsLoading(!hasLoaded);
+		setIsRefreshing(hasLoaded);
 		setErrorMessage("");
 		try {
 			const [nextServices, nextProducts] = await Promise.all([
@@ -54,6 +58,8 @@ export default function ServicesPage() {
 			setProducts([]);
 		} finally {
 			setIsLoading(false);
+			setIsRefreshing(false);
+			setHasLoaded(true);
 		}
 	}, []);
 
@@ -194,7 +200,7 @@ export default function ServicesPage() {
 	const formPlaceholder =
 		tab === "services" ? "Ex: Corte + Barba" : "Ex: Pomada, Shampoo";
 	return (
-		<div className="app-shell flex flex-col min-h-[100dvh] bg-background">
+		<div className="app-shell flex flex-col overflow-hidden bg-background">
 			<ScreenHeader
 				eyebrow="Serviços e produtos"
 				title="Catálogo"
@@ -247,10 +253,7 @@ export default function ServicesPage() {
 									{editingId ? "Editar item" : "Novo item"}
 								</h2>
 							</div>
-							<IconButton
-								label="Fechar"
-								onClick={cancelEdit}
-							>
+							<IconButton label="Fechar" onClick={cancelEdit}>
 								×
 							</IconButton>
 						</div>
@@ -321,7 +324,7 @@ export default function ServicesPage() {
 				</div>
 			)}
 
-			<div className="flex-1 overflow-y-auto pb-24">
+			<div className="min-h-0 flex-1 overflow-y-auto pb-4">
 				{errorMessage && (
 					<div className="mx-4 mt-4">
 						<Notice tone="error" title="Erro">
@@ -330,17 +333,15 @@ export default function ServicesPage() {
 					</div>
 				)}
 
-				{isLoading ?
-					<div className="mx-4 mt-4 rounded-lg border border-border bg-card px-4 py-12 text-center">
-						<span className="font-mono-ui text-xs text-foreground-faint">
-							Carregando catálogo
-						</span>
+				{isLoading && items.length === 0 ?
+					<div className="mx-4 mt-4">
+						<LoadingCard label="Carregando catálogo" rows={3} />
 					</div>
 				: items.length === 0 && !showForm ?
 					<div className="mx-4 mt-4">
 						<EmptyState title={emptyLabel} hint={emptyHint} />
 					</div>
-				:	<div className="space-y-2 px-4 py-4">
+				:	<div className="grid gap-2 px-4 py-4 sm:grid-cols-2 xl:grid-cols-3">
 						{items.map((item) => (
 							<div
 								key={item.id}

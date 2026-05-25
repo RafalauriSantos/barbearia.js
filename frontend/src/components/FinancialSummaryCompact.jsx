@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { LoadingCard } from "@/components/ScreenPrimitives";
 import { formatCurrency } from "@/lib/store";
 
 function getAdminRows(summary) {
@@ -12,14 +13,10 @@ export function FinancialSummaryCompact({
 }) {
 	const [expanded, setExpanded] = useState(false);
 
-	if (isLoading) {
+	if (isLoading && !summary) {
 		return (
 			<div className="px-4 py-3">
-				<div className="rounded-lg border border-border bg-card px-3 py-3">
-					<p className="font-mono-ui text-[10px] text-foreground-faint">
-						Carregando financeiro
-					</p>
-				</div>
+				<LoadingCard label="Carregando financeiro" rows={2} />
 			</div>
 		);
 	}
@@ -37,7 +34,7 @@ export function FinancialSummaryCompact({
 	return (
 		<div className="px-4 py-3">
 			<div className="rounded-lg border border-border bg-card p-3">
-				<div className="grid grid-cols-[1fr_auto] gap-3">
+				<div className="grid grid-cols-[1fr_auto] gap-3 md:grid-cols-[1fr_180px]">
 					<div className="min-w-0 rounded-md bg-background-deep px-3 py-2">
 						<p className="font-mono-ui text-[10px] uppercase text-foreground-faint">
 							Total pago

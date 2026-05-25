@@ -1,106 +1,87 @@
 const supabase = require("../lib/supabase");
-const {
-	getDefaultBarbeariaId,
-	getDefaultBarbeiroId,
-} = require("../lib/tenant");
+const { AppError } = require("../lib/errors");
 
-exports.get = async function () {
-	const barbeariaId = getDefaultBarbeariaId();
-	const { data: barbearia, error: barbeariaError } = await supabase
+async function findShop(barbeariaId) {
+	const { data, error } = await supabase
 		.from("barbearias")
 		.select("*")
 		.eq("id", barbeariaId)
-		.single();
+		.maybeSingle();
 
-	if (barbeariaError && barbeariaError.code !== "PGRST116") {
-		throw barbeariaError;
+	if (error && error.code !== "PGRST116") throw error;
+	if (!data) {
+		throw new AppError(404, "BARBEARIA_NOT_FOUND", "Barbearia nao encontrada.");
 	}
+	return data;
+}
 
-	let barbeiro = null;
-	const barbeiroId = getDefaultBarbeiroId();
+async function findBarber(user) {
+	if (!user?.barbeiro_id) return null;
 
-	if (barbeiroId) {
-		const { data, error } = await supabase
-			.from("barbeiros")
-			.select("*")
-			.eq("id", barbeiroId)
-			.eq("barbearia_id", barbeariaId)
-			.single();
-		if (error && error.code !== "PGRST116") throw error;
-		barbeiro = data;
-	} else {
-		const { data, error } = await supabase
-			.from("barbeiros")
-			.select("*")
-			.eq("barbearia_id", barbeariaId)
-			.eq("ativo", true)
-			.limit(1)
-			.maybeSingle();
-		if (error) throw error;
-		barbeiro = data;
-	}
+	const { data, error } = await supabase
+		.from("barbeiros")
+		.select("*")
+		.eq("id", user.barbeiro_id)
+		.eq("barbearia_id", user.barbearia_id)
+		.maybeSingle();
 
+	if (error && error.code !== "PGRST116") throw error;
+	return data || null;
+}
+
+function toProfile({ shop, barber }) {
 	return {
-		shopName: barbearia?.nome || "",
-		barberName: barbeiro?.nome || "",
-		barbearia_id: barbeariaId,
-		barbeiro_id: barbeiro?.id,
+		shopName: shop?.nome || "",
+		barberName: barber?.nome || "",
+		barbearia_id: shop?.id,
+		barbeiro_id: barber?.id,
 	};
+}
+
+exports.get = async function (user) {
+	const [shop, barber] = await Promise.all([
+		findShop(user.barbearia_id),
+		findBarber(user),
+	]);
+
+	return toProfile({ shop, barber });
 };
 
-exports.upsert = async function (payload) {
-	const barbeariaId = getDefaultBarbeariaId();
-	const { data, error } = await supabase
-		.from("barbearias")
-		.update({ nome: payload.shopName || "" })
-		.eq("id", barbeariaId)
-		.select()
-		.single();
-	if (error) throw error;
+exports.upsert = async function (payload, user) {
+	let shop = await findShop(user.barbearia_id);
 
-	const barbeiroId = getDefaultBarbeiroId();
-	if (barbeiroId && payload.barberName !== undefined) {
-		const { error: barberError } = await supabase
-			.from("barbeiros")
-			.update({ nome: payload.barberName || "" })
-			.eq("id", barbeiroId)
-			.eq("barbearia_id", barbeariaId);
-		if (barberError) throw barberError;
-	} else if (!barbeiroId && payload.barberName !== undefined) {
-		// No explicit barber id configured: try to find an active barber for this shop
-		const { data: existingBarber, error: findError } = await supabase
-			.from("barbeiros")
-			.select("*")
-			.eq("barbearia_id", barbeariaId)
-			.eq("ativo", true)
-			.limit(1)
+	if (user.role === "admin" && payload.shopName !== undefined) {
+		const { data, error } = await supabase
+			.from("barbearias")
+			.update({ nome: payload.shopName || "" })
+			.eq("id", user.barbearia_id)
+			.select()
 			.maybeSingle();
-		if (findError) throw findError;
 
-		if (existingBarber) {
-			const { error: updateErr } = await supabase
-				.from("barbeiros")
-				.update({ nome: payload.barberName || "" })
-				.eq("id", existingBarber.id);
-			if (updateErr) throw updateErr;
-		} else {
-			const { error: insertErr } = await supabase
-				.from("barbeiros")
-				.insert([
-					{
-						nome: payload.barberName || "",
-						barbearia_id: barbeariaId,
-						ativo: true,
-					},
-				]);
-			if (insertErr) throw insertErr;
+		if (error && error.code !== "PGRST116") throw error;
+		if (!data) {
+			throw new AppError(
+				404,
+				"BARBEARIA_NOT_FOUND",
+				"Barbearia nao encontrada.",
+			);
 		}
+		shop = data;
 	}
 
-	return {
-		shopName: data.nome || "",
-		barberName: payload.barberName || "",
-		barbearia_id: barbeariaId,
-		barbeiro_id: barbeiroId,
-	};
+	let barber = await findBarber(user);
+	if (payload.barberName !== undefined && user.barbeiro_id) {
+		const { data, error } = await supabase
+			.from("barbeiros")
+			.update({ nome: payload.barberName || "" })
+			.eq("id", user.barbeiro_id)
+			.eq("barbearia_id", user.barbearia_id)
+			.select()
+			.maybeSingle();
+
+		if (error && error.code !== "PGRST116") throw error;
+		barber = data || barber;
+	}
+
+	return toProfile({ shop, barber });
 };

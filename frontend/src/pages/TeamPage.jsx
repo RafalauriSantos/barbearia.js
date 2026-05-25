@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { BottomNav } from "@/components/BottomNav";
 import { AdminDashboard } from "@/components/AdminDashboard";
@@ -13,39 +13,78 @@ import {
 	formatDayKey,
 	getAppointmentsForDayWithFilters,
 	loadBarbers,
-	loadFinancialSummary,
 } from "@/lib/store";
 import { useAuth } from "@/context/AuthContext";
+
+function normalizeText(value) {
+	return String(value || "")
+		.trim()
+		.toLowerCase();
+}
+
+function isOwnerBarber(barber, user) {
+	if (!barber || !user) return false;
+
+	if (user.barbeiro_id && barber.id === user.barbeiro_id) return true;
+	if (user.id && barber.usuario_id === user.id) return true;
+
+	const barberEmail = normalizeText(barber.email);
+	const userEmail = normalizeText(user.email);
+	if (barberEmail && userEmail && barberEmail === userEmail) return true;
+
+	const barberName = normalizeText(barber.name || barber.nome);
+	const userName = normalizeText(user.nome || user.name);
+	return Boolean(barberName && userName && barberName === userName);
+}
+
+function getOwnerBarberIds(barbers, user) {
+	const ids = new Set();
+	if (user?.barbeiro_id) ids.add(user.barbeiro_id);
+	for (const barber of barbers) {
+		if (isOwnerBarber(barber, user)) ids.add(barber.id);
+	}
+	return ids;
+}
 
 export default function TeamPage() {
 	const [currentDate, setCurrentDate] = useState(new Date());
 	const [appointments, setAppointments] = useState([]);
 	const [barbers, setBarbers] = useState([]);
-	const [financialSummary, setFinancialSummary] = useState(null);
 	const [isLoading, setIsLoading] = useState(true);
+	const [hasLoaded, setHasLoaded] = useState(false);
 	const [errorMessage, setErrorMessage] = useState("");
 	const navigate = useNavigate();
 	const { user } = useAuth();
 	const isAdmin = user?.role === "admin";
 	const dayKey = formatDayKey(currentDate);
+	const ownerBarberIds = useMemo(
+		() => getOwnerBarberIds(barbers, user),
+		[barbers, user],
+	);
+	const teamBarbers = useMemo(
+		() => barbers.filter((barber) => !ownerBarberIds.has(barber.id)),
+		[barbers, ownerBarberIds],
+	);
+	const teamAppointments = useMemo(
+		() =>
+			appointments.filter(
+				(appointment) => !ownerBarberIds.has(appointment.barbeiro_id),
+			),
+		[appointments, ownerBarberIds],
+	);
 
 	const reload = useCallback(async () => {
-		setIsLoading(true);
+		setIsLoading(!hasLoaded);
 		setErrorMessage("");
 		try {
 			const list = await getAppointmentsForDayWithFilters(dayKey);
 			setAppointments(list);
-			const nextFinancialSummary = await loadFinancialSummary({
-				start_date: dayKey,
-				end_date: dayKey,
-			});
-			setFinancialSummary(nextFinancialSummary);
 		} catch (error) {
 			setAppointments([]);
-			setFinancialSummary(null);
 			setErrorMessage(error.message || "Falha ao carregar dados da equipe.");
 		} finally {
 			setIsLoading(false);
+			setHasLoaded(true);
 		}
 	}, [dayKey]);
 
@@ -84,7 +123,7 @@ export default function TeamPage() {
 
 	if (!isAdmin) {
 		return (
-			<div className="app-shell flex min-h-[100dvh] flex-col bg-background">
+			<div className="app-shell flex flex-col overflow-hidden bg-background">
 				<ScreenHeader
 					eyebrow="Equipe"
 					title="Acesso restrito"
@@ -95,7 +134,7 @@ export default function TeamPage() {
 					}
 				/>
 
-				<div className="flex-1 px-4 py-6">
+				<div className="min-h-0 flex-1 overflow-y-auto px-4 py-6">
 					<EmptyState title="Acesso restrito ao administrador." />
 				</div>
 
@@ -105,7 +144,7 @@ export default function TeamPage() {
 	}
 
 	return (
-		<div className="app-shell flex min-h-[100dvh] flex-col bg-background">
+		<div className="app-shell flex flex-col overflow-hidden bg-background">
 			<ScreenHeader
 				eyebrow="Equipe"
 				title="Gestão"
@@ -125,9 +164,8 @@ export default function TeamPage() {
 
 			<AdminDashboard
 				dayKey={dayKey}
-				barbers={barbers}
-				appointments={appointments}
-				financialSummary={financialSummary}
+				barbers={teamBarbers}
+				appointments={teamAppointments}
 				isLoading={isLoading}
 				errorMessage={errorMessage}
 				onRetry={reloadAll}

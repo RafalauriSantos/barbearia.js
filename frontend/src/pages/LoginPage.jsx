@@ -1,9 +1,12 @@
 import { useState } from "react";
-import { Navigate, useLocation, useNavigate } from "react-router-dom";
+import { Link, Navigate, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
+import { resendEmailCode } from "@/lib/api/auth.api";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 const SIGNUP_SUCCESS_MESSAGE =
-	"Conta criada. Enviamos um link de confirmação para seu email. Verifique sua caixa de entrada ou spam.";
+	"Conta criada. Enviamos um codigo de 6 digitos para seu email.";
+const PENDING_VERIFICATION_EMAIL_KEY = "kash_flow_pending_verification_email";
 
 export default function LoginPage() {
 	const { isAuthenticated, isLoading, login, signup } = useAuth();
@@ -14,6 +17,7 @@ export default function LoginPage() {
 	const [password, setPassword] = useState("");
 	const [confirmPassword, setConfirmPassword] = useState("");
 	const [isSubmitting, setIsSubmitting] = useState(false);
+	const [isResending, setIsResending] = useState(false);
 	const [errorMessage, setErrorMessage] = useState("");
 	const [successMessage, setSuccessMessage] = useState("");
 
@@ -39,10 +43,15 @@ export default function LoginPage() {
 		try {
 			if (mode === "signup") {
 				await signup({ email: cleanEmail, password });
+				window.sessionStorage?.setItem(
+					PENDING_VERIFICATION_EMAIL_KEY,
+					cleanEmail,
+				);
 				setMode("login");
 				setPassword("");
 				setConfirmPassword("");
 				setSuccessMessage(SIGNUP_SUCCESS_MESSAGE);
+				navigate("/verify-code");
 				return;
 			} else {
 				await login({ email: cleanEmail, password });
@@ -60,7 +69,31 @@ export default function LoginPage() {
 		}
 	};
 
+	const handleResendCode = async () => {
+		const cleanEmail = email.trim();
+		if (!cleanEmail || isResending) {
+			setErrorMessage("Informe o email para reenviar o codigo.");
+			return;
+		}
+
+		setIsResending(true);
+		setErrorMessage("");
+		setSuccessMessage("");
+		try {
+			await resendEmailCode({ email: cleanEmail });
+			setSuccessMessage("Reenviamos um novo codigo para seu email.");
+		} catch (error) {
+			setErrorMessage(error.message || "Nao foi possivel reenviar o codigo.");
+		} finally {
+			setIsResending(false);
+		}
+	};
+
 	const isSignup = mode === "signup";
+	const forgotPasswordPath =
+		email.trim() ?
+			`/forgot-password?email=${encodeURIComponent(email.trim())}`
+		:	"/forgot-password";
 
 	return (
 		<div className="min-h-[100dvh] bg-background-deep px-4 py-4">
@@ -74,13 +107,16 @@ export default function LoginPage() {
 							Acesso da barbearia
 						</h1>
 						<p className="mt-3 max-w-xs font-client text-sm leading-relaxed text-foreground-faint">
-							Entre para abrir a agenda do dia, registrar pagamentos e acompanhar
-							a equipe.
+							Entre para abrir a agenda do dia, registrar pagamentos e
+							acompanhar a equipe.
 						</p>
 					</div>
-					<span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md border border-paid/40 bg-paid/10 font-value text-xl text-paid">
-						K
-					</span>
+					<div className="flex shrink-0 items-center gap-2">
+						<ThemeToggle />
+						<span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md border border-paid/40 bg-paid/10 font-value text-xl text-paid">
+							K
+						</span>
+					</div>
 				</div>
 
 				<div className="rounded-lg border border-border bg-card p-3">
@@ -214,6 +250,22 @@ export default function LoginPage() {
 								"Criar conta"
 							:	"Entrar"}
 						</button>
+
+						<Link
+							to={forgotPasswordPath}
+							className="block w-full rounded-md border border-border px-6 py-3 text-center font-mono-ui text-xs text-foreground-faint transition-colors hover:text-foreground">
+							Esqueci minha senha
+						</Link>
+
+						{isSignup && (
+							<button
+								type="button"
+								onClick={handleResendCode}
+								disabled={isResending || isSubmitting || isLoading}
+								className="w-full rounded-md border border-border px-6 py-3 font-mono-ui text-xs text-foreground-faint disabled:opacity-60">
+								{isResending ? "Reenviando..." : "Reenviar codigo"}
+							</button>
+						)}
 					</form>
 				</div>
 			</div>

@@ -4,6 +4,7 @@ import {
 	DateStepper,
 	EmptyState,
 	IconButton,
+	LoadingCard,
 	Notice,
 	ScreenHeader,
 } from "@/components/ScreenPrimitives";
@@ -31,6 +32,8 @@ export default function ExpensesPage() {
 	const [expenses, setExpenses] = useState([]);
 	const [form, setForm] = useState(initialForm);
 	const [isLoading, setIsLoading] = useState(true);
+	const [isRefreshing, setIsRefreshing] = useState(false);
+	const [hasLoaded, setHasLoaded] = useState(false);
 	const [isSubmitting, setIsSubmitting] = useState(false);
 	const [errorMessage, setErrorMessage] = useState("");
 	const [formError, setFormError] = useState("");
@@ -39,7 +42,8 @@ export default function ExpensesPage() {
 	const dayKey = formatDayKey(currentDate);
 
 	const reload = useCallback(async () => {
-		setIsLoading(true);
+		setIsLoading(!hasLoaded);
+		setIsRefreshing(hasLoaded);
 		setErrorMessage("");
 		try {
 			const list = await loadExpenses(dayKey);
@@ -49,6 +53,8 @@ export default function ExpensesPage() {
 			setExpenses([]);
 		} finally {
 			setIsLoading(false);
+			setIsRefreshing(false);
+			setHasLoaded(true);
 		}
 	}, [dayKey]);
 
@@ -123,7 +129,7 @@ export default function ExpensesPage() {
 	};
 
 	return (
-		<div className="app-shell flex flex-col min-h-[100dvh] bg-background">
+		<div className="app-shell flex flex-col overflow-hidden bg-background">
 			<ScreenHeader
 				eyebrow="Saídas"
 				title="Despesas"
@@ -142,7 +148,7 @@ export default function ExpensesPage() {
 				/>
 			</ScreenHeader>
 
-			<div className="px-4 pt-4">
+			<div className="shrink-0 px-4 pt-4">
 				<div className="rounded-lg border border-border bg-card p-4">
 					<p className="font-mono-ui text-[10px] uppercase text-foreground-faint">
 						Total do dia
@@ -227,10 +233,10 @@ export default function ExpensesPage() {
 				</div>
 			)}
 
-			<div className="flex-1 overflow-y-auto pb-24">
-				{isLoading ?
-					<div className="mx-4 mt-4 rounded-lg border border-border bg-card px-4 py-12 text-center font-mono-ui text-xs text-foreground-faint">
-						Carregando despesas
+			<div className="min-h-0 flex-1 overflow-y-auto pb-4">
+				{isLoading && expenses.length === 0 ?
+					<div className="mx-4 mt-4">
+						<LoadingCard label="Carregando despesas" rows={2} />
 					</div>
 				: expenses.length === 0 ?
 					<div className="mx-4 mt-4">
@@ -239,7 +245,7 @@ export default function ExpensesPage() {
 							hint="Registre apenas saídas que afetam o caixa do dia."
 						/>
 					</div>
-				:	<div className="space-y-2 px-4 py-4">
+				:	<div className="grid gap-2 px-4 py-4 sm:grid-cols-2 xl:grid-cols-3">
 						{expenses.map((item) => (
 							<div
 								key={item.id}

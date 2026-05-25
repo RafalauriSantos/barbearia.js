@@ -16,6 +16,7 @@ export function AppointmentDialog({
 	canChooseBarber = false,
 	defaultBarberId = "",
 	forcedBarberId = "",
+	defaultTimeSlot = "09:00",
 	onClose,
 	onSave,
 	onError,
@@ -24,7 +25,9 @@ export function AppointmentDialog({
 	const [isLoadingServices, setIsLoadingServices] = useState(true);
 	// Campos do formulario (novo ou edicao).
 	const [clientName, setClientName] = useState(appointment?.client_name || "");
-	const [timeSlot, setTimeSlot] = useState(appointment?.time_slot || "09:00");
+	const [timeSlot, setTimeSlot] = useState(
+		String(appointment?.time_slot || defaultTimeSlot || "09:00").slice(0, 5),
+	);
 	const [serviceId, setServiceId] = useState(appointment?.service_id || "");
 	const [value, setValue] = useState(appointment?.value?.toString() || "");
 	const [barberId, setBarberId] = useState(
@@ -183,6 +186,30 @@ export function AppointmentDialog({
 						/>
 					</div>
 
+					<div className="rounded-lg border border-border bg-card p-4">
+						<label className="mb-1 block font-mono-ui text-[10px] text-foreground-faint">
+							Serviço
+						</label>
+						<select
+							value={serviceId}
+							onChange={(e) => handleServiceChange(e.target.value)}
+							className="w-full rounded-md border border-border bg-secondary px-3 py-3 text-sm text-foreground"
+							disabled={isSubmitting || isLoadingServices || services.length === 0}>
+							<option value="">
+								{isLoadingServices ?
+									"Carregando..."
+								: services.length === 0 ?
+									"Nenhum serviço cadastrado"
+								:	"Selecione"}
+							</option>
+							{services.map((s) => (
+								<option key={s.id} value={s.id}>
+									{s.name} - R$ {s.price.toFixed(2)}
+								</option>
+							))}
+						</select>
+					</div>
+
 					<div className="grid grid-cols-2 gap-3">
 						<div className="rounded-lg border border-border bg-card p-4">
 							<label className="mb-1 block font-mono-ui text-[10px] text-foreground-faint">
@@ -241,26 +268,6 @@ export function AppointmentDialog({
 						</div>
 					)}
 
-					{!isLoadingServices && services.length > 0 && (
-						<div className="rounded-lg border border-border bg-card p-4">
-							<label className="mb-1 block font-mono-ui text-[10px] text-foreground-faint">
-								Serviço opcional
-							</label>
-							<select
-								value={serviceId}
-								onChange={(e) => handleServiceChange(e.target.value)}
-								className="w-full rounded-md border border-border bg-secondary px-3 py-3 text-sm text-foreground"
-								disabled={isSubmitting}>
-								<option value="">Nenhum</option>
-								{services.map((s) => (
-									<option key={s.id} value={s.id}>
-										{s.name} - R$ {s.price.toFixed(2)}
-									</option>
-								))}
-							</select>
-						</div>
-					)}
-
 					<button
 						type="submit"
 						disabled={isSubmitting}
@@ -269,7 +276,7 @@ export function AppointmentDialog({
 							"Salvando..."
 						: appointment ?
 							"Salvar alterações"
-						:	"Adicionar atendimento"}
+						:	"Confirmar"}
 					</button>
 				</form>
 			</div>

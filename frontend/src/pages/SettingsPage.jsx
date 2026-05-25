@@ -3,10 +3,12 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import {
 	IconButton,
+	LoadingCard,
 	Notice,
 	ScreenHeader,
 } from "@/components/ScreenPrimitives";
 import { clearAllData, loadProfile, saveProfile } from "@/lib/store";
+import { apiClient } from "@/lib/api/client";
 
 // Tela para editar dados basicos e resetar tudo.
 export default function SettingsPage() {
@@ -16,7 +18,9 @@ export default function SettingsPage() {
 	const [barberName, setBarberName] = useState("");
 	const [isLoading, setIsLoading] = useState(true);
 	const [isSaving, setIsSaving] = useState(false);
+	const [isSendingEmail, setIsSendingEmail] = useState(false);
 	const [errorMessage, setErrorMessage] = useState("");
+	const [successMessage, setSuccessMessage] = useState("");
 
 	useEffect(() => {
 		let mounted = true;
@@ -31,6 +35,7 @@ export default function SettingsPage() {
 			} catch (error) {
 				if (mounted) {
 					setErrorMessage(error.message || "Falha ao carregar perfil.");
+					setSuccessMessage("");
 				}
 			} finally {
 				if (mounted) {
@@ -54,6 +59,7 @@ export default function SettingsPage() {
 
 		setIsSaving(true);
 		setErrorMessage("");
+		setSuccessMessage("");
 		try {
 			await saveProfile({
 				shopName: cleanShopName,
@@ -68,12 +74,28 @@ export default function SettingsPage() {
 			setIsSaving(false);
 		}
 	};
+
+	const handleSendTestEmail = async () => {
+		if (isSendingEmail || isSaving) return;
+		setIsSendingEmail(true);
+		setErrorMessage("");
+		setSuccessMessage("");
+		try {
+			await apiClient.post("/test-email");
+			setSuccessMessage("Email de teste enviado.");
+		} catch (error) {
+			setErrorMessage(error.message || "Falha ao enviar email de teste.");
+		} finally {
+			setIsSendingEmail(false);
+		}
+	};
 	const resetData = async () => {
 		// Limpa os dados locais e volta para o inicio.
 		if (isSaving) return;
 
 		setIsSaving(true);
 		setErrorMessage("");
+		setSuccessMessage("");
 		try {
 			await clearAllData();
 		} catch (error) {
@@ -91,7 +113,7 @@ export default function SettingsPage() {
 	};
 
 	return (
-		<div className="app-shell min-h-[100dvh] bg-background">
+		<div className="app-shell flex flex-col overflow-hidden bg-background">
 			<ScreenHeader
 				eyebrow="Conta"
 				title="Configurações"
@@ -102,18 +124,20 @@ export default function SettingsPage() {
 				}
 			/>
 
-			<div className="space-y-4 px-4 py-5">
+			<div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-4 py-5">
 				{errorMessage && (
 					<Notice tone="error" title="Erro">
 						{errorMessage}
 					</Notice>
 				)}
 
-				{isLoading && (
-					<p className="rounded-lg border border-border bg-card px-4 py-3 font-mono-ui text-xs text-foreground-faint">
-						Carregando perfil...
-					</p>
+				{successMessage && (
+					<Notice tone="success" title="Sucesso">
+						{successMessage}
+					</Notice>
 				)}
+
+				{isLoading && <LoadingCard label="Carregando perfil" rows={2} />}
 
 				<section className="rounded-lg border border-border bg-card p-4">
 					<p className="font-mono-ui text-[10px] uppercase text-foreground-faint">
@@ -174,6 +198,21 @@ export default function SettingsPage() {
 						disabled={isSaving}
 						className="mt-3 w-full rounded-md border border-border bg-background-deep px-4 py-3 font-mono-ui text-sm text-foreground">
 						Sair da conta
+					</button>
+				</section>
+
+				<section className="rounded-lg border border-border bg-card p-4">
+					<p className="font-mono-ui text-[10px] uppercase text-foreground-faint">
+						Email de teste
+					</p>
+					<p className="mt-2 font-client text-sm text-foreground-faint">
+						Envia uma mensagem de teste para orafaellauri@gmail.com.
+					</p>
+					<button
+						onClick={handleSendTestEmail}
+						disabled={isSendingEmail || isSaving}
+						className="mt-3 w-full rounded-md border border-border bg-background-deep px-4 py-3 font-mono-ui text-sm text-foreground disabled:opacity-60">
+						{isSendingEmail ? "Enviando..." : "Enviar email de teste"}
 					</button>
 				</section>
 

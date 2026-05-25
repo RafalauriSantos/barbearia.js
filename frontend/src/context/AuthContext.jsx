@@ -6,7 +6,7 @@ import {
 	useMemo,
 	useState,
 } from "react";
-import { clearAccessToken, getAccessToken, setAccessToken } from "@/lib/auth";
+import { clearSessionTokens, getAccessToken, setSessionTokens } from "@/lib/auth";
 import {
 	login as loginRequest,
 	me as fetchCurrentUser,
@@ -33,7 +33,7 @@ export function AuthProvider({ children }) {
 			setUser(currentUser);
 			return currentUser;
 		} catch {
-			clearAccessToken();
+			clearSessionTokens();
 			setUser(null);
 			return null;
 		} finally {
@@ -47,7 +47,7 @@ export function AuthProvider({ children }) {
 
 	const login = useCallback(async ({ email, password }) => {
 		const session = await loginRequest({ email, password });
-		setAccessToken(session.accessToken);
+		setSessionTokens(session);
 		const currentUser = await fetchCurrentUser();
 		setUser(currentUser);
 		return currentUser;
@@ -62,14 +62,14 @@ export function AuthProvider({ children }) {
 
 	const acceptInvite = useCallback(async ({ token, password, nome }) => {
 		const session = await acceptInviteRequest(token, { password, nome });
-		setAccessToken(session.accessToken);
+		setSessionTokens(session);
 		const currentUser = await fetchCurrentUser();
 		setUser(currentUser);
 		return currentUser;
 	}, []);
 
 	const logout = useCallback(() => {
-		clearAccessToken();
+		clearSessionTokens();
 		setUser(null);
 	}, []);
 

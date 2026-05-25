@@ -4,7 +4,7 @@ import { formatCurrency } from "@/lib/store";
 export function DaySummaryCard({ summary }) {
 	// Mostra os numeros principais do dia.
 	return (
-		<div className="px-4 pt-4">
+		<div className="shrink-0 px-4 pt-4">
 			<div className="rounded-lg border border-border bg-card p-4">
 				<div className="flex items-end justify-between gap-3">
 					<div className="min-w-0">

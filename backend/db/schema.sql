@@ -15,6 +15,24 @@ CREATE TABLE IF NOT EXISTS public.usuarios (
     atualizado_em timestamptz NOT NULL DEFAULT now()
 );
 
+CREATE TABLE IF NOT EXISTS public.email_verification_codes (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid (),
+    user_id uuid NOT NULL REFERENCES public.usuarios (id) ON DELETE CASCADE,
+    code_hash varchar NOT NULL,
+    expira_em timestamptz NOT NULL,
+    usado_em timestamptz,
+    criado_em timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS public.password_reset_codes (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid (),
+    user_id uuid NOT NULL REFERENCES public.usuarios (id) ON DELETE CASCADE,
+    code_hash varchar NOT NULL,
+    expira_em timestamptz NOT NULL,
+    usado_em timestamptz,
+    criado_em timestamptz NOT NULL DEFAULT now()
+);
+
 CREATE TABLE IF NOT EXISTS public.barbearias (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid (),
     usuario_dono_id uuid NOT NULL REFERENCES public.usuarios (id) ON DELETE CASCADE,
@@ -174,7 +192,9 @@ CREATE INDEX IF NOT EXISTS idx_barbearias_usuario_dono ON public.barbearias (usu
 
 CREATE INDEX IF NOT EXISTS idx_barbeiros_barbearia_ativo ON public.barbeiros (barbearia_id, ativo);
 
-CREATE UNIQUE INDEX IF NOT EXISTS idx_barbeiros_usuario_unique ON public.barbeiros (usuario_id) WHERE usuario_id IS NOT NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS idx_barbeiros_usuario_unique ON public.barbeiros (usuario_id)
+WHERE
+    usuario_id IS NOT NULL;
 
 CREATE INDEX IF NOT EXISTS idx_barbeiros_barbearia_usuario ON public.barbeiros (barbearia_id, usuario_id);
 
@@ -198,6 +218,18 @@ CREATE INDEX IF NOT EXISTS idx_agendamento_servicos_agendamento ON public.agenda
 CREATE INDEX IF NOT EXISTS idx_agendamento_produtos_agendamento ON public.agendamento_produtos (agendamento_id);
 
 CREATE INDEX IF NOT EXISTS idx_convites_barbeiros_barbearia ON public.convites_barbeiros (barbearia_id, criado_em);
+
+CREATE INDEX IF NOT EXISTS idx_email_verification_codes_user ON public.email_verification_codes (user_id, expira_em);
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_email_verification_codes_active ON public.email_verification_codes (user_id)
+WHERE
+    usado_em IS NULL;
+
+CREATE INDEX IF NOT EXISTS idx_password_reset_codes_user ON public.password_reset_codes (user_id, expira_em);
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_password_reset_codes_active ON public.password_reset_codes (user_id)
+WHERE
+    usado_em IS NULL;
 
 CREATE INDEX IF NOT EXISTS idx_convites_barbeiros_barbeiro_status ON public.convites_barbeiros (
     barbeiro_id,

@@ -52,6 +52,54 @@
     --sidebar-border: 165 8% 21%;
     --sidebar-ring: 150 72% 48%;
   }
+
+  :root[data-theme="light"] {
+    --background: 155 18% 96%;
+    --background-deep: 150 24% 91%;
+    --foreground: 168 22% 11%;
+    --foreground-faint: 166 9% 42%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 168 22% 11%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 168 22% 11%;
+
+    --primary: 152 65% 37%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 156 18% 89%;
+    --secondary-foreground: 168 22% 11%;
+
+    --muted: 158 18% 88%;
+    --muted-foreground: 166 9% 42%;
+
+    --accent: 151 46% 86%;
+    --accent-foreground: 152 65% 28%;
+
+    --destructive: 3 76% 55%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 157 13% 78%;
+    --input: 157 13% 78%;
+    --ring: 152 65% 37%;
+
+    --status-paid: 152 65% 37%;
+    --status-paid-bg: 151 46% 88%;
+    --status-fiado: 31 92% 45%;
+    --status-fiado-bg: 35 92% 90%;
+    --status-overdue: 3 76% 55%;
+    --status-overdue-bg: 3 76% 92%;
+
+    --sidebar-background: 155 18% 96%;
+    --sidebar-foreground: 168 22% 11%;
+    --sidebar-primary: 152 65% 37%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 156 18% 89%;
+    --sidebar-accent-foreground: 168 22% 11%;
+    --sidebar-border: 157 13% 78%;
+    --sidebar-ring: 152 65% 37%;
+  }
 }
 
 @layer base {
@@ -59,8 +107,9 @@
     @apply border-border;
   }
 
-  html {
+html {
     background: hsl(var(--background-deep));
+    min-height: 100%;
   }
 
   body {
@@ -70,6 +119,14 @@
       "Aptos", "Segoe UI", ui-sans-serif, system-ui, -apple-system,
       sans-serif;
     color-scheme: dark;
+  }
+
+  #root {
+    min-height: 100dvh;
+  }
+
+  :root[data-theme="light"] body {
+    color-scheme: light;
   }
 
   .font-logo {
@@ -170,9 +227,15 @@
 
 .app-shell {
   width: 100%;
-  max-width: 480px;
+  max-width: min(100%, 480px);
   margin: 0 auto;
+  min-height: 100vh;
+  min-height: 100svh;
   min-height: 100dvh;
+  height: 100vh;
+  height: 100svh;
+  height: 100dvh;
+  max-height: 100dvh;
   position: relative;
   overflow-x: hidden;
   background: hsl(var(--background));
@@ -183,6 +246,50 @@
   .app-shell {
     border-left: 1px solid hsl(var(--border));
     border-right: 1px solid hsl(var(--border));
+  }
+}
+
+@media (min-width: 768px) {
+  .app-shell {
+    max-width: min(100%, 760px);
+  }
+}
+
+@media (min-width: 1180px) {
+  .app-shell {
+    max-width: min(100%, 1120px);
+  }
+}
+
+.skeleton-shimmer {
+  position: relative;
+  overflow: hidden;
+  background: hsl(var(--secondary));
+}
+
+.skeleton-shimmer::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    hsl(var(--foreground) / 0.08),
+    transparent
+  );
+  animation: skeleton-shimmer 1.25s ease-in-out infinite;
+}
+
+@keyframes skeleton-shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton-shimmer::after {
+    animation: none;
   }
 }
 

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { formatDateDisplay, isToday, loadProfile } from "@/lib/store";
 import { useAuth } from "@/context/AuthContext";
 import { DateStepper, IconButton } from "@/components/ScreenPrimitives";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 // Cabecalho da tela com dados do perfil e controle de data.
 export function AppHeader({ currentDate, onPrevDay, onNextDay, onSettings }) {
@@ -42,7 +43,7 @@ export function AppHeader({ currentDate, onPrevDay, onNextDay, onSettings }) {
 		:	formatDateDisplay(currentDate);
 	const displayName = profile?.barberName || user?.nome || "Usuário";
 	return (
-		<header className="sticky top-0 z-50 border-b border-border bg-background/95 px-4 py-3 backdrop-blur">
+		<header className="z-50 shrink-0 border-b border-border bg-background/95 px-4 py-3 backdrop-blur">
 			<div className="flex items-center justify-between gap-3">
 				<div className="min-w-0">
 					<p className="font-mono-ui text-[10px] uppercase text-paid">
@@ -56,6 +57,7 @@ export function AppHeader({ currentDate, onPrevDay, onNextDay, onSettings }) {
 					<span className="max-w-[118px] truncate rounded-md border border-border bg-card px-2.5 py-1.5 font-client text-xs text-foreground-faint">
 						{displayName}
 					</span>
+					<ThemeToggle />
 					<IconButton label="Configurações" onClick={onSettings}>
 						⚙
 					</IconButton>
