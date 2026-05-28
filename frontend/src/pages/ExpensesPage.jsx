@@ -13,6 +13,7 @@ import {
 	formatDayKey,
 	formatDateDisplay,
 	addExpense,
+	updateExpense,
 	deleteExpense,
 	loadExpenses,
 } from "@/lib/store";
@@ -38,6 +39,7 @@ export default function ExpensesPage() {
 	const [errorMessage, setErrorMessage] = useState("");
 	const [formError, setFormError] = useState("");
 	const [showForm, setShowForm] = useState(false);
+	const [editingId, setEditingId] = useState(null);
 
 	const dayKey = formatDayKey(currentDate);
 
@@ -80,7 +82,29 @@ export default function ExpensesPage() {
 		setCurrentDate(d);
 	};
 
-	const handleCreateExpense = async (e) => {
+	const resetForm = () => {
+		setForm(initialForm);
+		setFormError("");
+		setEditingId(null);
+		setShowForm(false);
+	};
+
+	const openCreateForm = () => {
+		resetForm();
+		setShowForm(true);
+	};
+
+	const handleEditItem = (item) => {
+		setEditingId(item.id);
+		setForm({
+			name: item.name || "",
+			value: String(item.value ?? ""),
+		});
+		setFormError("");
+		setShowForm(true);
+	};
+
+	const handleSaveExpense = async (e) => {
 		e.preventDefault();
 		if (isSubmitting) return;
 
@@ -98,13 +122,17 @@ export default function ExpensesPage() {
 		setErrorMessage("");
 		setFormError("");
 		try {
-			await addExpense({
+			const payload = {
 				name: form.name.trim(),
 				value: parseMoneyInput(form.value),
 				date: dayKey,
-			});
-			setForm(initialForm);
-			setShowForm(false);
+			};
+			if (editingId) {
+				await updateExpense(editingId, payload);
+			} else {
+				await addExpense(payload);
+			}
+			resetForm();
 			await reload();
 		} catch (error) {
 			setErrorMessage(error.message || "Falha ao salvar despesa.");
@@ -137,7 +165,7 @@ export default function ExpensesPage() {
 				action={
 					<IconButton
 						label="Adicionar despesa"
-						onClick={() => setShowForm(true)}
+						onClick={openCreateForm}
 						tone="primary">
 						+
 					</IconButton>
@@ -163,9 +191,9 @@ export default function ExpensesPage() {
 			{showForm && (
 				<div
 					className="fixed inset-0 z-[100] flex items-end justify-center bg-black/70 px-0 backdrop-blur-sm"
-					onClick={() => setShowForm(false)}>
+					onClick={resetForm}>
 					<form
-						onSubmit={handleCreateExpense}
+						onSubmit={handleSaveExpense}
 						className="max-h-[92dvh] w-full max-w-[480px] space-y-3 overflow-y-auto rounded-t-lg border-x border-t border-border bg-background px-4 pb-6 pt-4"
 						onClick={(event) => event.stopPropagation()}>
 						<div className="flex items-center justify-between gap-3">
@@ -174,10 +202,10 @@ export default function ExpensesPage() {
 									Saída do dia
 								</p>
 								<h2 className="mt-1 font-logo text-lg text-foreground">
-									Nova despesa
+									{editingId ? "Editar despesa" : "Nova despesa"}
 								</h2>
 							</div>
-							<IconButton label="Fechar" onClick={() => setShowForm(false)}>
+							<IconButton label="Fechar" onClick={resetForm}>
 								×
 							</IconButton>
 						</div>
@@ -224,12 +252,25 @@ export default function ExpensesPage() {
 								disabled={isSubmitting}
 							/>
 						</div>
-						<button
-							type="submit"
-							disabled={isSubmitting}
-							className="w-full rounded-md bg-foreground py-3 font-mono-ui text-sm text-primary-foreground disabled:opacity-60">
-							{isSubmitting ? "Salvando..." : "Adicionar despesa"}
-						</button>
+						<div className="flex gap-2">
+							<button
+								type="submit"
+								disabled={isSubmitting}
+								className="flex-1 rounded-md bg-foreground py-3 font-mono-ui text-sm text-primary-foreground disabled:opacity-60">
+								{isSubmitting ?
+									"Salvando..."
+								: editingId ?
+									"Salvar"
+								:	"Adicionar despesa"}
+							</button>
+							<button
+								type="button"
+								onClick={resetForm}
+								disabled={isSubmitting}
+								className="rounded-md border border-border px-4 py-3 font-mono-ui text-sm text-foreground-faint">
+								Cancelar
+							</button>
+						</div>
 					</form>
 				</div>
 			)}
@@ -260,12 +301,20 @@ export default function ExpensesPage() {
 											{formatCurrency(Number(item.value || 0))}
 										</p>
 									</div>
-									<button
-										onClick={() => handleDelete(item.id)}
-										disabled={isSubmitting}
-										className="rounded-md border border-overdue/30 bg-overdue/10 px-3 py-2 font-mono-ui text-[10px] text-overdue">
-										Excluir
-									</button>
+									<div className="flex shrink-0 gap-2">
+										<button
+											onClick={() => handleEditItem(item)}
+											disabled={isSubmitting}
+											className="rounded-md border border-border px-3 py-2 font-mono-ui text-[10px] text-foreground-faint">
+											Editar
+										</button>
+										<button
+											onClick={() => handleDelete(item.id)}
+											disabled={isSubmitting}
+											className="rounded-md border border-overdue/30 bg-overdue/10 px-3 py-2 font-mono-ui text-[10px] text-overdue">
+											Excluir
+										</button>
+									</div>
 								</div>
 							</div>
 						))}
