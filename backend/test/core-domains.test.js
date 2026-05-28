@@ -132,13 +132,18 @@ t.test("core CRUD routes respond through layered modules", async (t) => {
 	const token = jwt.sign({ userId: "user-1" }, env.JWT_SECRET);
 	const authHeaders = { authorization: `Bearer ${token}` };
 
-	const products = await app.inject({ method: "GET", url: "/products" });
+	const products = await app.inject({
+		method: "GET",
+		url: "/products",
+		headers: authHeaders,
+	});
 	t.equal(products.statusCode, 200);
 	t.equal(JSON.parse(products.payload)[0].name, "Pomada");
 
 	const expenses = await app.inject({
 		method: "GET",
 		url: "/expenses?date=2026-04-29",
+		headers: authHeaders,
 	});
 	t.equal(expenses.statusCode, 200);
 	t.equal(JSON.parse(expenses.payload)[0].date, "2026-04-29");

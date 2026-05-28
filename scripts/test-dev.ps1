@@ -62,12 +62,12 @@ function Invoke-ApiJson {
 	$params = @{
 		Method = $Method
 		Uri = $Url
-		ContentType = "application/json"
 		Headers = $Headers
 		TimeoutSec = $TimeoutSec
 	}
 
 	if ($null -ne $Body) {
+		$params.ContentType = "application/json"
 		$params.Body = $Body | ConvertTo-Json -Depth 8
 	}
 
@@ -136,6 +136,21 @@ function Test-AuthenticatedAppointments {
 			-Url "$apiBaseUrl/profile" `
 			-Headers $headers
 
+		Test-HttpJson `
+			-Name "API /services authenticated" `
+			-Url "$apiBaseUrl/services" `
+			-Headers $headers
+
+		Test-HttpJson `
+			-Name "API /products authenticated" `
+			-Url "$apiBaseUrl/products" `
+			-Headers $headers
+
+		Test-HttpJson `
+			-Name "API /expenses authenticated" `
+			-Url "$apiBaseUrl/expenses" `
+			-Headers $headers
+
 		try {
 			$profile = Invoke-ApiJson `
 				-Method "PUT" `
@@ -153,6 +168,45 @@ function Test-AuthenticatedAppointments {
 				$_.Exception.Message
 			}
 			Add-Check -Name "API /profile update authenticated" -Passed $false -Details $message
+		}
+
+		$serviceId = $null
+		try {
+			$serviceName = "Servico Check $([guid]::NewGuid().ToString("N").Substring(0, 8))"
+			$service = Invoke-ApiJson `
+				-Method "POST" `
+				-Url "$apiBaseUrl/services" `
+				-Headers $headers `
+				-Body @{ name = $serviceName; price = 25 }
+
+			$serviceOk = $service.name -eq $serviceName -and $service.id
+			$serviceDetails = if ($serviceOk) { "created $($service.id)" } else { "unexpected response" }
+			Add-Check -Name "API /services create authenticated" -Passed $serviceOk -Details $serviceDetails
+			if ($service.id) { $serviceId = $service.id }
+		} catch {
+			$message = if ($_.Exception.Response) {
+				"HTTP $([int]$_.Exception.Response.StatusCode)"
+			} else {
+				$_.Exception.Message
+			}
+			Add-Check -Name "API /services create authenticated" -Passed $false -Details $message
+		}
+
+		if ($serviceId) {
+			try {
+				Invoke-ApiJson `
+					-Method "DELETE" `
+					-Url "$apiBaseUrl/services/$serviceId" `
+					-Headers $headers | Out-Null
+				Add-Check -Name "API /services cleanup authenticated" -Passed $true -Details "removed $serviceId"
+			} catch {
+				$message = if ($_.Exception.Response) {
+					"HTTP $([int]$_.Exception.Response.StatusCode)"
+				} else {
+					$_.Exception.Message
+				}
+				Add-Check -Name "API /services cleanup authenticated" -Passed $false -Details $message
+			}
 		}
 
 		Test-HttpJson `
@@ -201,9 +255,6 @@ Test-HttpPage -Name "Frontend /" -Url "http://127.0.0.1:5173/"
 Test-HttpPage -Name "Frontend /app" -Url "http://127.0.0.1:5173/app"
 Test-HttpJson -Name "Backend /health" -Url "http://127.0.0.1:3000/health" -TimeoutSec 10
 Test-HttpJson -Name "Backend /health/db" -Url "http://127.0.0.1:3000/health/db" -TimeoutSec 25
-Test-HttpJson -Name "API /services" -Url "http://127.0.0.1:3000/services"
-Test-HttpJson -Name "API /products" -Url "http://127.0.0.1:3000/products"
-Test-HttpJson -Name "API /expenses" -Url "http://127.0.0.1:3000/expenses"
 Test-AuthenticatedAppointments
 
 $failed = 0

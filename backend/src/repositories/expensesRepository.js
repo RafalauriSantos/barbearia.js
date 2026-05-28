@@ -1,5 +1,4 @@
 const supabase = require("../lib/supabase");
-const { getDefaultBarbeariaId } = require("../lib/tenant");
 
 function toApi(row) {
 	return {
@@ -19,11 +18,11 @@ function toDatabase(payload) {
 	};
 }
 
-exports.findAll = async function ({ date } = {}) {
+exports.findAll = async function ({ date, barbeariaId } = {}) {
 	let query = supabase
 		.from("despesas")
 		.select("*")
-		.eq("barbearia_id", getDefaultBarbeariaId());
+		.eq("barbearia_id", barbeariaId);
 	if (date) query = query.eq("data", date);
 
 	const { data, error } = await query.order("data", { ascending: true });
@@ -31,20 +30,20 @@ exports.findAll = async function ({ date } = {}) {
 	return (data || []).map(toApi);
 };
 
-exports.findById = async function (id) {
+exports.findById = async function (id, { barbeariaId }) {
 	const { data, error } = await supabase
 		.from("despesas")
 		.select("*")
 		.eq("id", id)
-		.eq("barbearia_id", getDefaultBarbeariaId())
+		.eq("barbearia_id", barbeariaId)
 		.single();
 	if (error && error.code !== "PGRST116") throw error;
 	return data ? toApi(data) : null;
 };
 
-exports.create = async function (payload) {
+exports.create = async function (payload, { barbeariaId }) {
 	const row = {
-		barbearia_id: getDefaultBarbeariaId(),
+		barbearia_id: barbeariaId,
 		descricao: payload.name,
 		valor: Number(payload.value || 0),
 		data: payload.date,
@@ -58,24 +57,24 @@ exports.create = async function (payload) {
 	return toApi(data);
 };
 
-exports.update = async function (id, updates) {
+exports.update = async function (id, updates, { barbeariaId }) {
 	const { data, error } = await supabase
 		.from("despesas")
 		.update(toDatabase(updates))
 		.eq("id", id)
-		.eq("barbearia_id", getDefaultBarbeariaId())
+		.eq("barbearia_id", barbeariaId)
 		.select()
 		.single();
 	if (error) throw error;
 	return toApi(data);
 };
 
-exports.remove = async function (id) {
+exports.remove = async function (id, { barbeariaId }) {
 	const { error } = await supabase
 		.from("despesas")
 		.delete()
 		.eq("id", id)
-		.eq("barbearia_id", getDefaultBarbeariaId());
+		.eq("barbearia_id", barbeariaId);
 	if (error) throw error;
 	return true;
 };

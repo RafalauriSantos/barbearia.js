@@ -49,6 +49,14 @@ function registerErrorHandler(app) {
 			});
 		}
 
+		if (err.statusCode >= 400 && err.statusCode < 500) {
+			request.log.warn({ err }, "Request error");
+			return reply.code(err.statusCode).send({
+				error: err.message,
+				code: err.code || "BAD_REQUEST",
+			});
+		}
+
 		request.log.error({ err }, "Unexpected error");
 		return reply
 			.code(500)

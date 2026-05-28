@@ -1,5 +1,4 @@
 const supabase = require("../lib/supabase");
-const { getDefaultBarbeariaId } = require("../lib/tenant");
 
 function toApi(row) {
 	return {
@@ -19,31 +18,31 @@ function toDatabase(payload) {
 	};
 }
 
-exports.findAll = async function () {
+exports.findAll = async function ({ barbeariaId }) {
 	const { data, error } = await supabase
 		.from("servicos")
 		.select("*")
-		.eq("barbearia_id", getDefaultBarbeariaId())
+		.eq("barbearia_id", barbeariaId)
 		.eq("ativo", true)
 		.order("nome", { ascending: true });
 	if (error) throw error;
 	return (data || []).map(toApi);
 };
 
-exports.findById = async function (id) {
+exports.findById = async function (id, { barbeariaId }) {
 	const { data, error } = await supabase
 		.from("servicos")
 		.select("*")
 		.eq("id", id)
-		.eq("barbearia_id", getDefaultBarbeariaId())
+		.eq("barbearia_id", barbeariaId)
 		.single();
 	if (error && error.code !== "PGRST116") throw error;
 	return data ? toApi(data) : null;
 };
 
-exports.create = async function (payload) {
+exports.create = async function (payload, { barbeariaId }) {
 	const row = {
-		barbearia_id: getDefaultBarbeariaId(),
+		barbearia_id: barbeariaId,
 		nome: payload.name,
 		preco: Number(payload.price || 0),
 		ativo: true,
@@ -57,24 +56,24 @@ exports.create = async function (payload) {
 	return toApi(data);
 };
 
-exports.update = async function (id, updates) {
+exports.update = async function (id, updates, { barbeariaId }) {
 	const { data, error } = await supabase
 		.from("servicos")
 		.update(toDatabase(updates))
 		.eq("id", id)
-		.eq("barbearia_id", getDefaultBarbeariaId())
+		.eq("barbearia_id", barbeariaId)
 		.select()
 		.single();
 	if (error) throw error;
 	return toApi(data);
 };
 
-exports.remove = async function (id) {
+exports.remove = async function (id, { barbeariaId }) {
 	const { error } = await supabase
 		.from("servicos")
 		.update({ ativo: false })
 		.eq("id", id)
-		.eq("barbearia_id", getDefaultBarbeariaId());
+		.eq("barbearia_id", barbeariaId);
 	if (error) throw error;
 	return true;
 };

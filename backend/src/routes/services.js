@@ -1,14 +1,9 @@
 const controller = require("../controllers/servicesController");
+const auth = require("../middleware/auth");
 
 module.exports = async function (fastify, opts) {
-	fastify.get("/", async (request, reply) => controller.list(request, reply));
-	fastify.post("/", async (request, reply) =>
-		controller.create(request, reply),
-	);
-	fastify.put("/:id", async (request, reply) =>
-		controller.update(request, reply),
-	);
-	fastify.delete("/:id", async (request, reply) =>
-		controller.remove(request, reply),
-	);
+	fastify.get("/", { preHandler: auth }, controller.list);
+	fastify.post("/", { preHandler: auth }, controller.create);
+	fastify.put("/:id", { preHandler: auth }, controller.update);
+	fastify.delete("/:id", { preHandler: auth }, controller.remove);
 };
