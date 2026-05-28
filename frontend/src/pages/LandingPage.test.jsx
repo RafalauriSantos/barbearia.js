@@ -1,0 +1,23 @@
+import { render, screen } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
+import { describe, expect, it } from "vitest";
+import LandingPage from "./LandingPage";
+
+describe("LandingPage", () => {
+	it("shows the product pitch before login", () => {
+		render(
+			<MemoryRouter>
+				<LandingPage />
+			</MemoryRouter>,
+		);
+
+		expect(
+			screen.getByRole("heading", { name: "Kash Flow", level: 1 }),
+		).toBeTruthy();
+		expect(screen.getByText(/Agenda, caixa e equipe/i)).toBeTruthy();
+		expect(screen.getByRole("link", { name: "Entrar" })).toBeTruthy();
+		expect(screen.getByRole("link", { name: "Criar acesso" }).getAttribute("href")).toBe(
+			"/login?mode=signup",
+		);
+	});
+});

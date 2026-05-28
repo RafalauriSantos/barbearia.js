@@ -49,7 +49,9 @@ function HomeRedirect() {
 	const { isAuthenticated, isLoading } = useAuth();
 
 	if (isLoading) return <SessionLoading />;
-	return <Navigate to={isAuthenticated ? "/app" : "/login"} replace />;
+	if (isAuthenticated) return <Navigate to="/app" replace />;
+
+	return <LandingPage />;
 }
 
 function AppRoutes() {

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { BottomNav } from "@/components/BottomNav";
 import { AdminDashboard } from "@/components/AdminDashboard";
@@ -51,7 +51,7 @@ export default function TeamPage() {
 	const [appointments, setAppointments] = useState([]);
 	const [barbers, setBarbers] = useState([]);
 	const [isLoading, setIsLoading] = useState(true);
-	const [hasLoaded, setHasLoaded] = useState(false);
+	const hasLoadedRef = useRef(false);
 	const [errorMessage, setErrorMessage] = useState("");
 	const navigate = useNavigate();
 	const { user } = useAuth();
@@ -74,6 +74,7 @@ export default function TeamPage() {
 	);
 
 	const reload = useCallback(async () => {
+		const hasLoaded = hasLoadedRef.current;
 		setIsLoading(!hasLoaded);
 		setErrorMessage("");
 		try {
@@ -84,7 +85,7 @@ export default function TeamPage() {
 			setErrorMessage(error.message || "Falha ao carregar dados da equipe.");
 		} finally {
 			setIsLoading(false);
-			setHasLoaded(true);
+			hasLoadedRef.current = true;
 		}
 	}, [dayKey]);
 

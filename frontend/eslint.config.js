@@ -32,4 +32,10 @@ export default [
 			"no-unused-vars": "off",
 		},
 	},
+	{
+		files: ["src/context/**/*.{js,jsx}"],
+		rules: {
+			"react-refresh/only-export-components": "off",
+		},
+	},
 ];

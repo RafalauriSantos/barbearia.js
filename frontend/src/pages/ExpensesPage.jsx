@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { BottomNav } from "@/components/BottomNav";
 import {
 	DateStepper,
@@ -33,7 +33,7 @@ export default function ExpensesPage() {
 	const [form, setForm] = useState(initialForm);
 	const [isLoading, setIsLoading] = useState(true);
 	const [isRefreshing, setIsRefreshing] = useState(false);
-	const [hasLoaded, setHasLoaded] = useState(false);
+	const hasLoadedRef = useRef(false);
 	const [isSubmitting, setIsSubmitting] = useState(false);
 	const [errorMessage, setErrorMessage] = useState("");
 	const [formError, setFormError] = useState("");
@@ -42,6 +42,7 @@ export default function ExpensesPage() {
 	const dayKey = formatDayKey(currentDate);
 
 	const reload = useCallback(async () => {
+		const hasLoaded = hasLoadedRef.current;
 		setIsLoading(!hasLoaded);
 		setIsRefreshing(hasLoaded);
 		setErrorMessage("");
@@ -54,7 +55,7 @@ export default function ExpensesPage() {
 		} finally {
 			setIsLoading(false);
 			setIsRefreshing(false);
-			setHasLoaded(true);
+			hasLoadedRef.current = true;
 		}
 	}, [dayKey]);
 

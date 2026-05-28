@@ -22,6 +22,17 @@ afterEach(() => {
 });
 
 describe("LoginPage signup feedback", () => {
+	it("opens the signup mode from query string", () => {
+		render(
+			<MemoryRouter initialEntries={["/login?mode=signup"]}>
+				<LoginPage />
+			</MemoryRouter>,
+		);
+
+		expect(screen.getByRole("button", { name: "Criar conta" })).toBeTruthy();
+		expect(screen.getByText("Confirmar senha")).toBeTruthy();
+	});
+
 	it("does not expose verification codes returned by the backend", async () => {
 		authMock.signup.mockResolvedValueOnce({
 			verificationCode: "123456",

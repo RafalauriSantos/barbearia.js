@@ -2,7 +2,6 @@ import { useState } from "react";
 import { Link, Navigate, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import { resendEmailCode } from "@/lib/api/auth.api";
-import { ThemeToggle } from "@/components/ThemeToggle";
 
 const SIGNUP_SUCCESS_MESSAGE =
 	"Conta criada. Enviamos um codigo de 6 digitos para seu email.";
@@ -12,7 +11,10 @@ export default function LoginPage() {
 	const { isAuthenticated, isLoading, login, signup } = useAuth();
 	const navigate = useNavigate();
 	const location = useLocation();
-	const [mode, setMode] = useState("login");
+	const requestedMode = new URLSearchParams(location.search).get("mode");
+	const [mode, setMode] = useState(
+		requestedMode === "signup" ? "signup" : "login",
+	);
 	const [email, setEmail] = useState("");
 	const [password, setPassword] = useState("");
 	const [confirmPassword, setConfirmPassword] = useState("");
@@ -112,7 +114,6 @@ export default function LoginPage() {
 						</p>
 					</div>
 					<div className="flex shrink-0 items-center gap-2">
-						<ThemeToggle />
 						<span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md border border-paid/40 bg-paid/10 font-value text-xl text-paid">
 							K
 						</span>

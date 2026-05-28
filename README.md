@@ -83,6 +83,14 @@ npm run dev
 
 ## Testes
 
+Gate completo local:
+
+```bash
+.\validar-tudo.cmd
+```
+
+Quando tudo passa, esse comando tambem sobe backend/frontend, executa os smoke tests e abre o app no navegador.
+
 Backend:
 
 ```bash
@@ -99,11 +107,24 @@ npm run test
 npm run build
 ```
 
+Smoke test com backend e frontend rodando:
+
+```bash
+.\testar-tudo.cmd
+```
+
+Subir os servidores e testar o fluxo local automaticamente:
+
+```bash
+.\rodar-e-testar.cmd
+```
+
 ## Scripts de raiz
 
 - `rodar-tudo.cmd` - sobe backend e frontend
-- `testar-tudo.cmd` - executa testes principais
-- `validar-tudo.cmd` - valida build e testes
+- `testar-tudo.cmd` - executa smoke tests contra servidores rodando
+- `validar-tudo.cmd` - roda backend tests, frontend lint, frontend tests e build; se passar, sobe e abre o app
+- `rodar-e-testar.cmd` - sobe backend/frontend e executa os smoke tests
 - `ver-portas.cmd` - verifica portas locais
 
 ## Documentacao

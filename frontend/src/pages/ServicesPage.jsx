@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
 	loadServices,
 	addService,
@@ -32,7 +32,7 @@ export default function ServicesPage() {
 	const [products, setProducts] = useState([]);
 	const [isLoading, setIsLoading] = useState(true);
 	const [isRefreshing, setIsRefreshing] = useState(false);
-	const [hasLoaded, setHasLoaded] = useState(false);
+	const hasLoadedRef = useRef(false);
 	const [isSubmitting, setIsSubmitting] = useState(false);
 	const [errorMessage, setErrorMessage] = useState("");
 	const [formError, setFormError] = useState("");
@@ -42,6 +42,7 @@ export default function ServicesPage() {
 	const [showForm, setShowForm] = useState(false);
 
 	const reloadData = useCallback(async () => {
+		const hasLoaded = hasLoadedRef.current;
 		setIsLoading(!hasLoaded);
 		setIsRefreshing(hasLoaded);
 		setErrorMessage("");
@@ -59,7 +60,7 @@ export default function ServicesPage() {
 		} finally {
 			setIsLoading(false);
 			setIsRefreshing(false);
-			setHasLoaded(true);
+			hasLoadedRef.current = true;
 		}
 	}, []);
 
