@@ -4,7 +4,6 @@ import {
 	DateStepper,
 	EmptyState,
 	IconButton,
-	LoadingCard,
 	Notice,
 	ScreenHeader,
 } from "@/components/ScreenPrimitives";
@@ -276,11 +275,13 @@ export default function ExpensesPage() {
 			)}
 
 			<div className="min-h-0 flex-1 overflow-y-auto pb-4">
-				{isLoading && expenses.length === 0 ?
-					<div className="mx-4 mt-4">
-						<LoadingCard label="Carregando despesas" rows={2} />
-					</div>
-				: expenses.length === 0 ?
+				{isLoading && expenses.length === 0 && (
+					<p className="mx-4 mt-4 rounded-md border border-border bg-card px-3 py-2 font-mono-ui text-[10px] uppercase text-foreground-faint">
+						Atualizando despesas...
+					</p>
+				)}
+
+				{expenses.length === 0 ?
 					<div className="mx-4 mt-4">
 						<EmptyState
 							title="Nenhuma despesa neste dia"

@@ -32,6 +32,12 @@ async function findBarber(user) {
 function toProfile({ shop, barber }) {
 	return {
 		shopName: shop?.nome || "",
+		phone: shop?.telefone || "",
+		address: shop?.endereco || "",
+		openingTime: shop?.horario_abertura?.slice(0, 5) || "08:00",
+		closingTime: shop?.horario_fechamento?.slice(0, 5) || "18:00",
+		appointmentDuration: shop?.duracao_atendimento_min || 30,
+		scheduleInterval: shop?.intervalo_agenda_min || 30,
 		barberName: barber?.nome || "",
 		barbearia_id: shop?.id,
 		barbeiro_id: barber?.id,
@@ -50,23 +56,43 @@ exports.get = async function (user) {
 exports.upsert = async function (payload, user) {
 	let shop = await findShop(user.barbearia_id);
 
-	if (user.role === "admin" && payload.shopName !== undefined) {
-		const { data, error } = await supabase
-			.from("barbearias")
-			.update({ nome: payload.shopName || "" })
-			.eq("id", user.barbearia_id)
-			.select()
-			.maybeSingle();
+	if (user.role === "admin") {
+		const shopUpdates = {};
 
-		if (error && error.code !== "PGRST116") throw error;
-		if (!data) {
-			throw new AppError(
-				404,
-				"BARBEARIA_NOT_FOUND",
-				"Barbearia nao encontrada.",
-			);
+		if (payload.shopName !== undefined) shopUpdates.nome = payload.shopName;
+		if (payload.phone !== undefined) shopUpdates.telefone = payload.phone || null;
+		if (payload.address !== undefined) shopUpdates.endereco = payload.address || null;
+		if (payload.openingTime !== undefined) {
+			shopUpdates.horario_abertura = payload.openingTime || null;
 		}
-		shop = data;
+		if (payload.closingTime !== undefined) {
+			shopUpdates.horario_fechamento = payload.closingTime || null;
+		}
+		if (payload.appointmentDuration !== undefined) {
+			shopUpdates.duracao_atendimento_min = payload.appointmentDuration;
+		}
+		if (payload.scheduleInterval !== undefined) {
+			shopUpdates.intervalo_agenda_min = payload.scheduleInterval;
+		}
+
+		if (Object.keys(shopUpdates).length > 0) {
+			const { data, error } = await supabase
+				.from("barbearias")
+				.update(shopUpdates)
+				.eq("id", user.barbearia_id)
+				.select()
+				.maybeSingle();
+
+			if (error && error.code !== "PGRST116") throw error;
+			if (!data) {
+				throw new AppError(
+					404,
+					"BARBEARIA_NOT_FOUND",
+					"Barbearia nao encontrada.",
+				);
+			}
+			shop = data;
+		}
 	}
 
 	let barber = await findBarber(user);

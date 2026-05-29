@@ -11,7 +11,6 @@ export default function AcceptInvitePage() {
 	const [invite, setInvite] = useState(null);
 	const [nome, setNome] = useState("");
 	const [password, setPassword] = useState("");
-	const [confirmPassword, setConfirmPassword] = useState("");
 	const [isSubmitting, setIsSubmitting] = useState(false);
 	const [isInviteLoading, setIsInviteLoading] = useState(true);
 	const [errorMessage, setErrorMessage] = useState("");
@@ -56,13 +55,15 @@ export default function AcceptInvitePage() {
 		return <Navigate to="/app" replace />;
 	}
 
+	const handlePasswordChange = (event) => {
+		const nextPassword = event.target.value;
+		setPassword(nextPassword);
+		setErrorMessage("");
+	};
+
 	const handleSubmit = async (event) => {
 		event.preventDefault();
 		if (isSubmitting) return;
-		if (password && password !== confirmPassword) {
-			setErrorMessage("As senhas precisam ser iguais.");
-			return;
-		}
 
 		setIsSubmitting(true);
 		setErrorMessage("");
@@ -145,27 +146,12 @@ export default function AcceptInvitePage() {
 								<input
 									type="password"
 									value={password}
-									onChange={(event) => setPassword(event.target.value)}
+									onChange={handlePasswordChange}
 									className="w-full rounded-md border border-border bg-secondary px-3 py-3 text-sm text-foreground"
 									autoComplete="new-password"
 									minLength={8}
 									disabled={isSubmitting}
 									placeholder="Obrigatoria para novo acesso"
-								/>
-							</div>
-
-							<div>
-								<label className="mb-1 block font-mono-ui text-[10px] text-foreground-faint">
-									Confirmar senha
-								</label>
-								<input
-									type="password"
-									value={confirmPassword}
-									onChange={(event) => setConfirmPassword(event.target.value)}
-									className="w-full rounded-md border border-border bg-secondary px-3 py-3 text-sm text-foreground"
-									autoComplete="new-password"
-									minLength={password ? 8 : undefined}
-									disabled={isSubmitting}
 								/>
 							</div>
 

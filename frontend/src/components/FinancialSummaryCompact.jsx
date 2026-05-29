@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { LoadingCard } from "@/components/ScreenPrimitives";
 import { formatCurrency } from "@/lib/store";
 
 function getAdminRows(summary) {
@@ -13,27 +12,24 @@ export function FinancialSummaryCompact({
 }) {
 	const [expanded, setExpanded] = useState(false);
 
-	if (isLoading && !summary) {
-		return (
-			<div className="px-4 py-3">
-				<LoadingCard label="Carregando financeiro" rows={2} />
-			</div>
-		);
-	}
-
-	if (!summary) return null;
-
-	const isAdmin = summary.type === "admin";
-	const total = isAdmin ? summary.total_pago_geral : summary.total_pago;
-	const barbearia = summary.total_barbearia ?? summary.parte_barbearia;
-	const barbeiros = summary.total_barbeiros ?? summary.parte_barbeiro;
+	const isAdmin = summary?.type === "admin";
+	const total = isAdmin ? summary?.total_pago_geral : summary?.total_pago;
+	const barbearia = summary?.total_barbearia ?? summary?.parte_barbearia;
+	const barbeiros = summary?.total_barbeiros ?? summary?.parte_barbeiro;
 	const count =
-		summary.quantidade_atendimentos_pagos ?? summary.quantidade_atendimentos;
+		summary?.quantidade_atendimentos_pagos ??
+		summary?.quantidade_atendimentos ??
+		0;
 	const rows = getAdminRows(summary);
 
 	return (
 		<div className="px-4 py-3">
 			<div className="rounded-lg border border-border bg-card p-3">
+				{isLoading && (
+					<p className="mb-2 font-mono-ui text-[9px] uppercase text-foreground-faint">
+						Atualizando financeiro...
+					</p>
+				)}
 				<div className="grid grid-cols-[1fr_auto] gap-3 md:grid-cols-[1fr_180px]">
 					<div className="min-w-0 rounded-md bg-background-deep px-3 py-2">
 						<p className="font-mono-ui text-[10px] uppercase text-foreground-faint">

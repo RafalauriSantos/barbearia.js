@@ -52,9 +52,7 @@ describe("ForgotPasswordPage", () => {
 		fireEvent.change(screen.getByLabelText("Nova senha"), {
 			target: { value: "NovaSenha123" },
 		});
-		fireEvent.change(screen.getByLabelText("Confirmar nova senha"), {
-			target: { value: "NovaSenha123" },
-		});
+		expect(screen.queryByLabelText("Confirmar nova senha")).toBeNull();
 		fireEvent.click(screen.getByRole("button", { name: "Redefinir senha" }));
 
 		await waitFor(() => {

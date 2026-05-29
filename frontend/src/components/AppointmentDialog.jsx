@@ -1,5 +1,10 @@
 import { useEffect, useState } from "react";
-import { loadServices, addAppointment, updateAppointment } from "@/lib/store";
+import {
+	loadServices,
+	loadProducts,
+	addAppointment,
+	updateAppointment,
+} from "@/lib/store";
 import { IconButton } from "@/components/ScreenPrimitives";
 import {
 	parseMoneyInput,
@@ -23,53 +28,134 @@ export function AppointmentDialog({
 }) {
 	const [services, setServices] = useState([]);
 	const [isLoadingServices, setIsLoadingServices] = useState(true);
+	const [products, setProducts] = useState([]);
+	const [isLoadingProducts, setIsLoadingProducts] = useState(true);
 	// Campos do formulario (novo ou edicao).
 	const [clientName, setClientName] = useState(appointment?.client_name || "");
 	const [timeSlot, setTimeSlot] = useState(
 		String(appointment?.time_slot || defaultTimeSlot || "09:00").slice(0, 5),
 	);
-	const [serviceId, setServiceId] = useState(appointment?.service_id || "");
+	const [selectedServices, setSelectedServices] = useState(
+		appointment?.services?.length ? appointment.services
+		: appointment?.service_id ?
+			[
+				{
+					id: appointment.service_id,
+					name: appointment.service_name || "Servico",
+					price: Number(appointment.value || 0),
+					quantity: 1,
+				},
+			]
+		:	[],
+	);
+	const [selectedProducts, setSelectedProducts] = useState(
+		appointment?.products?.length ? appointment.products : [],
+	);
 	const [value, setValue] = useState(appointment?.value?.toString() || "");
 	const [barberId, setBarberId] = useState(
 		appointment?.barbeiro_id || defaultBarberId || forcedBarberId || "",
 	);
+	const [status, setStatus] = useState(appointment?.status || "normal");
+	const [prazoDate, setPrazoDate] = useState(appointment?.prazo_date || "");
+	const [autoValue, setAutoValue] = useState(true);
 	const [isSubmitting, setIsSubmitting] = useState(false);
 	const [errorMessage, setErrorMessage] = useState("");
 
 	useEffect(() => {
 		let mounted = true;
 
-		async function fetchServices() {
+		async function fetchCatalog() {
 			try {
-				const list = await loadServices();
+				const [serviceList, productList] = await Promise.all([
+					loadServices(),
+					loadProducts(),
+				]);
 				if (mounted) {
-					setServices(list);
+					setServices(serviceList);
+					setProducts(productList);
 				}
 			} catch {
 				if (mounted) {
 					setServices([]);
+					setProducts([]);
 				}
 			} finally {
 				if (mounted) {
 					setIsLoadingServices(false);
+					setIsLoadingProducts(false);
 				}
 			}
 		}
 
-		fetchServices();
+		fetchCatalog();
 
 		return () => {
 			mounted = false;
 		};
 	}, []);
-	// Quando escolhe servico, preenche o valor automaticamente.
-	const handleServiceChange = (id) => {
-		setServiceId(id);
-		if (id) {
-			const svc = services.find((s) => s.id === id);
-			if (svc) setValue(svc.price.toString());
-		}
+	const addService = (svc) => {
+		setSelectedServices((prev) => {
+			const existing = prev.find((item) => item.id === svc.id);
+			if (!existing) {
+				return [
+					...prev,
+					{ id: svc.id, name: svc.name, price: svc.price, quantity: 1 },
+				];
+			}
+			return prev.map((item) =>
+				item.id === svc.id ?
+					{ ...item, quantity: Number(item.quantity || 1) + 1 }
+				:	item,
+			);
+		});
 	};
+	const addProduct = (prod) => {
+		setSelectedProducts((prev) => {
+			const existing = prev.find((item) => item.id === prod.id);
+			if (!existing) {
+				return [
+					...prev,
+					{ id: prod.id, name: prod.name, price: prod.price, quantity: 1 },
+				];
+			}
+			return prev.map((item) =>
+				item.id === prod.id ?
+					{ ...item, quantity: Number(item.quantity || 1) + 1 }
+				:	item,
+			);
+		});
+	};
+	const updateItemQuantity = (listSetter, id, quantity) => {
+		listSetter((prev) =>
+			prev.map((item) => (item.id === id ? { ...item, quantity } : item)),
+		);
+	};
+	const removeItem = (listSetter, id) => {
+		listSetter((prev) => prev.filter((item) => item.id !== id));
+	};
+	const itemsTotal = [...selectedServices, ...selectedProducts].reduce(
+		(sum, item) => sum + Number(item.price || 0) * Number(item.quantity || 1),
+		0,
+	);
+
+	useEffect(() => {
+		const initialValue = Number(value || 0);
+		if (initialValue === 0 && itemsTotal > 0) {
+			setAutoValue(true);
+			return;
+		}
+		const delta = Math.abs(initialValue - itemsTotal);
+		setAutoValue(delta < 0.01);
+	}, []);
+
+	useEffect(() => {
+		if (!autoValue) return;
+		if (itemsTotal <= 0) {
+			setValue("");
+			return;
+		}
+		setValue(itemsTotal.toFixed(2));
+	}, [itemsTotal, autoValue]);
 	const handleSubmit = async (e) => {
 		e.preventDefault();
 		if (isSubmitting) return;
@@ -93,6 +179,13 @@ export function AppointmentDialog({
 			return;
 		}
 
+		if (status === "fiado" && !String(prazoDate || "").trim()) {
+			const message = "Informe a data do fiado.";
+			setErrorMessage(message);
+			if (onError) onError(message);
+			return;
+		}
+
 		if (canChooseBarber && !barberId) {
 			const message = "Selecione o barbeiro do atendimento.";
 			setErrorMessage(message);
@@ -104,16 +197,16 @@ export function AppointmentDialog({
 		setErrorMessage("");
 		if (onError) onError("");
 
-		const svc = services.find((s) => s.id === serviceId);
 		// Monta os dados que serao salvos.
 		const parsedValue = parseMoneyInput(value);
 		const data = {
 			client_name: clientName.trim(),
 			time_slot: timeSlot,
-			service_id: serviceId || undefined,
-			service_name: svc?.name,
+			services: selectedServices,
+			products: selectedProducts,
 			day_key: dayKey,
-			status: appointment?.status || "normal",
+			status,
+			prazo_date: status === "fiado" ? prazoDate || null : null,
 		};
 		if (Number.isFinite(parsedValue)) data.value = parsedValue;
 		if (forcedBarberId) {
@@ -188,26 +281,120 @@ export function AppointmentDialog({
 
 					<div className="rounded-lg border border-border bg-card p-4">
 						<label className="mb-1 block font-mono-ui text-[10px] text-foreground-faint">
-							Serviço
+							Serviços
 						</label>
-						<select
-							value={serviceId}
-							onChange={(e) => handleServiceChange(e.target.value)}
-							className="w-full rounded-md border border-border bg-secondary px-3 py-3 text-sm text-foreground"
-							disabled={isSubmitting || isLoadingServices || services.length === 0}>
-							<option value="">
-								{isLoadingServices ?
-									"Carregando..."
-								: services.length === 0 ?
-									"Nenhum serviço cadastrado"
-								:	"Selecione"}
-							</option>
-							{services.map((s) => (
-								<option key={s.id} value={s.id}>
-									{s.name} - R$ {s.price.toFixed(2)}
-								</option>
-							))}
-						</select>
+						<div className="flex flex-wrap gap-2">
+							{isLoadingServices ?
+								<span className="font-mono-ui text-[10px] text-foreground-faint">
+									Carregando...
+								</span>
+							: services.length === 0 ?
+								<span className="font-mono-ui text-[10px] text-foreground-faint">
+									Nenhum serviço cadastrado
+								</span>
+							:	services.map((svc) => (
+									<button
+										key={svc.id}
+										type="button"
+										onClick={() => addService(svc)}
+										className="rounded-md border border-border bg-secondary px-3 py-2 font-mono-ui text-[10px] text-foreground">
+										{svc.name} · R$ {svc.price.toFixed(2)}
+									</button>
+								))
+							}
+						</div>
+						{selectedServices.length > 0 && (
+							<div className="mt-3 space-y-2">
+								{selectedServices.map((item) => (
+									<div
+										key={item.id}
+										className="flex items-center gap-2 rounded-md border border-border bg-background-deep px-3 py-2">
+										<span className="min-w-0 flex-1 truncate font-mono-ui text-[10px] text-foreground">
+											{item.name}
+										</span>
+										<input
+											type="number"
+											min="1"
+											value={item.quantity}
+											onChange={(e) =>
+												updateItemQuantity(
+													setSelectedServices,
+													item.id,
+													Math.max(1, Number(e.target.value || 1)),
+												)
+											}
+											className="w-16 rounded-md border border-border bg-secondary px-2 py-1 text-xs text-foreground"
+											disabled={isSubmitting}
+										/>
+										<button
+											type="button"
+											onClick={() => removeItem(setSelectedServices, item.id)}
+											className="rounded-md border border-overdue/40 bg-overdue/10 px-2 py-1 font-mono-ui text-[9px] text-overdue">
+											remover
+										</button>
+									</div>
+								))}
+							</div>
+						)}
+					</div>
+
+					<div className="rounded-lg border border-border bg-card p-4">
+						<label className="mb-1 block font-mono-ui text-[10px] text-foreground-faint">
+							Produtos
+						</label>
+						<div className="flex flex-wrap gap-2">
+							{isLoadingProducts ?
+								<span className="font-mono-ui text-[10px] text-foreground-faint">
+									Carregando...
+								</span>
+							: products.length === 0 ?
+								<span className="font-mono-ui text-[10px] text-foreground-faint">
+									Nenhum produto cadastrado
+								</span>
+							:	products.map((prod) => (
+									<button
+										key={prod.id}
+										type="button"
+										onClick={() => addProduct(prod)}
+										className="rounded-md border border-border bg-secondary px-3 py-2 font-mono-ui text-[10px] text-foreground">
+										{prod.name} · R$ {prod.price.toFixed(2)}
+									</button>
+								))
+							}
+						</div>
+						{selectedProducts.length > 0 && (
+							<div className="mt-3 space-y-2">
+								{selectedProducts.map((item) => (
+									<div
+										key={item.id}
+										className="flex items-center gap-2 rounded-md border border-border bg-background-deep px-3 py-2">
+										<span className="min-w-0 flex-1 truncate font-mono-ui text-[10px] text-foreground">
+											{item.name}
+										</span>
+										<input
+											type="number"
+											min="1"
+											value={item.quantity}
+											onChange={(e) =>
+												updateItemQuantity(
+													setSelectedProducts,
+													item.id,
+													Math.max(1, Number(e.target.value || 1)),
+												)
+											}
+											className="w-16 rounded-md border border-border bg-secondary px-2 py-1 text-xs text-foreground"
+											disabled={isSubmitting}
+										/>
+										<button
+											type="button"
+											onClick={() => removeItem(setSelectedProducts, item.id)}
+											className="rounded-md border border-overdue/40 bg-overdue/10 px-2 py-1 font-mono-ui text-[9px] text-overdue">
+											remover
+										</button>
+									</div>
+								))}
+							</div>
+						)}
 					</div>
 
 					<div className="grid grid-cols-2 gap-3">
@@ -236,13 +423,65 @@ export function AppointmentDialog({
 								value={value}
 								onChange={(e) => {
 									setValue(e.target.value);
+									setAutoValue(false);
 									setErrorMessage("");
 								}}
 								className="w-full rounded-md border border-border bg-secondary px-3 py-3 text-sm text-foreground"
 								placeholder="40.00"
 								disabled={isSubmitting}
 							/>
+							<p className="mt-2 font-mono-ui text-[9px] text-foreground-faint">
+								Total dos itens: R$ {itemsTotal.toFixed(2)}
+							</p>
+							<button
+								type="button"
+								onClick={() => {
+									setAutoValue(true);
+									setValue(itemsTotal.toFixed(2));
+								}}
+								className="mt-2 rounded-md border border-border px-2 py-1 font-mono-ui text-[9px] text-foreground-faint">
+								Usar total dos itens
+							</button>
 						</div>
+					</div>
+
+					<div className="rounded-lg border border-border bg-card p-4">
+						<label className="mb-1 block font-mono-ui text-[10px] text-foreground-faint">
+							Pagamento
+						</label>
+						<div className="grid grid-cols-2 gap-3">
+							<select
+								value={status}
+								onChange={(e) => {
+									setStatus(e.target.value);
+									if (e.target.value !== "fiado") {
+										setPrazoDate("");
+									}
+									setErrorMessage("");
+								}}
+								className="rounded-md border border-border bg-secondary px-3 py-3 text-sm text-foreground"
+								disabled={isSubmitting}>
+								<option value="normal">Pendente</option>
+								<option value="paid">Pago</option>
+								<option value="fiado">Fiado</option>
+							</select>
+							<input
+								type="date"
+								value={prazoDate}
+								onChange={(e) => {
+									setPrazoDate(e.target.value);
+									setErrorMessage("");
+								}}
+								className="rounded-md border border-border bg-secondary px-3 py-3 text-sm text-foreground"
+								disabled={isSubmitting || status !== "fiado"}
+								placeholder="Prazo"
+							/>
+						</div>
+						{status === "fiado" && (
+							<p className="mt-2 font-mono-ui text-[9px] text-foreground-faint">
+								Informe a data para cobrar o fiado.
+							</p>
+						)}
 					</div>
 
 					{canChooseBarber && (

@@ -1,0 +1,12 @@
+{
+	"name": "tcc-workspace",
+	"private": true,
+	"scripts": {
+		"dev": "concurrently -k \"npm:dev --prefix backend\" \"npm:dev --prefix frontend\"",
+		"dev:backend": "npm run dev --prefix backend",
+		"dev:frontend": "npm run dev --prefix frontend"
+	},
+	"devDependencies": {
+		"concurrently": "^9.2.0"
+	}
+}

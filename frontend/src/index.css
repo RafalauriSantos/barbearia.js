@@ -107,7 +107,7 @@
     @apply border-border;
   }
 
-html {
+  html {
     background: hsl(var(--background-deep));
     min-height: 100%;
   }
@@ -193,21 +193,27 @@ html {
   .text-paid {
     color: hsl(var(--status-paid));
   }
+
   .text-fiado {
     color: hsl(var(--status-fiado));
   }
+
   .text-overdue {
     color: hsl(var(--status-overdue));
   }
+
   .dot-paid {
     background-color: hsl(var(--status-paid));
   }
+
   .dot-fiado {
     background-color: hsl(var(--status-fiado));
   }
+
   .dot-overdue {
     background-color: hsl(var(--status-overdue));
   }
+
   .dot-normal {
     background-color: hsl(var(--muted-foreground));
   }
@@ -272,12 +278,10 @@ html {
   position: absolute;
   inset: 0;
   transform: translateX(-100%);
-  background: linear-gradient(
-    90deg,
-    transparent,
-    hsl(var(--foreground) / 0.08),
-    transparent
-  );
+  background: linear-gradient(90deg,
+      transparent,
+      hsl(var(--foreground) / 0.08),
+      transparent);
   animation: skeleton-shimmer 1.25s ease-in-out infinite;
 }
 
@@ -301,4 +305,13 @@ html {
 ::-webkit-scrollbar-thumb {
   background: hsl(var(--border));
   border-radius: 4px;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }

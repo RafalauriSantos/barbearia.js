@@ -7,6 +7,11 @@ function addIfDefined(target, key, value) {
 }
 
 function normalizeAppointment(raw) {
+	const services = Array.isArray(raw.services) ? raw.services : [];
+	const products = Array.isArray(raw.products) ? raw.products : [];
+	const serviceNames = services.map((item) => item.name).filter(Boolean);
+	const productNames = products.map((item) => item.name).filter(Boolean);
+	const summaryName = [...serviceNames, ...productNames].join(", ");
 	return {
 		id: raw.id,
 		client_name: raw.client_name || raw.cliente_nome || "",
@@ -15,11 +20,13 @@ function normalizeAppointment(raw) {
 		value: Number(raw.value || 0),
 		status: raw.status || "normal",
 		service_id: raw.service_id,
-		service_name: raw.service_name,
+		service_name: raw.service_name || summaryName,
 		prazo_date: raw.prazo_date,
 		barber_name: raw.barber_name,
 		barbearia_id: raw.barbearia_id,
 		barbeiro_id: raw.barbeiro_id,
+		services,
+		products,
 	};
 }
 
@@ -36,6 +43,8 @@ function toApiPayload(appt) {
 	addIfDefined(payload, "status", appt.status);
 	addIfDefined(payload, "service_id", appt.service_id);
 	addIfDefined(payload, "service_name", appt.service_name);
+	addIfDefined(payload, "services", appt.services);
+	addIfDefined(payload, "products", appt.products);
 	addIfDefined(payload, "prazo_date", appt.prazo_date);
 	addIfDefined(payload, "barber_name", appt.barber_name);
 	addIfDefined(payload, "barbeiro_id", appt.barbeiro_id);

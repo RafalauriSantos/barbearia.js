@@ -19,8 +19,64 @@ function firstService(row) {
 		:	null;
 }
 
+function normalizeItemList(items = []) {
+	return (Array.isArray(items) ? items : [])
+		.map((item) => ({
+			id: item.id || item.servico_id || item.produto_id,
+			name: item.name || item.nome_servico || item.nome_produto,
+			price: Number(item.price ?? item.preco_unitario ?? 0),
+			quantity: Number(item.quantity ?? item.quantidade ?? 1) || 1,
+		}))
+		.filter((item) => item.id);
+}
+
+function normalizeServices(payload = {}) {
+	const provided =
+		Object.prototype.hasOwnProperty.call(payload, "services") ||
+		Object.prototype.hasOwnProperty.call(payload, "service_id");
+	if (!provided) return { provided: false, items: [] };
+
+	if (Array.isArray(payload.services)) {
+		return { provided: true, items: normalizeItemList(payload.services) };
+	}
+
+	if (payload.service_id) {
+		return {
+			provided: true,
+			items: normalizeItemList([
+				{
+					id: payload.service_id,
+					name: payload.service_name || "Servico",
+					price: Number(payload.value || 0),
+					quantity: 1,
+				},
+			]),
+		};
+	}
+
+	return { provided: true, items: [] };
+}
+
+function normalizeProducts(payload = {}) {
+	const provided = Object.prototype.hasOwnProperty.call(payload, "products");
+	if (!provided) return { provided: false, items: [] };
+	return {
+		provided: true,
+		items: normalizeItemList(payload.products),
+	};
+}
+
+function sumItems(items = []) {
+	return items.reduce(
+		(sum, item) => sum + Number(item.price || 0) * Number(item.quantity || 1),
+		0,
+	);
+}
+
 function toApi(row) {
 	const service = firstService(row);
+	const services = normalizeItemList(row.agendamento_servicos || []);
+	const products = normalizeItemList(row.agendamento_produtos || []);
 	return {
 		id: row.id,
 		cliente_nome: row.cliente_nome,
@@ -33,6 +89,8 @@ function toApi(row) {
 		status: paymentStatusToApi(row.status_pagamento),
 		service_id: service?.servico_id,
 		service_name: service?.nome_servico,
+		services,
+		products,
 		prazo_date: row.prazo_fiado_data,
 		barber_name: row.barbeiros?.nome,
 		barbearia_id: row.barbearia_id,
@@ -73,27 +131,65 @@ function toAppointmentDatabase(payload) {
 }
 
 async function upsertAppointmentService(appointmentId, payload) {
-	if (!payload.service_id) return;
+	const { provided, items } = normalizeServices(payload);
+	if (!provided) return;
 
-	const subtotal = Number(payload.value || 0);
-	const row = {
-		agendamento_id: appointmentId,
-		servico_id: payload.service_id,
-		nome_servico: payload.service_name || "Servico",
-		preco_unitario: subtotal,
-		quantidade: 1,
-		subtotal,
-	};
+	await supabase
+		.from("agendamento_servicos")
+		.delete()
+		.eq("agendamento_id", appointmentId);
+	if (items.length === 0) return;
 
-	await supabase.from("agendamento_servicos").delete().eq("agendamento_id", appointmentId);
-	const { error } = await supabase.from("agendamento_servicos").insert(row);
+	const rows = items.map((item) => {
+		const quantity = Number(item.quantity || 1) || 1;
+		const price = Number(item.price || 0);
+		return {
+			agendamento_id: appointmentId,
+			servico_id: item.id,
+			nome_servico: item.name || "Servico",
+			preco_unitario: price,
+			quantidade: quantity,
+			subtotal: price * quantity,
+		};
+	});
+
+	const { error } = await supabase.from("agendamento_servicos").insert(rows);
+	if (error) throw error;
+}
+
+async function upsertAppointmentProducts(appointmentId, payload) {
+	const { provided, items } = normalizeProducts(payload);
+	if (!provided) return;
+
+	await supabase
+		.from("agendamento_produtos")
+		.delete()
+		.eq("agendamento_id", appointmentId);
+	if (items.length === 0) return;
+
+	const rows = items.map((item) => {
+		const quantity = Number(item.quantity || 1) || 1;
+		const price = Number(item.price || 0);
+		return {
+			agendamento_id: appointmentId,
+			produto_id: item.id,
+			nome_produto: item.name || "Produto",
+			preco_unitario: price,
+			quantidade: quantity,
+			subtotal: price * quantity,
+		};
+	});
+
+	const { error } = await supabase.from("agendamento_produtos").insert(rows);
 	if (error) throw error;
 }
 
 exports.findAll = async function ({ date, barbeariaId, barbeiroId } = {}) {
 	let query = supabase
 		.from("agendamentos")
-		.select("*, agendamento_servicos(*), barbeiros(nome), formas_pagamento(codigo,nome)")
+		.select(
+			"*, agendamento_servicos(*), agendamento_produtos(*), barbeiros(nome), formas_pagamento(codigo,nome)",
+		)
 		.eq("barbearia_id", barbeariaId);
 	if (date) query = query.eq("data", date);
 	if (barbeiroId) query = query.eq("barbeiro_id", barbeiroId);
@@ -106,7 +202,9 @@ exports.findAll = async function ({ date, barbeariaId, barbeiroId } = {}) {
 exports.findById = async function (id, { barbeariaId } = {}) {
 	let query = supabase
 		.from("agendamentos")
-		.select("*, agendamento_servicos(*), barbeiros(nome), formas_pagamento(codigo,nome)")
+		.select(
+			"*, agendamento_servicos(*), agendamento_produtos(*), barbeiros(nome), formas_pagamento(codigo,nome)",
+		)
 		.eq("id", id);
 	if (barbeariaId) query = query.eq("barbearia_id", barbeariaId);
 
@@ -116,15 +214,21 @@ exports.findById = async function (id, { barbeariaId } = {}) {
 };
 
 exports.create = async function (payload, { barbeariaId, barbeiroId }) {
+	const { items: serviceItems } = normalizeServices(payload);
+	const { items: productItems } = normalizeProducts(payload);
+	const itemsTotal = sumItems(serviceItems) + sumItems(productItems);
+	const manualValue =
+		payload.value !== undefined ? Number(payload.value) : itemsTotal;
+	const payloadWithValue = { ...payload, value: manualValue };
 	const row = {
 		id: payload.id || randomUUID(),
 		barbearia_id: barbeariaId,
 		barbeiro_id: barbeiroId,
 		status_atendimento: "agendado",
 		status_pagamento: paymentStatusToDatabase(payload.status),
-		valor_manual: Number(payload.value || 0),
-		total: Number(payload.value || 0),
-		...toAppointmentDatabase(payload),
+		valor_manual: Number(manualValue || 0),
+		total: Number(manualValue || 0),
+		...toAppointmentDatabase(payloadWithValue),
 	};
 
 	const { data, error } = await supabase
@@ -135,13 +239,25 @@ exports.create = async function (payload, { barbeariaId, barbeiroId }) {
 	if (error) throw error;
 
 	await upsertAppointmentService(data.id, payload);
+	await upsertAppointmentProducts(data.id, payload);
 	return exports.findById(data.id, { barbeariaId });
 };
 
 exports.update = async function (id, updates, { barbeariaId }) {
+	const { provided: servicesProvided, items: serviceItems } =
+		normalizeServices(updates);
+	const { provided: productsProvided, items: productItems } =
+		normalizeProducts(updates);
+	const itemsTotal = sumItems(serviceItems) + sumItems(productItems);
+	const shouldUpdateValue =
+		updates.value !== undefined || servicesProvided || productsProvided;
+	const payloadWithValue =
+		shouldUpdateValue ?
+			{ ...updates, value: updates.value ?? itemsTotal }
+		:	updates;
 	const { data, error } = await supabase
 		.from("agendamentos")
-		.update(toAppointmentDatabase(updates))
+		.update(toAppointmentDatabase(payloadWithValue))
 		.eq("id", id)
 		.eq("barbearia_id", barbeariaId)
 		.select()
@@ -149,6 +265,7 @@ exports.update = async function (id, updates, { barbeariaId }) {
 	if (error) throw error;
 
 	await upsertAppointmentService(id, updates);
+	await upsertAppointmentProducts(id, updates);
 	return exports.findById(data.id, { barbeariaId });
 };
 

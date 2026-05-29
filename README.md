@@ -1,4 +1,4 @@
-# Barbearia SaaS (TCC)
+# Projeto TCC
 
 Projeto full stack para gestao de barbearia: agenda diaria, servicos, produtos, despesas e resumo financeiro. Foco em fluxo operacional, dados persistidos e integracao real com Postgres/Supabase.
 

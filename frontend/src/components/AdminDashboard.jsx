@@ -3,7 +3,6 @@ import { AppointmentDialog } from "@/components/AppointmentDialog";
 import {
 	EmptyState,
 	IconButton,
-	LoadingCard,
 	Notice,
 } from "@/components/ScreenPrimitives";
 import { addBarber, formatCurrency, sendBarberInvite } from "@/lib/store";
@@ -22,6 +21,22 @@ function statusTone(status) {
 	if (status === "paid") return "border-paid/30 bg-paid/10 text-paid";
 	if (status === "fiado") return "border-fiado/30 bg-fiado/10 text-fiado";
 	return "border-border bg-secondary text-foreground-faint";
+}
+
+function getAppointmentSummary(appointment) {
+	const services =
+		Array.isArray(appointment.services) ? appointment.services : [];
+	const products =
+		Array.isArray(appointment.products) ? appointment.products : [];
+	const serviceNames = services.map((item) => item.name).filter(Boolean);
+	const productNames = products
+		.map((item) =>
+			item.quantity > 1 ? `${item.quantity}x ${item.name}` : item.name,
+		)
+		.filter(Boolean);
+	const names = [...serviceNames, ...productNames].filter(Boolean);
+	if (names.length > 0) return names.join(", ");
+	return appointment.service_name || "Atendimento";
 }
 
 function accessLabel(barber) {
@@ -108,7 +123,11 @@ function getNextAppointment(rows, dayKey) {
 
 	const now = new Date();
 	const currentMinutes = now.getHours() * 60 + now.getMinutes();
-	return rows.find((appointment) => toMinutes(appointment.time_slot) >= currentMinutes) || null;
+	return (
+		rows.find(
+			(appointment) => toMinutes(appointment.time_slot) >= currentMinutes,
+		) || null
+	);
 }
 
 function getAppointmentsByTime(rows) {
@@ -207,12 +226,15 @@ function BarberCard({ barber, rows, slots, dayKey, onSelect, onAdd }) {
 					<p className="rounded-md border border-dashed border-border bg-background-deep px-3 py-4 text-center font-mono-ui text-[10px] text-foreground-faint">
 						Agenda livre neste dia
 					</p>
-				:	rows.slice(0, 2).map((appointment) => (
-						<AppointmentPreview
-							key={appointment.id}
-							appointment={appointment}
-						/>
-					))}
+				:	rows
+						.slice(0, 2)
+						.map((appointment) => (
+							<AppointmentPreview
+								key={appointment.id}
+								appointment={appointment}
+							/>
+						))
+				}
 			</div>
 
 			<button
@@ -267,7 +289,7 @@ function BarberAgenda({ barber, rows, slots, onBack, onAdd, onEdit }) {
 												{appointment.client_name}
 											</p>
 											<p className="mt-1 truncate font-mono-ui text-[10px] text-foreground-faint">
-												{appointment.service_name || "Atendimento"} ·{" "}
+												{getAppointmentSummary(appointment)} ·{" "}
 												{formatCurrency(Number(appointment.value || 0))}
 											</p>
 										</div>
@@ -329,9 +351,9 @@ export function AdminDashboard({
 	);
 
 	const selectedBarber =
-		activeBarberId === "all" ?
-			null
-		:	barbers.find((barber) => barber.id === activeBarberId) || null;
+		activeBarberId === "all" ? null : (
+			barbers.find((barber) => barber.id === activeBarberId) || null
+		);
 	const nextTeamAppointment = getNextAppointment(appointments, dayKey);
 	const totalSlots = slots.length * barbers.length;
 	const freeSlots = Math.max(totalSlots - appointments.length, 0);
@@ -520,9 +542,12 @@ export function AdminDashboard({
 
 				{!selectedBarber && (
 					<section className="grid gap-3 px-4 pb-6 lg:grid-cols-2">
-						{isLoading && barbers.length === 0 ?
-							<LoadingCard label="Carregando equipe" rows={3} />
-						: barbers.length === 0 ?
+						{isLoading && barbers.length === 0 && (
+							<p className="rounded-md border border-border bg-card px-3 py-2 font-mono-ui text-[10px] uppercase text-foreground-faint lg:col-span-2">
+								Atualizando equipe...
+							</p>
+						)}
+						{barbers.length === 0 ?
 							<EmptyState
 								title="Nenhum barbeiro da equipe cadastrado"
 								hint="Cadastre barbeiros para consultar a agenda da equipe."

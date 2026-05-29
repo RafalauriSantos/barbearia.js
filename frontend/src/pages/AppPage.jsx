@@ -11,15 +11,25 @@ import {
 	getAppointmentsForDayWithFilters,
 	getDaySummaryFromAppointments,
 	isToday,
+	loadProducts,
+	loadServices,
 	loadBarbers,
 	loadProfile,
+	updateAppointment,
 } from "@/lib/store";
 import { useAuth } from "@/context/AuthContext";
 import { useNavigate } from "react-router-dom";
-
 const SLOT_START_MINUTES = 9 * 60;
 const SLOT_END_MINUTES = 20 * 60;
 const SLOT_STEP_MINUTES = 30;
+const AVATAR_COLORS = [
+	"#0f766e",
+	"#1e3a8a",
+	"#7f1d1d",
+	"#155e75",
+	"#4c1d95",
+	"#0f172a",
+];
 
 function toTimeLabel(totalMinutes) {
 	const hours = Math.floor(totalMinutes / 60);
@@ -37,33 +47,58 @@ function isBeforeToday(date) {
 	return normalizeDate(date) < normalizeDate(new Date());
 }
 
-function getSlots() {
-	const slots = [];
-	for (
-		let minutes = SLOT_START_MINUTES;
-		minutes <= SLOT_END_MINUTES;
-		minutes += SLOT_STEP_MINUTES
-	) {
-		slots.push({ minutes, time: toTimeLabel(minutes) });
-	}
-	return slots;
-}
-
 function getStatusLabel(status) {
 	if (status === "paid") return "pago";
-	if (status === "fiado") return "pendente";
+	if (status === "fiado") return "fiado";
 	return "pendente";
 }
 
-function getNowLineIndex(slots, currentDate) {
-	if (!isToday(currentDate)) return -1;
+function formatFiadoLabel(prazoDate) {
+	if (!prazoDate) return "";
+	const prazo = new Date(prazoDate + "T12:00:00");
+	const day = prazo.getDate();
+	const month = prazo.getMonth() + 1;
+	return `${day}/${month}`;
+}
+
+function getAppointmentSummary(appointment) {
+	const services =
+		Array.isArray(appointment.services) ? appointment.services : [];
+	const products =
+		Array.isArray(appointment.products) ? appointment.products : [];
+	const serviceNames = services.map((item) => item.name).filter(Boolean);
+	const productNames = products
+		.map((item) =>
+			item.quantity > 1 ? `${item.quantity}x ${item.name}` : item.name,
+		)
+		.filter(Boolean);
+	const names = [...serviceNames, ...productNames].filter(Boolean);
+	if (names.length > 0) return names.join(", ");
+	return appointment.service_name || "Atendimento";
+}
+
+function getInitials(name) {
+	const trimmed = String(name || "").trim();
+	if (!trimmed) return "?";
+	const parts = trimmed.split(/\s+/).filter(Boolean);
+	if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+	return `${parts[0][0] || ""}${parts[parts.length - 1][0] || ""}`.toUpperCase();
+}
+
+function getAvatarColor(index) {
+	return AVATAR_COLORS[index % AVATAR_COLORS.length];
+}
+
+function getDefaultTimeSlot() {
 	const now = new Date();
 	const nowMinutes = now.getHours() * 60 + now.getMinutes();
-	if (nowMinutes < SLOT_START_MINUTES || nowMinutes > SLOT_END_MINUTES) {
-		return -1;
-	}
-	const index = slots.findIndex((slot) => slot.minutes >= nowMinutes);
-	return index === -1 ? slots.length - 1 : index;
+	const roundedMinutes =
+		Math.ceil(nowMinutes / SLOT_STEP_MINUTES) * SLOT_STEP_MINUTES;
+	const clampedMinutes = Math.min(
+		Math.max(roundedMinutes, SLOT_START_MINUTES),
+		SLOT_END_MINUTES,
+	);
+	return toTimeLabel(clampedMinutes);
 }
 
 export default function AppPage() {
@@ -87,34 +122,46 @@ export default function AppPage() {
 	const [editingAppt, setEditingAppt] = useState();
 	const [defaultTimeSlot, setDefaultTimeSlot] = useState("09:00");
 	const [selectedAppointment, setSelectedAppointment] = useState(null);
+	const [services, setServices] = useState([]);
+	const [products, setProducts] = useState([]);
+	const [isLoadingCatalog, setIsLoadingCatalog] = useState(true);
+	const [itemDraft, setItemDraft] = useState({ services: [], products: [] });
+	const [autoValueForDraft, setAutoValueForDraft] = useState(true);
+	const [isSavingItems, setIsSavingItems] = useState(false);
+	const [itemError, setItemError] = useState("");
 	const [barbers, setBarbers] = useState([]);
 	const [profile, setProfile] = useState(null);
-	const [agendaKey, setAgendaKey] = useState("mine");
+	const [activeBarberId, setActiveBarberId] = useState("all");
 	const navigate = useNavigate();
 	const { user } = useAuth();
 	const isAdmin = user?.role === "admin";
 	const dayKey = formatDayKey(currentDate);
 	const ownBarberId = user?.barbeiro_id || "";
-	const selectedBarberId = agendaKey === "mine" ? ownBarberId : agendaKey;
-	const ownBarber = barbers.find((barber) => barber.id === ownBarberId);
-	const teamBarbers = useMemo(
-		() => barbers.filter((barber) => barber.id !== ownBarberId),
-		[barbers, ownBarberId],
-	);
-	const selectedBarberName =
-		agendaKey === "mine" ?
-			ownBarber?.name || user?.nome || user?.email || "Minha agenda"
-		:	barbers.find((barber) => barber.id === agendaKey)?.name || "Agenda";
+	const selectedBarberId = activeBarberId === "all" ? "" : activeBarberId;
+	const barberOptions = useMemo(() => {
+		if (!isAdmin) {
+			const fallbackName = user?.nome || user?.email || "Minha agenda";
+			return [
+				{
+					id: ownBarberId || "mine",
+					name: fallbackName,
+					photo_url: user?.photo_url,
+					color: getAvatarColor(0),
+				},
+			];
+		}
+		return barbers.map((barber, index) => ({
+			...barber,
+			photo_url: barber.photo_url || barber.foto_url || null,
+			color: getAvatarColor(index),
+		}));
+	}, [barbers, isAdmin, ownBarberId, user]);
 	const todaySelected = isToday(currentDate);
 	const canGoBack = !todaySelected;
-	const slots = useMemo(() => getSlots(), []);
-	const nowLineIndex = getNowLineIndex(slots, currentDate);
-	const appointmentsByTime = useMemo(() => {
-		const map = new Map();
-		for (const appointment of appointments) {
-			map.set(String(appointment.time_slot || "").slice(0, 5), appointment);
-		}
-		return map;
+	const sortedAppointments = useMemo(() => {
+		return [...appointments].sort((first, second) =>
+			String(first.time_slot || "").localeCompare(String(second.time_slot || "")),
+		);
 	}, [appointments]);
 
 	useEffect(() => {
@@ -125,27 +172,22 @@ export default function AppPage() {
 
 	useEffect(() => {
 		if (!isAdmin) return;
-		if (!ownBarberId && agendaKey === "mine") {
-			setAgendaKey("");
+		if (!ownBarberId && activeBarberId === "mine") {
+			setActiveBarberId("all");
 		}
-	}, [agendaKey, isAdmin, ownBarberId]);
+	}, [activeBarberId, isAdmin, ownBarberId]);
 
 	useEffect(() => {
 		if (!isAdmin) return;
 		loadBarbers()
 			.then((list) => {
 				setBarbers(list);
-				setAgendaKey((current) => {
+				setActiveBarberId((current) => {
 					const availableIds = new Set(list.map((barber) => barber.id));
-					if (ownBarberId) {
-						if (!current || current === ownBarberId) return "mine";
-						if (current === "mine" || availableIds.has(current)) return current;
-						return "mine";
-					}
-					if (current && current !== "mine" && availableIds.has(current)) {
-						return current;
-					}
-					return "";
+					if (current === "all") return "all";
+					if (current && availableIds.has(current)) return current;
+					if (ownBarberId && availableIds.has(ownBarberId)) return ownBarberId;
+					return "all";
 				});
 			})
 			.catch((error) => {
@@ -154,29 +196,19 @@ export default function AppPage() {
 			});
 	}, [isAdmin, ownBarberId]);
 
+	useEffect(() => {
+		if (isAdmin) return;
+		if (ownBarberId) {
+			setActiveBarberId(ownBarberId);
+		}
+	}, [isAdmin, ownBarberId]);
+
 	const reload = useCallback(async () => {
 		setIsLoading(!hasLoaded);
 		setErrorMessage("");
-		if (!selectedBarberId) {
-			setAppointments([]);
-			setSummary({
-				totalReceived: 0,
-				totalClients: 0,
-				totalIncome: 0,
-				totalExpenses: 0,
-				paid: 0,
-				pending: 0,
-				toCollect: 0,
-				overdue: 0,
-			});
-			setIsLoading(false);
-			setHasLoaded(true);
-			return;
-		}
 		try {
-			const list = await getAppointmentsForDayWithFilters(dayKey, {
-				barbeiro_id: selectedBarberId,
-			});
+			const params = selectedBarberId ? { barbeiro_id: selectedBarberId } : {};
+			const list = await getAppointmentsForDayWithFilters(dayKey, params);
 			setAppointments(list);
 			const nextSummary = await getDaySummaryFromAppointments(dayKey, list);
 			setSummary(nextSummary);
@@ -205,6 +237,36 @@ export default function AppPage() {
 		reload();
 	}, [reload]);
 
+	useEffect(() => {
+		let mounted = true;
+		async function fetchCatalog() {
+			try {
+				const [serviceList, productList] = await Promise.all([
+					loadServices(),
+					loadProducts(),
+				]);
+				if (mounted) {
+					setServices(serviceList);
+					setProducts(productList);
+				}
+			} catch {
+				if (mounted) {
+					setServices([]);
+					setProducts([]);
+				}
+			} finally {
+				if (mounted) {
+					setIsLoadingCatalog(false);
+				}
+			}
+		}
+
+		fetchCatalog();
+		return () => {
+			mounted = false;
+		};
+	}, []);
+
 	const prevDay = () => {
 		if (!canGoBack) return;
 		const next = new Date(currentDate);
@@ -219,7 +281,7 @@ export default function AppPage() {
 		setCurrentDate(next);
 	};
 
-	const openNewAtSlot = (time) => {
+	const openNewAppointment = () => {
 		if (isBeforeToday(currentDate)) {
 			setFeedbackMessage("Nao e possivel adicionar em datas passadas.");
 			return;
@@ -229,7 +291,7 @@ export default function AppPage() {
 			return;
 		}
 		setEditingAppt(undefined);
-		setDefaultTimeSlot(time);
+		setDefaultTimeSlot(todaySelected ? getDefaultTimeSlot() : "09:00");
 		setDialogOpen(true);
 		setFeedbackMessage("");
 	};
@@ -239,6 +301,95 @@ export default function AppPage() {
 		setEditingAppt(appointment);
 		setDefaultTimeSlot(appointment.time_slot || "09:00");
 		setDialogOpen(true);
+	};
+
+	const openQuickItems = (appointment) => {
+		const servicesDraft =
+			Array.isArray(appointment.services) ? appointment.services : [];
+		const productsDraft =
+			Array.isArray(appointment.products) ? appointment.products : [];
+		const itemsTotal = [...servicesDraft, ...productsDraft].reduce(
+			(sum, item) => sum + Number(item.price || 0) * Number(item.quantity || 1),
+			0,
+		);
+		const delta = Math.abs(Number(appointment.value || 0) - itemsTotal);
+		setAutoValueForDraft(delta < 0.01 || Number(appointment.value || 0) === 0);
+		setItemDraft({ services: servicesDraft, products: productsDraft });
+		setItemError("");
+		setSelectedAppointment(appointment);
+	};
+
+	const updateDraftQuantity = (type, id, quantity) => {
+		setItemDraft((prev) => ({
+			...prev,
+			[type]: prev[type].map((item) =>
+				item.id === id ? { ...item, quantity } : item,
+			),
+		}));
+	};
+
+	const removeDraftItem = (type, id) => {
+		setItemDraft((prev) => ({
+			...prev,
+			[type]: prev[type].filter((item) => item.id !== id),
+		}));
+	};
+
+	const addDraftItem = (type, item) => {
+		setItemDraft((prev) => {
+			const list = prev[type];
+			const existing = list.find((entry) => entry.id === item.id);
+			if (!existing) {
+				return {
+					...prev,
+					[type]: [
+						...list,
+						{ id: item.id, name: item.name, price: item.price, quantity: 1 },
+					],
+				};
+			}
+			return {
+				...prev,
+				[type]: list.map((entry) =>
+					entry.id === item.id ?
+						{ ...entry, quantity: Number(entry.quantity || 1) + 1 }
+					:	entry,
+				),
+			};
+		});
+	};
+
+	const draftTotal = [...itemDraft.services, ...itemDraft.products].reduce(
+		(sum, item) => sum + Number(item.price || 0) * Number(item.quantity || 1),
+		0,
+	);
+
+	const saveDraftItems = async () => {
+		if (!selectedAppointment || isSavingItems) return;
+		setIsSavingItems(true);
+		setItemError("");
+		try {
+			const payload = {
+				services: itemDraft.services,
+				products: itemDraft.products,
+			};
+			if (autoValueForDraft) {
+				payload.value = draftTotal;
+			} else {
+				payload.value = Number(selectedAppointment.value || 0);
+			}
+			const updated = await updateAppointment(selectedAppointment.id, payload);
+			setSelectedAppointment(updated);
+			setItemDraft({
+				services: Array.isArray(updated.services) ? updated.services : [],
+				products: Array.isArray(updated.products) ? updated.products : [],
+			});
+			await reload();
+		} catch (error) {
+			setItemError(error.message || "Falha ao atualizar itens.");
+		} finally {
+			setIsSavingItems(false);
+		}
 	};
 
 	const removeAppointment = async (appointment) => {
@@ -254,84 +405,143 @@ export default function AppPage() {
 	};
 
 	const shopName = profile?.shopName || "Marque's";
-	const currentMinutes = new Date().getHours() * 60 + new Date().getMinutes();
 
 	return (
 		<div className="app-shell flex flex-col overflow-hidden bg-background">
-			<header className="shrink-0 border-b border-border bg-background/95 px-3 pb-1 pt-1.5 backdrop-blur">
-				<div className="flex items-center justify-between gap-2">
-					<div className="min-w-0">
-						<p className="truncate font-logo text-base leading-tight text-foreground">
-							{shopName}
-						</p>
-					</div>
-					<div className="flex min-w-0 shrink-0 items-center gap-2">
-						{isAdmin && (
-							<select
-								value={agendaKey}
-								onChange={(event) => {
-									setAgendaKey(event.target.value);
-									setFeedbackMessage("");
-								}}
-								className="max-w-[128px] rounded-full border border-border bg-card px-2.5 py-1.5 font-mono-ui text-[10px] text-foreground">
-								{!ownBarberId && <option value="">Escolha</option>}
-								{ownBarberId && <option value="mine">Minha agenda</option>}
-								{teamBarbers.map((barber) => (
-									<option key={barber.id} value={barber.id}>
-										{barber.name}
-									</option>
-								))}
-							</select>
-						)}
-						{!isAdmin && (
-							<span className="max-w-[128px] truncate rounded-full border border-border bg-card px-2.5 py-1.5 font-mono-ui text-[10px] text-foreground">
-								{selectedBarberName}
-							</span>
-						)}
-						<ThemeToggle className="h-7 w-7" />
+			<header className="shrink-0 border-b border-border bg-background/95 px-4 pb-3 pt-3 backdrop-blur">
+				<div className="flex items-center justify-between gap-3">
+					<h1 className="truncate font-logo text-[22px] font-semibold text-foreground">
+						{shopName}
+					</h1>
+					<div className="flex items-center gap-2">
+						<ThemeToggle className="h-9 w-9 rounded-full border border-border bg-card" />
 						<IconButton
 							label="Configurações"
 							onClick={() => navigate("/settings")}
-							className="h-7 w-7">
+							className="h-9 w-9">
 							⚙
 						</IconButton>
 					</div>
 				</div>
 
-				<div className="mt-1 grid grid-cols-3 gap-1">
-					<div className="flex min-w-0 items-baseline justify-center gap-1 rounded-md border border-paid/20 bg-paid/10 px-1.5 py-1">
-						<span className="shrink-0 font-mono-ui text-[8px] uppercase text-foreground-faint">
+				<div className="mt-3">
+					<div className="flex gap-3 overflow-x-auto pb-1 no-scrollbar">
+						{isAdmin && (
+							<button
+								type="button"
+								onClick={() => {
+									setActiveBarberId("all");
+									setFeedbackMessage("");
+								}}
+								className="flex shrink-0 flex-col items-center gap-1">
+								<div
+									className={`flex h-9 w-9 items-center justify-center rounded-full border-2 ${
+										activeBarberId === "all" ?
+											"border-[#4ade80]"
+										: "border-transparent"
+									}`}
+									style={{ background: "#1f2937" }}>
+									<svg
+										width="14"
+										height="14"
+										viewBox="0 0 24 24"
+										fill="none"
+										stroke="currentColor"
+										strokeWidth="1.6"
+										strokeLinecap="round"
+										strokeLinejoin="round"
+										className="text-foreground">
+										<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+										<circle cx="9" cy="7" r="4" />
+										<path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+										<path d="M16 3.13a4 4 0 0 1 0 7.75" />
+									</svg>
+								</div>
+								<span
+									className={`text-[8px] ${
+										activeBarberId === "all" ?
+											"text-[#4ade80]"
+										: "text-foreground-faint"
+									}`}>
+									Todos
+								</span>
+							</button>
+						)}
+						{barberOptions.map((barber, index) => {
+							const isActive = activeBarberId === barber.id ||
+								(!isAdmin && barber.id === ownBarberId);
+							return (
+								<button
+									key={barber.id}
+									type="button"
+									onClick={() => {
+										setActiveBarberId(barber.id);
+										setFeedbackMessage("");
+									}}
+									className="flex shrink-0 flex-col items-center gap-1">
+									<div
+										className={`flex h-9 w-9 items-center justify-center overflow-hidden rounded-full border-2 ${
+											isActive ? "border-[#4ade80]" : "border-transparent"
+										}`}
+										style={{ background: barber.color || getAvatarColor(index) }}>
+										{barber.photo_url ? (
+											<img
+												src={barber.photo_url}
+												alt={barber.name}
+												className="h-full w-full object-cover"
+											/>
+										) : (
+											<span className="text-[10px] font-semibold text-white">
+												{getInitials(barber.name || barber.nome)}
+											</span>
+										)}
+									</div>
+									<span
+										className={`max-w-[52px] truncate text-[8px] ${
+											isActive ? "text-[#4ade80]" : "text-foreground-faint"
+										}`}>
+										{barber.name || barber.nome}
+									</span>
+								</button>
+							);
+						})}
+					</div>
+				</div>
+
+				<div className="mt-3 grid grid-cols-3 gap-2">
+					<div className="flex items-center justify-center gap-2 rounded-full border border-border bg-card px-2 py-1">
+						<span className="font-mono-ui text-[8px] uppercase text-foreground-faint">
 							Recebido
 						</span>
-						<span className="min-w-0 truncate font-value text-[10px] text-paid">
+						<span className="font-value text-[11px] text-[#4ade80]">
 							{formatCurrency(summary.totalReceived)}
 						</span>
 					</div>
-					<div className="flex min-w-0 items-baseline justify-center gap-1 rounded-md border border-fiado/20 bg-fiado/10 px-1.5 py-1">
-						<span className="shrink-0 font-mono-ui text-[8px] uppercase text-foreground-faint">
+					<div className="flex items-center justify-center gap-2 rounded-full border border-border bg-card px-2 py-1">
+						<span className="font-mono-ui text-[8px] uppercase text-foreground-faint">
 							A cobrar
 						</span>
-						<span className="min-w-0 truncate font-value text-[10px] text-fiado">
+						<span className="font-value text-[11px] text-[#facc15]">
 							{formatCurrency(summary.toCollect)}
 						</span>
 					</div>
-					<div className="flex min-w-0 items-baseline justify-center gap-1 rounded-md border border-border bg-card px-1.5 py-1">
-						<span className="shrink-0 font-mono-ui text-[8px] uppercase text-foreground-faint">
+					<div className="flex items-center justify-center gap-2 rounded-full border border-border bg-card px-2 py-1">
+						<span className="font-mono-ui text-[8px] uppercase text-foreground-faint">
 							Clientes
 						</span>
-						<span className="font-value text-[10px] text-foreground">
+						<span className="font-value text-[11px] text-foreground">
 							{summary.totalClients}
 						</span>
 					</div>
 				</div>
 
-				<div className="mt-1 grid grid-cols-[32px_1fr_32px] items-center gap-2">
+				<div className="mt-2 grid grid-cols-[32px_1fr_32px] items-center gap-2">
 					<IconButton
 						label="Dia anterior"
 						onClick={prevDay}
 						disabled={!canGoBack}
 						tone="quiet"
-						className="h-7 w-7">
+						className={`h-7 w-7 ${!canGoBack ? "opacity-40" : ""}`}>
 						‹
 					</IconButton>
 					<div className="flex min-w-0 items-center justify-center gap-2 rounded-md border border-border bg-background-deep px-2 py-1">
@@ -356,6 +566,25 @@ export default function AppPage() {
 			</header>
 
 			<main className="min-h-0 flex-1 overflow-y-auto px-3 py-3">
+				<div className="mb-3 flex items-center justify-between gap-3">
+					<div className="min-w-0">
+						<p className="font-mono-ui text-[10px] uppercase text-foreground-faint">
+							Clientes agendados
+						</p>
+						<p className="mt-0.5 truncate font-client text-sm text-foreground">
+							{sortedAppointments.length === 0 ?
+								"Nenhum horário lançado"
+							:	`${sortedAppointments.length} na agenda do dia`}
+						</p>
+					</div>
+					<button
+						type="button"
+						onClick={openNewAppointment}
+						className="shrink-0 rounded-md bg-foreground px-4 py-2.5 font-mono-ui text-xs text-primary-foreground transition-transform active:scale-[0.98]">
+						+ Cliente
+					</button>
+				</div>
+
 				{feedbackMessage && (
 					<div className="mb-3">
 						<Notice tone="error">{feedbackMessage}</Notice>
@@ -379,72 +608,64 @@ export default function AppPage() {
 					</div>
 				)}
 
-				{isLoading && appointments.length === 0 ?
-					<LoadingCard label="Carregando horários" rows={5} />
-				:	<div className="space-y-1.5 pb-2">
-						{slots.map((slot, index) => {
-							const appointment = appointmentsByTime.get(slot.time);
-							const slotIsPast =
-								todaySelected && slot.minutes + SLOT_STEP_MINUTES <= currentMinutes;
+				{isLoading && appointments.length === 0 && (
+					<p className="mb-3 rounded-md border border-border bg-card px-3 py-2 font-mono-ui text-[10px] uppercase text-foreground-faint">
+						Atualizando agenda...
+					</p>
+				)}
 
-							return (
-								<div key={slot.time}>
-									{index === nowLineIndex && (
-										<div className="grid grid-cols-[54px_1fr] items-center gap-2 py-1">
-											<span className="font-mono-ui text-[9px] uppercase text-overdue">
-												agora
-											</span>
-											<div className="h-px bg-overdue" />
-										</div>
-									)}
-									<div
-										className={`grid grid-cols-[54px_1fr] gap-2 ${
-											slotIsPast ? "opacity-50" : ""
-										}`}>
-										<div className="pt-3 text-left font-mono-ui text-xs text-foreground-faint">
-											{slot.time}
-										</div>
-										{appointment ?
-											<button
-												type="button"
-												onClick={() => setSelectedAppointment(appointment)}
-												className="min-h-[64px] w-full rounded-lg border border-paid/35 bg-[hsl(var(--status-paid-bg))] px-3 py-2 text-left transition-colors hover:bg-paid/20">
-												<div className="flex items-start justify-between gap-2">
-													<div className="min-w-0">
-														<p className="truncate font-client text-sm font-semibold text-foreground">
-															{appointment.client_name}
-														</p>
-														<p className="mt-1 truncate font-mono-ui text-[10px] text-foreground-faint">
-															{appointment.service_name || "Atendimento"} ·{" "}
-															{formatCurrency(Number(appointment.value || 0))}
-														</p>
-													</div>
-													<span
-														className={`shrink-0 rounded-full border px-2 py-0.5 font-mono-ui text-[9px] uppercase ${
-															appointment.status === "paid" ?
-																"border-paid/40 bg-paid/20 text-paid"
-															:	"border-fiado/40 bg-fiado/15 text-fiado"
-														}`}>
-														{getStatusLabel(appointment.status)}
-													</span>
-												</div>
-											</button>
-										:	<button
-												type="button"
-												onClick={() => openNewAtSlot(slot.time)}
-												className="grid min-h-[58px] w-full grid-cols-[1fr_auto] items-center gap-2 rounded-lg border border-dashed border-border bg-card/45 px-3 py-2 text-left transition-colors hover:border-paid/40 hover:bg-paid/5">
-												<span className="font-mono-ui text-[10px] uppercase text-foreground-faint">
-													+ adicionar cliente
-												</span>
-												<span className="flex h-9 w-9 items-center justify-center rounded-md border border-border bg-background-deep font-mono-ui text-lg text-paid">
-													+
-												</span>
-											</button>
-										}
-									</div>
+				{sortedAppointments.length === 0 ?
+					<div className="flex min-h-[260px] flex-col items-center justify-center rounded-lg border border-dashed border-border bg-card/35 px-5 py-8 text-center">
+						<p className="font-logo text-xl text-foreground">
+							Nenhum cliente agendado
+						</p>
+						<p className="mt-2 max-w-[280px] font-client text-sm text-foreground-faint">
+							Adicione o cliente e informe o horário manualmente no atendimento.
+						</p>
+						<button
+							type="button"
+							onClick={openNewAppointment}
+							className="mt-5 rounded-md bg-foreground px-5 py-3 font-mono-ui text-xs text-primary-foreground transition-transform active:scale-[0.98]">
+							+ Adicionar cliente
+						</button>
+					</div>
+				:	<div className="space-y-2 pb-2">
+						{sortedAppointments.map((appointment) => (
+							<button
+								key={appointment.id}
+								type="button"
+								onClick={() => openQuickItems(appointment)}
+								className="grid min-h-[76px] w-full grid-cols-[58px_1fr_auto] items-center gap-3 rounded-lg border border-border bg-card px-3 py-3 text-left transition-colors hover:border-paid/35 hover:bg-paid/5">
+								<div className="flex h-full flex-col items-center justify-center rounded-md bg-background-deep px-2">
+									<span className="font-value text-sm tabular-nums text-foreground">
+										{String(appointment.time_slot || "").slice(0, 5) || "--:--"}
+									</span>
 								</div>
-							);
-						})}
+								<div className="min-w-0">
+									<p className="truncate font-client text-sm font-semibold text-foreground">
+										{appointment.client_name}
+									</p>
+									<p className="mt-1 truncate font-mono-ui text-[10px] text-foreground-faint">
+										{getAppointmentSummary(appointment)} ·{" "}
+										{formatCurrency(Number(appointment.value || 0))}
+										{(
+											appointment.status === "fiado" &&
+											appointment.prazo_date
+										) ?
+											` · Fiado ate ${formatFiadoLabel(appointment.prazo_date)}`
+										:	""}
+									</p>
+								</div>
+								<span
+									className={`shrink-0 rounded-full border px-2 py-0.5 font-mono-ui text-[9px] uppercase ${
+										appointment.status === "paid" ?
+											"border-paid/40 bg-paid/20 text-paid"
+										:	"border-fiado/40 bg-fiado/15 text-fiado"
+									}`}>
+									{getStatusLabel(appointment.status)}
+								</span>
+							</button>
+						))}
 					</div>
 				}
 			</main>
@@ -465,21 +686,173 @@ export default function AppPage() {
 							{selectedAppointment.client_name}
 						</h2>
 						<p className="mt-2 font-client text-sm text-foreground-faint">
-							{selectedAppointment.service_name || "Atendimento"} ·{" "}
+							{getAppointmentSummary(selectedAppointment)} ·{" "}
 							{formatCurrency(Number(selectedAppointment.value || 0))}
+							{(
+								selectedAppointment.status === "fiado" &&
+								selectedAppointment.prazo_date
+							) ?
+								` · Fiado ate ${formatFiadoLabel(selectedAppointment.prazo_date)}`
+							:	""}
 						</p>
-						<div className="mt-4 grid grid-cols-2 gap-2">
+						<div className="mt-4 space-y-3">
+							{itemError && <Notice tone="error">{itemError}</Notice>}
+							<div className="rounded-md border border-border bg-card px-3 py-3">
+								<p className="font-mono-ui text-[10px] uppercase text-foreground-faint">
+									Itens do atendimento
+								</p>
+								{(
+									itemDraft.services.length === 0 &&
+									itemDraft.products.length === 0
+								) ?
+									<p className="mt-2 font-mono-ui text-[10px] text-foreground-faint">
+										Sem itens adicionados.
+									</p>
+								:	<div className="mt-2 space-y-2">
+										{itemDraft.services.map((item) => (
+											<div
+												key={`service-${item.id}`}
+												className="flex items-center gap-2 rounded-md border border-border bg-background-deep px-2 py-2">
+												<span className="min-w-0 flex-1 truncate font-mono-ui text-[10px] text-foreground">
+													{item.name}
+												</span>
+												<input
+													type="number"
+													min="1"
+													value={item.quantity}
+													onChange={(event) =>
+														updateDraftQuantity(
+															"services",
+															item.id,
+															Math.max(1, Number(event.target.value || 1)),
+														)
+													}
+													className="w-16 rounded-md border border-border bg-secondary px-2 py-1 text-xs text-foreground"
+												/>
+												<button
+													type="button"
+													onClick={() => removeDraftItem("services", item.id)}
+													className="rounded-md border border-overdue/40 bg-overdue/10 px-2 py-1 font-mono-ui text-[9px] text-overdue">
+													remover
+												</button>
+											</div>
+										))}
+										{itemDraft.products.map((item) => (
+											<div
+												key={`product-${item.id}`}
+												className="flex items-center gap-2 rounded-md border border-border bg-background-deep px-2 py-2">
+												<span className="min-w-0 flex-1 truncate font-mono-ui text-[10px] text-foreground">
+													{item.name}
+												</span>
+												<input
+													type="number"
+													min="1"
+													value={item.quantity}
+													onChange={(event) =>
+														updateDraftQuantity(
+															"products",
+															item.id,
+															Math.max(1, Number(event.target.value || 1)),
+														)
+													}
+													className="w-16 rounded-md border border-border bg-secondary px-2 py-1 text-xs text-foreground"
+												/>
+												<button
+													type="button"
+													onClick={() => removeDraftItem("products", item.id)}
+													className="rounded-md border border-overdue/40 bg-overdue/10 px-2 py-1 font-mono-ui text-[9px] text-overdue">
+													remover
+												</button>
+											</div>
+										))}
+									</div>
+								}
+								<div className="mt-3 flex flex-wrap items-center gap-2">
+									<span className="font-mono-ui text-[10px] text-foreground-faint">
+										Total itens: {formatCurrency(draftTotal)}
+									</span>
+									<button
+										type="button"
+										onClick={() => setAutoValueForDraft(true)}
+										className="rounded-md border border-border px-2 py-1 font-mono-ui text-[9px] text-foreground-faint">
+										Usar total dos itens
+									</button>
+								</div>
+							</div>
+
+							<div className="rounded-md border border-border bg-card px-3 py-3">
+								<p className="font-mono-ui text-[10px] uppercase text-foreground-faint">
+									Adicionar itens
+								</p>
+								{isLoadingCatalog ?
+									<LoadingCard label="Carregando catálogo" rows={2} />
+								:	<div className="mt-2 space-y-3">
+										<div>
+											<p className="mb-2 font-mono-ui text-[9px] uppercase text-foreground-faint">
+												Serviços
+											</p>
+											{services.length === 0 ?
+												<p className="font-mono-ui text-[10px] text-foreground-faint">
+													Nenhum serviço cadastrado.
+												</p>
+											:	<div className="flex flex-wrap gap-2">
+													{services.map((service) => (
+														<button
+															key={service.id}
+															type="button"
+															onClick={() => addDraftItem("services", service)}
+															className="rounded-md border border-border bg-secondary px-2 py-1.5 font-mono-ui text-[10px] text-foreground">
+															{service.name} · {formatCurrency(service.price)}
+														</button>
+													))}
+												</div>
+											}
+										</div>
+										<div>
+											<p className="mb-2 font-mono-ui text-[9px] uppercase text-foreground-faint">
+												Produtos
+											</p>
+											{products.length === 0 ?
+												<p className="font-mono-ui text-[10px] text-foreground-faint">
+													Nenhum produto cadastrado.
+												</p>
+											:	<div className="flex flex-wrap gap-2">
+													{products.map((product) => (
+														<button
+															key={product.id}
+															type="button"
+															onClick={() => addDraftItem("products", product)}
+															className="rounded-md border border-border bg-secondary px-2 py-1.5 font-mono-ui text-[10px] text-foreground">
+															{product.name} · {formatCurrency(product.price)}
+														</button>
+													))}
+												</div>
+											}
+										</div>
+									</div>
+								}
+							</div>
+
+							<div className="grid grid-cols-2 gap-2">
+								<button
+									type="button"
+									onClick={() => openDetails(selectedAppointment)}
+									className="rounded-md border border-border bg-card px-4 py-3 font-mono-ui text-xs text-foreground">
+									Ver detalhes
+								</button>
+								<button
+									type="button"
+									onClick={() => removeAppointment(selectedAppointment)}
+									className="rounded-md border border-overdue/40 bg-overdue/10 px-4 py-3 font-mono-ui text-xs text-overdue">
+									Remover
+								</button>
+							</div>
 							<button
 								type="button"
-								onClick={() => openDetails(selectedAppointment)}
-								className="rounded-md border border-border bg-card px-4 py-3 font-mono-ui text-xs text-foreground">
-								Ver detalhes
-							</button>
-							<button
-								type="button"
-								onClick={() => removeAppointment(selectedAppointment)}
-								className="rounded-md border border-overdue/40 bg-overdue/10 px-4 py-3 font-mono-ui text-xs text-overdue">
-								Remover
+								onClick={saveDraftItems}
+								disabled={isSavingItems}
+								className="w-full rounded-md bg-foreground px-4 py-3 font-mono-ui text-xs text-primary-foreground disabled:opacity-60">
+								{isSavingItems ? "Salvando..." : "Salvar itens"}
 							</button>
 						</div>
 					</div>
@@ -490,7 +863,7 @@ export default function AppPage() {
 				<AppointmentDialog
 					dayKey={dayKey}
 					appointment={editingAppt}
-					barbers={[]}
+					barbers={barbers}
 					canChooseBarber={false}
 					defaultBarberId={selectedBarberId}
 					forcedBarberId={selectedBarberId}

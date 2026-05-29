@@ -30,7 +30,7 @@ describe("LoginPage signup feedback", () => {
 		);
 
 		expect(screen.getByRole("button", { name: "Criar conta" })).toBeTruthy();
-		expect(screen.getByText("Confirmar senha")).toBeTruthy();
+		expect(screen.queryByText("Confirmar senha")).toBeNull();
 	});
 
 	it("does not expose verification codes returned by the backend", async () => {
@@ -51,9 +51,6 @@ describe("LoginPage signup feedback", () => {
 			target: { value: "cliente@example.com" },
 		});
 		fireEvent.change(inputs[1], {
-			target: { value: "SenhaTeste123" },
-		});
-		fireEvent.change(inputs[2], {
 			target: { value: "SenhaTeste123" },
 		});
 

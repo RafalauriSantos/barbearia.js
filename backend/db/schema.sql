@@ -37,6 +37,18 @@ CREATE TABLE IF NOT EXISTS public.barbearias (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid (),
     usuario_dono_id uuid NOT NULL REFERENCES public.usuarios (id) ON DELETE CASCADE,
     nome varchar NOT NULL,
+    telefone varchar,
+    endereco text,
+    horario_abertura time,
+    horario_fechamento time,
+    duracao_atendimento_min integer NOT NULL DEFAULT 30 CHECK (
+        duracao_atendimento_min >= 5
+        AND duracao_atendimento_min <= 480
+    ),
+    intervalo_agenda_min integer NOT NULL DEFAULT 30 CHECK (
+        intervalo_agenda_min >= 5
+        AND intervalo_agenda_min <= 240
+    ),
     criado_em timestamptz NOT NULL DEFAULT now(),
     atualizado_em timestamptz NOT NULL DEFAULT now()
 );

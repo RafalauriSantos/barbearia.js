@@ -45,7 +45,7 @@ export default function LandingPage() {
 									Kash Flow
 								</span>
 								<span className="block font-mono-ui text-[10px] uppercase text-emerald-200/70">
-									Barbearia SaaS
+									Operacao em tempo real
 								</span>
 							</span>
 						</Link>

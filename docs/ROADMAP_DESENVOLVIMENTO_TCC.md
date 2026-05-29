@@ -1,4 +1,4 @@
-# Roadmap de Desenvolvimento - TCC Barbearia SaaS
+# Roadmap de Desenvolvimento - TCC
 
 Este roadmap e o caminho principal para evoluir o projeto de uma agenda local funcional para um MVP SaaS utilizavel por uma barbearia real.
 
@@ -513,4 +513,3 @@ Primeira tarefa pratica:
 5. so depois iniciar tenant por usuario.
 
 Esse caminho evita construir em cima de uma sessao instavel.
-

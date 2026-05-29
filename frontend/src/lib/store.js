@@ -210,7 +210,9 @@ export async function getDaySummaryFromAppointments(dayKey, appointments) {
 
 // Formata numero para moeda em real.
 export function formatCurrency(value) {
-	return value.toLocaleString("pt-BR", {
+	const numericValue = Number(value);
+	const safeValue = Number.isFinite(numericValue) ? numericValue : 0;
+	return safeValue.toLocaleString("pt-BR", {
 		style: "currency",
 		currency: "BRL",
 		minimumFractionDigits: 2,

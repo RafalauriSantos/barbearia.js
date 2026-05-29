@@ -30,6 +30,7 @@ exports.create = async (request, reply) => {
 exports.update = async (request, reply) => {
 	const user = await getCurrentUser(request);
 	const payload = validateUpdateAppointment(request.body);
+	
 	const updated = await AppointmentsService.updateAppointment(
 		request.params.id,
 		payload,

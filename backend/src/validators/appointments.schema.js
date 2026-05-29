@@ -1,5 +1,12 @@
 const { z } = require("zod");
 
+const itemSchema = z.object({
+	id: z.string().min(1),
+	name: z.string().min(1).optional(),
+	price: z.coerce.number().nonnegative(),
+	quantity: z.coerce.number().int().positive().optional(),
+});
+
 const appointmentSchema = z.object({
 	cliente_nome: z.string().min(1).optional(),
 	data: z.string().min(1).optional(),
@@ -13,6 +20,8 @@ const appointmentSchema = z.object({
 	status: z.enum(["normal", "paid", "fiado"]).optional(),
 	service_id: z.string().optional(),
 	service_name: z.string().optional(),
+	services: z.array(itemSchema).optional(),
+	products: z.array(itemSchema).optional(),
 	prazo_date: z.string().nullable().optional(),
 	barber_name: z.string().optional(),
 	forma_pagamento_id: z.string().uuid().nullable().optional(),

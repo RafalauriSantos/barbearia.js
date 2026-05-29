@@ -17,7 +17,6 @@ export default function LoginPage() {
 	);
 	const [email, setEmail] = useState("");
 	const [password, setPassword] = useState("");
-	const [confirmPassword, setConfirmPassword] = useState("");
 	const [isSubmitting, setIsSubmitting] = useState(false);
 	const [isResending, setIsResending] = useState(false);
 	const [errorMessage, setErrorMessage] = useState("");
@@ -29,15 +28,18 @@ export default function LoginPage() {
 		return <Navigate to={from} replace />;
 	}
 
+	const handlePasswordChange = (event) => {
+		const nextPassword = event.target.value;
+		setPassword(nextPassword);
+		setErrorMessage("");
+		setSuccessMessage("");
+	};
+
 	const handleSubmit = async (event) => {
 		event.preventDefault();
 		if (isSubmitting) return;
 
 		const cleanEmail = email.trim();
-		if (mode === "signup" && password !== confirmPassword) {
-			setErrorMessage("As senhas precisam ser iguais.");
-			return;
-		}
 
 		setIsSubmitting(true);
 		setErrorMessage("");
@@ -51,7 +53,6 @@ export default function LoginPage() {
 				);
 				setMode("login");
 				setPassword("");
-				setConfirmPassword("");
 				setSuccessMessage(SIGNUP_SUCCESS_MESSAGE);
 				navigate("/verify-code");
 				return;
@@ -204,11 +205,7 @@ export default function LoginPage() {
 							<input
 								type="password"
 								value={password}
-								onChange={(event) => {
-									setPassword(event.target.value);
-									setErrorMessage("");
-									setSuccessMessage("");
-								}}
+								onChange={handlePasswordChange}
 								className="w-full rounded-md border border-border bg-background-deep px-3 py-3 text-sm text-foreground"
 								autoComplete={isSignup ? "new-password" : "current-password"}
 								disabled={isSubmitting || isLoading}
@@ -216,28 +213,6 @@ export default function LoginPage() {
 								required
 							/>
 						</div>
-
-						{isSignup && (
-							<div>
-								<label className="mb-1 block font-mono-ui text-[10px] text-foreground-faint">
-									Confirmar senha
-								</label>
-								<input
-									type="password"
-									value={confirmPassword}
-									onChange={(event) => {
-										setConfirmPassword(event.target.value);
-										setErrorMessage("");
-										setSuccessMessage("");
-									}}
-									className="w-full rounded-md border border-border bg-background-deep px-3 py-3 text-sm text-foreground"
-									autoComplete="new-password"
-									disabled={isSubmitting || isLoading}
-									minLength={8}
-									required
-								/>
-							</div>
-						)}
 
 						<button
 							type="submit"

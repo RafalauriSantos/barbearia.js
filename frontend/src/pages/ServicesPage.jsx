@@ -14,7 +14,6 @@ import { BottomNav } from "@/components/BottomNav";
 import {
 	EmptyState,
 	IconButton,
-	LoadingCard,
 	Notice,
 	ScreenHeader,
 } from "@/components/ScreenPrimitives";
@@ -334,11 +333,13 @@ export default function ServicesPage() {
 					</div>
 				)}
 
-				{isLoading && items.length === 0 ?
-					<div className="mx-4 mt-4">
-						<LoadingCard label="Carregando catálogo" rows={3} />
-					</div>
-				: items.length === 0 && !showForm ?
+				{isLoading && items.length === 0 && (
+					<p className="mx-4 mt-4 rounded-md border border-border bg-card px-3 py-2 font-mono-ui text-[10px] uppercase text-foreground-faint">
+						Atualizando catálogo...
+					</p>
+				)}
+
+				{items.length === 0 && !showForm ?
 					<div className="mx-4 mt-4">
 						<EmptyState title={emptyLabel} hint={emptyHint} />
 					</div>

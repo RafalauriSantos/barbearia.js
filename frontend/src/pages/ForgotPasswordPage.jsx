@@ -7,7 +7,6 @@ export default function ForgotPasswordPage() {
 	const [email, setEmail] = useState("");
 	const [code, setCode] = useState("");
 	const [password, setPassword] = useState("");
-	const [confirmPassword, setConfirmPassword] = useState("");
 	const [step, setStep] = useState("request");
 	const [status, setStatus] = useState("idle");
 	const [message, setMessage] = useState("");
@@ -35,16 +34,17 @@ export default function ForgotPasswordPage() {
 		}
 	};
 
+	const handlePasswordChange = (event) => {
+		const nextPassword = event.target.value;
+		setPassword(nextPassword);
+		setMessage("");
+		setStatus("idle");
+	};
+
 	const handleResetPassword = async (event) => {
 		event.preventDefault();
 		const cleanEmail = email.trim();
 		if (!cleanEmail || code.length !== 6 || status === "loading") return;
-
-		if (password !== confirmPassword) {
-			setStatus("error");
-			setMessage("As senhas precisam ser iguais.");
-			return;
-		}
 
 		setStatus("loading");
 		setMessage("");
@@ -52,7 +52,6 @@ export default function ForgotPasswordPage() {
 			await resetPassword({ email: cleanEmail, code, password });
 			setStatus("success");
 			setPassword("");
-			setConfirmPassword("");
 			setMessage("Senha redefinida. Agora voce ja pode entrar.");
 		} catch (error) {
 			setStatus("error");
@@ -136,33 +135,7 @@ export default function ForgotPasswordPage() {
 										id="password-reset-new-password"
 										type="password"
 										value={password}
-										onChange={(event) => {
-											setPassword(event.target.value);
-											setMessage("");
-											setStatus("idle");
-										}}
-										className="w-full rounded-md border border-border bg-background-deep px-3 py-3 text-sm text-foreground"
-										autoComplete="new-password"
-										disabled={isLoading || isSuccess}
-										minLength={8}
-										required
-									/>
-								</div>
-								<div>
-									<label
-										htmlFor="password-reset-confirm-password"
-										className="mb-1 block font-mono-ui text-[10px] text-foreground-faint">
-										Confirmar nova senha
-									</label>
-									<input
-										id="password-reset-confirm-password"
-										type="password"
-										value={confirmPassword}
-										onChange={(event) => {
-											setConfirmPassword(event.target.value);
-											setMessage("");
-											setStatus("idle");
-										}}
+										onChange={handlePasswordChange}
 										className="w-full rounded-md border border-border bg-background-deep px-3 py-3 text-sm text-foreground"
 										autoComplete="new-password"
 										disabled={isLoading || isSuccess}
