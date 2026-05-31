@@ -6,6 +6,10 @@ Data-base: 2026-05-30.
 
 Este roadmap substitui o antigo checklist de frontend. Qualquer decisao de escopo, status de entrega, validacao, risco conhecido ou proximo passo deve ser atualizado aqui para evitar documentos conflitantes.
 
+Roadmap no Notion:
+
+- https://app.notion.com/p/Roadmap-Atual-do-App-TCC-3702113a244881d49159fc94250960a8
+
 ## 1. Objetivo do Produto
 
 Construir um SaaS simples para barbearias, com:
@@ -76,6 +80,12 @@ Resultado atual:
 - Backend e frontend responderam localmente em runtime.
 - Fluxos principais de negocio passaram por API autenticada.
 - Fluxo principal tambem foi validado manualmente no navegador pelo usuario.
+
+Atualizacao 2026-05-31:
+
+- Ajuste de viewport dinamico para iOS Safari (100dvh/100svh) e safe area.
+- Remocao de alturas fixas em containers raiz e padding seguro para bottom nav.
+- Meta viewport atualizada com `height=device-height` e `viewport-fit=cover`.
 
 ### Worktree observado
 

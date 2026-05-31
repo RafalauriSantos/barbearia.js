@@ -123,8 +123,6 @@
   body {
     @apply bg-background-deep text-foreground antialiased;
     min-height: 100vh;
-    min-height: 100svh;
-    min-height: 100dvh;
     font-family:
       "Aptos", "Segoe UI", ui-sans-serif, system-ui, -apple-system,
       sans-serif;
@@ -133,8 +131,6 @@
 
   #root {
     min-height: 100vh;
-    min-height: 100svh;
-    min-height: 100dvh;
   }
 
   :root[data-theme="light"] body {
@@ -170,6 +166,15 @@
       "Aptos Display", "Segoe UI", ui-sans-serif, system-ui, -apple-system,
       sans-serif;
     font-weight: 800;
+  }
+
+  @supports (height: 100dvh) {
+
+    body,
+    #root,
+    .app-shell {
+      min-height: 100dvh;
+    }
   }
 
   button,
@@ -252,8 +257,6 @@
   max-width: min(100%, 480px);
   margin: 0 auto;
   min-height: 100vh;
-  min-height: 100svh;
-  min-height: 100dvh;
   position: relative;
   overflow-x: hidden;
   background: hsl(var(--background));

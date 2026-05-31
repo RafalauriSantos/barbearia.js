@@ -130,3 +130,4 @@ Smoke test com backend e frontend ja rodando:
 
 - O backend usa `SUPABASE_SERVICE_KEY` para operacoes administrativas e seed.
 - CORS e `APP_URL` podem ser ajustados no .env do backend.
+- O frontend aplica viewport dinamico (100dvh/100svh) e safe area no iOS Safari.

@@ -91,6 +91,11 @@ Variavel de ambiente obrigatoria:
 VITE_API_URL=https://seuapp.onrender.com
 ```
 
+Nota iOS Safari:
+
+- O `frontend/index.html` ja inclui `height=device-height` e `viewport-fit=cover`.
+- O layout usa `100dvh/100svh` e safe area para evitar espaco preto no fim da tela.
+
 Depois do deploy, copie a URL publica da Vercel (ex: https://seuapp.vercel.app).
 
 ## 3) Ajustar CORS e APP_URL no Render
