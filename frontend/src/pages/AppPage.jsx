@@ -176,20 +176,25 @@ export default function AppPage() {
 	);
 	const ownAgendaName = profile?.barberName || user?.nome || "Minha agenda";
 	const ownAgendaPhotoUrl = profile?.barberPhotoUrl || profile?.photo_url || "";
-	const activeAgendaName = activeExternalBarber ?
-		activeExternalBarber.name || activeExternalBarber.nome
-	:	ownAgendaName;
-	const activeAgendaPhotoUrl = activeExternalBarber ?
-		activeExternalBarber.photo_url || activeExternalBarber.foto_url
-	:	ownAgendaPhotoUrl;
-	const agendaSubtitle = activeExternalBarber ?
-		`agenda de ${activeExternalBarber.name || activeExternalBarber.nome}`
-	:	"sua agenda";
+	const activeAgendaName =
+		activeExternalBarber ?
+			activeExternalBarber.name || activeExternalBarber.nome
+		:	ownAgendaName;
+	const activeAgendaPhotoUrl =
+		activeExternalBarber ?
+			activeExternalBarber.photo_url || activeExternalBarber.foto_url
+		:	ownAgendaPhotoUrl;
+	const agendaSubtitle =
+		activeExternalBarber ?
+			`agenda de ${activeExternalBarber.name || activeExternalBarber.nome}`
+		:	"sua agenda";
 	const todaySelected = isToday(currentDate);
 	const canGoBack = !todaySelected;
 	const sortedAppointments = useMemo(() => {
 		return [...appointments].sort((first, second) =>
-			String(first.time_slot || "").localeCompare(String(second.time_slot || "")),
+			String(first.time_slot || "").localeCompare(
+				String(second.time_slot || ""),
+			),
 		);
 	}, [appointments]);
 
@@ -430,15 +435,13 @@ export default function AppPage() {
 				<div className="flex items-center justify-between gap-3">
 					<div className="flex min-w-0 items-center gap-3">
 						<div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full border border-[#4ade80]/35 bg-card text-xs font-semibold text-[#86efac] shadow-[0_0_0_3px_rgba(74,222,128,0.08)]">
-							{activeAgendaPhotoUrl ? (
+							{activeAgendaPhotoUrl ?
 								<img
 									src={activeAgendaPhotoUrl}
 									alt={activeAgendaName}
 									className="h-full w-full object-cover"
 								/>
-							) : (
-								<span>{getInitials(activeAgendaName)}</span>
-							)}
+							:	<span>{getInitials(activeAgendaName)}</span>}
 						</div>
 						<div className="min-w-0">
 							<h1 className="truncate font-logo text-[20px] font-semibold text-foreground">
@@ -464,58 +467,59 @@ export default function AppPage() {
 				</div>
 
 				{barberOptions.length > 0 && (
-				<div className="mt-3">
-					<div className="flex gap-3 overflow-x-auto pb-1 no-scrollbar">
-						{barberOptions.map((barber, index) => {
-							const isActive = activeBarberId === barber.id;
-							return (
+					<div className="mt-3">
+						<div className="flex gap-3 overflow-x-auto pb-1 no-scrollbar">
+							{barberOptions.map((barber, index) => {
+								const isActive = activeBarberId === barber.id;
+								return (
+									<button
+										key={barber.id}
+										type="button"
+										onClick={() => {
+											setActiveBarberId(barber.id);
+											setFeedbackMessage("");
+										}}
+										className="flex shrink-0 flex-col items-center gap-1">
+										<div
+											className={`flex h-9 w-9 items-center justify-center overflow-hidden rounded-full border-2 ${
+												isActive ? "border-[#4ade80]" : "border-transparent"
+											}`}
+											style={{
+												background: barber.color || getAvatarColor(index),
+											}}>
+											{barber.photo_url ?
+												<img
+													src={barber.photo_url}
+													alt={barber.name}
+													className="h-full w-full object-cover"
+												/>
+											:	<span className="text-[10px] font-semibold text-white">
+													{getInitials(barber.name || barber.nome)}
+												</span>
+											}
+										</div>
+										<span
+											className={`max-w-[52px] truncate text-[8px] ${
+												isActive ? "text-[#4ade80]" : "text-foreground-faint"
+											}`}>
+											{barber.name || barber.nome}
+										</span>
+									</button>
+								);
+							})}
+							{activeExternalBarber && (
 								<button
-									key={barber.id}
 									type="button"
 									onClick={() => {
-										setActiveBarberId(barber.id);
+										setActiveBarberId("");
 										setFeedbackMessage("");
 									}}
-									className="flex shrink-0 flex-col items-center gap-1">
-									<div
-										className={`flex h-9 w-9 items-center justify-center overflow-hidden rounded-full border-2 ${
-											isActive ? "border-[#4ade80]" : "border-transparent"
-										}`}
-										style={{ background: barber.color || getAvatarColor(index) }}>
-										{barber.photo_url ? (
-											<img
-												src={barber.photo_url}
-												alt={barber.name}
-												className="h-full w-full object-cover"
-											/>
-										) : (
-											<span className="text-[10px] font-semibold text-white">
-												{getInitials(barber.name || barber.nome)}
-											</span>
-										)}
-									</div>
-									<span
-										className={`max-w-[52px] truncate text-[8px] ${
-											isActive ? "text-[#4ade80]" : "text-foreground-faint"
-										}`}>
-										{barber.name || barber.nome}
-									</span>
+									className="mt-0.5 flex h-9 shrink-0 items-center rounded-full border border-[#14532d]/80 bg-[#052e1b] px-3 font-mono-ui text-[10px] lowercase text-[#86efac] transition-colors hover:border-[#22c55e]/50">
+									← minha agenda
 								</button>
-							);
-						})}
-						{activeExternalBarber && (
-							<button
-								type="button"
-								onClick={() => {
-									setActiveBarberId("");
-									setFeedbackMessage("");
-								}}
-								className="mt-0.5 flex h-9 shrink-0 items-center rounded-full border border-[#14532d]/80 bg-[#052e1b] px-3 font-mono-ui text-[10px] lowercase text-[#86efac] transition-colors hover:border-[#22c55e]/50">
-								← minha agenda
-							</button>
-						)}
+							)}
+						</div>
 					</div>
-				</div>
 				)}
 
 				<div className="mt-3 grid grid-cols-3 gap-2">
@@ -575,7 +579,7 @@ export default function AppPage() {
 				</div>
 			</header>
 
-			<main className="min-h-0 flex-1 overflow-y-auto px-3 py-3">
+			<main className="min-h-0 flex-1 overflow-y-auto px-3 pt-3 safe-bottom">
 				<div className="mb-3 flex items-center justify-between gap-3">
 					<div className="min-w-0">
 						<p className="font-mono-ui text-[10px] uppercase text-foreground-faint">
@@ -658,10 +662,7 @@ export default function AppPage() {
 									<p className="mt-1 truncate font-mono-ui text-[10px] text-foreground-faint">
 										{getAppointmentSummary(appointment)} ·{" "}
 										{formatCurrency(Number(appointment.value || 0))}
-										{(
-											appointment.status === "fiado" &&
-											appointment.prazo_date
-										) ?
+										{appointment.status === "fiado" && appointment.prazo_date ?
 											` · Fiado ate ${formatFiadoLabel(appointment.prazo_date)}`
 										:	""}
 									</p>

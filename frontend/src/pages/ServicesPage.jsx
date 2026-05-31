@@ -324,7 +324,7 @@ export default function ServicesPage() {
 				</div>
 			)}
 
-			<div className="min-h-0 flex-1 overflow-y-auto pb-4">
+			<div className="min-h-0 flex-1 overflow-y-auto safe-bottom">
 				{errorMessage && (
 					<div className="mx-4 mt-4">
 						<Notice tone="error" title="Erro">

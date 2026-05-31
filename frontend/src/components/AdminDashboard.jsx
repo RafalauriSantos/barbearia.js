@@ -1,10 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { AppointmentDialog } from "@/components/AppointmentDialog";
-import {
-	EmptyState,
-	IconButton,
-	Notice,
-} from "@/components/ScreenPrimitives";
+import { EmptyState, IconButton, Notice } from "@/components/ScreenPrimitives";
 import { addBarber, formatCurrency, sendBarberInvite } from "@/lib/store";
 
 const SLOT_START_MINUTES = 9 * 60;
@@ -435,7 +431,7 @@ export function AdminDashboard({
 
 	return (
 		<>
-			<div className="min-h-0 flex-1 overflow-y-auto pb-4">
+			<div className="min-h-0 flex-1 overflow-y-auto safe-bottom">
 				{errorMessage && (
 					<div className="mx-4 mb-3 rounded-lg border border-overdue/30 bg-overdue/10 px-4 py-3">
 						<p className="font-mono-ui text-[10px] uppercase text-overdue">

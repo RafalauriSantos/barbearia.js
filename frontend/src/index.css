@@ -107,13 +107,23 @@
     @apply border-border;
   }
 
+  html,
+  body,
+  #root {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    overflow-x: hidden;
+  }
+
   html {
     background: hsl(var(--background-deep));
-    min-height: 100%;
   }
 
   body {
     @apply bg-background-deep text-foreground antialiased;
+    min-height: 100vh;
+    min-height: 100svh;
     min-height: 100dvh;
     font-family:
       "Aptos", "Segoe UI", ui-sans-serif, system-ui, -apple-system,
@@ -122,6 +132,8 @@
   }
 
   #root {
+    min-height: 100vh;
+    min-height: 100svh;
     min-height: 100dvh;
   }
 
@@ -231,6 +243,10 @@
   animation: none;
 }
 
+.safe-bottom {
+  padding-bottom: calc(4rem + env(safe-area-inset-bottom));
+}
+
 .app-shell {
   width: 100%;
   max-width: min(100%, 480px);
@@ -238,10 +254,6 @@
   min-height: 100vh;
   min-height: 100svh;
   min-height: 100dvh;
-  height: 100vh;
-  height: 100svh;
-  height: 100dvh;
-  max-height: 100dvh;
   position: relative;
   overflow-x: hidden;
   background: hsl(var(--background));

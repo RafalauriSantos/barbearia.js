@@ -3,7 +3,7 @@ const NotFound = () => {
 	// Mostra o caminho que nao foi encontrado.
 	const path = window.location.pathname;
 	return (
-		<div className="flex min-h-screen items-center justify-center bg-background px-4">
+		<div className="flex min-h-[100dvh] items-center justify-center bg-background px-4">
 			<div className="text-center border border-border rounded p-6 bg-card max-w-md w-full">
 				<p className="font-mono-ui text-[10px] uppercase text-foreground-faint">
 					Kash Flow

@@ -274,7 +274,7 @@ export default function ExpensesPage() {
 				</div>
 			)}
 
-			<div className="min-h-0 flex-1 overflow-y-auto pb-4">
+			<div className="min-h-0 flex-1 overflow-y-auto safe-bottom">
 				{isLoading && expenses.length === 0 && (
 					<p className="mx-4 mt-4 rounded-md border border-border bg-card px-3 py-2 font-mono-ui text-[10px] uppercase text-foreground-faint">
 						Atualizando despesas...

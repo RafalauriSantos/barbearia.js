@@ -45,7 +45,8 @@ function loadImage(dataUrl) {
 	return new Promise((resolve, reject) => {
 		const image = new Image();
 		image.onload = () => resolve(image);
-		image.onerror = () => reject(new Error("Nao foi possivel preparar a foto."));
+		image.onerror = () =>
+			reject(new Error("Nao foi possivel preparar a foto."));
 		image.src = dataUrl;
 	});
 }
@@ -85,7 +86,11 @@ async function createCroppedAvatarUpload({ draft, focus, zoom }) {
 	const centerX = naturalWidth * (clamp(focus.x, 0, 100) / 100);
 	const centerY = naturalHeight * (clamp(focus.y, 0, 100) / 100);
 	const sourceX = clamp(centerX - sourceSize / 2, 0, naturalWidth - sourceSize);
-	const sourceY = clamp(centerY - sourceSize / 2, 0, naturalHeight - sourceSize);
+	const sourceY = clamp(
+		centerY - sourceSize / 2,
+		0,
+		naturalHeight - sourceSize,
+	);
 
 	context.fillStyle = "#050b09";
 	context.fillRect(0, 0, AVATAR_OUTPUT_SIZE, AVATAR_OUTPUT_SIZE);
@@ -209,13 +214,17 @@ export default function SettingsPage() {
 					setOpeningTime(profile?.openingTime || DEFAULT_OPENING_TIME);
 					setClosingTime(profile?.closingTime || DEFAULT_CLOSING_TIME);
 					setAppointmentDuration(
-						String(profile?.appointmentDuration || DEFAULT_APPOINTMENT_DURATION),
+						String(
+							profile?.appointmentDuration || DEFAULT_APPOINTMENT_DURATION,
+						),
 					);
 					setScheduleInterval(
 						String(profile?.scheduleInterval || DEFAULT_SCHEDULE_INTERVAL),
 					);
 					setBarberName(profile?.barberName || "");
-					setBarberPhotoUrl(profile?.barberPhotoUrl || profile?.photo_url || "");
+					setBarberPhotoUrl(
+						profile?.barberPhotoUrl || profile?.photo_url || "",
+					);
 					setBarberPhotoDraft(null);
 					setAvatarFocus(DEFAULT_AVATAR_FOCUS);
 					setAvatarZoom(DEFAULT_AVATAR_ZOOM);
@@ -418,13 +427,14 @@ export default function SettingsPage() {
 		"w-full rounded-md border border-border bg-secondary px-3 py-3 text-sm text-foreground transition-colors focus-visible:border-foreground disabled:opacity-60";
 	const avatarPreviewUrl =
 		barberPhotoDraft?.dataUrl || (!removeBarberPhoto ? barberPhotoUrl : "");
-	const avatarImageStyle = barberPhotoDraft ?
-		{
-			objectPosition: `${avatarFocus.x}% ${avatarFocus.y}%`,
-			transform: `scale(${avatarZoom})`,
-			transformOrigin: `${avatarFocus.x}% ${avatarFocus.y}%`,
-		}
-	:	undefined;
+	const avatarImageStyle =
+		barberPhotoDraft ?
+			{
+				objectPosition: `${avatarFocus.x}% ${avatarFocus.y}%`,
+				transform: `scale(${avatarZoom})`,
+				transformOrigin: `${avatarFocus.x}% ${avatarFocus.y}%`,
+			}
+		:	undefined;
 
 	return (
 		<div className="app-shell flex flex-col overflow-hidden bg-background">
@@ -440,7 +450,7 @@ export default function SettingsPage() {
 
 			<form
 				onSubmit={handleSaveProfile}
-				className="min-h-0 flex-1 overflow-y-auto px-4 py-5">
+				className="min-h-0 flex-1 overflow-y-auto px-4 pt-5 safe-bottom">
 				<div className="mx-auto max-w-3xl space-y-4">
 					<div aria-live="polite" className="space-y-3">
 						{errorMessage && (
@@ -462,7 +472,7 @@ export default function SettingsPage() {
 						)}
 					</div>
 
-					{isAdmin ? (
+					{isAdmin ?
 						<SettingSection eyebrow="Barbearia" title="Dados da loja">
 							<div className="grid gap-4 md:grid-cols-2">
 								<Field id="shopName" label="Nome da barbearia">
@@ -507,18 +517,20 @@ export default function SettingsPage() {
 								/>
 							</Field>
 						</SettingSection>
-					) : (
-						<SettingSection eyebrow="Barbearia" title="Dados da loja">
-							<ReadOnlyRow label="Nome da barbearia" value={shopName || "Kurt"} />
+					:	<SettingSection eyebrow="Barbearia" title="Dados da loja">
+							<ReadOnlyRow
+								label="Nome da barbearia"
+								value={shopName || "Kurt"}
+							/>
 							<ReadOnlyRow
 								label="Permissão"
 								value="Somente o dono altera dados da barbearia."
 							/>
 						</SettingSection>
-					)}
+					}
 
 					<SettingSection eyebrow="Agenda" title="Padrões de atendimento">
-						{isAdmin ? (
+						{isAdmin ?
 							<>
 								<div className="grid gap-4 md:grid-cols-2">
 									<Field id="openingTime" label="Abertura">
@@ -590,8 +602,7 @@ export default function SettingsPage() {
 									</Field>
 								</div>
 							</>
-						) : (
-							<>
+						:	<>
 								<ReadOnlyRow
 									label="Funcionamento"
 									value={`${openingTime} ate ${closingTime}`}
@@ -601,7 +612,7 @@ export default function SettingsPage() {
 									value={`${appointmentDuration} min por cliente`}
 								/>
 							</>
-						)}
+						}
 					</SettingSection>
 
 					<SettingSection eyebrow="Minha conta" title="Perfil de acesso">
@@ -618,16 +629,14 @@ export default function SettingsPage() {
 							/>
 							<div className="flex items-center gap-4">
 								<div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-full border border-[#4ade80]/35 bg-card text-sm font-semibold text-[#86efac]">
-									{avatarPreviewUrl ? (
+									{avatarPreviewUrl ?
 										<img
 											src={avatarPreviewUrl}
 											alt={barberName || "Foto do perfil"}
 											className="h-full w-full object-cover"
 											style={avatarImageStyle}
 										/>
-									) : (
-										<span>{getInitials(barberName || user?.email)}</span>
-									)}
+									:	<span>{getInitials(barberName || user?.email)}</span>}
 								</div>
 								<div className="min-w-0 flex-1">
 									<p className="font-mono-ui text-[10px] uppercase text-foreground-faint">

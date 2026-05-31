@@ -4,16 +4,16 @@
 		<meta charset="UTF-8" />
 		<meta
 			name="viewport"
-			content="width=device-width, initial-scale=1.0" />
+			content="width=device-width, initial-scale=1.0, height=device-height, viewport-fit=cover" />
 		<script>
 			(() => {
 				try {
 					const saved = localStorage.getItem("kash_flow_theme");
 					const theme =
 						saved ||
-						(matchMedia("(prefers-color-scheme: light)").matches ?
-							"light"
-						:	"dark");
+						(matchMedia("(prefers-color-scheme: light)").matches ? "light" : (
+							"dark"
+						));
 					document.documentElement.dataset.theme = theme;
 					document.documentElement.style.colorScheme = theme;
 				} catch {
