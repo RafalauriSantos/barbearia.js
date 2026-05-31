@@ -42,20 +42,38 @@ Observacoes:
 
 Depois do deploy, copie a URL publica do Render (ex: https://seuapp.onrender.com).
 
+Antes do primeiro teste em producao, aplique as migrations no banco de producao:
+
+```
+cd backend && npm run migrate
+```
+
+Use as mesmas variaveis `DATABASE_URL` e `DATABASE_SSL=true` configuradas no
+Render. Isso garante que tabelas e campos novos, incluindo foto de perfil, ja
+existam antes do app mobile usar a API publica.
+
 ## 2) Preparar variaveis do frontend (Vercel)
 
-Crie um projeto na Vercel apontando para a pasta frontend/.
+Crie um projeto na Vercel apontando para o repositorio. O arquivo `vercel.json`
+na raiz ja define a instalacao, build e pasta publicada corretas para o app em
+`frontend/`.
+
+Install command:
+
+```
+cd frontend && npm install
+```
 
 Build command:
 
 ```
-npm run build
+cd frontend && npm run build:artifact
 ```
 
 Output directory:
 
 ```
-dist
+frontend/.output
 ```
 
 Variavel de ambiente obrigatoria:
