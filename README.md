@@ -5,9 +5,20 @@ Projeto full stack para gestao de barbearia: agenda diaria, servicos, produtos, 
 ## O que este projeto entrega
 
 - Agenda com criacao, edicao e exclusao de agendamentos
+- Cadastro, login, verificacao por codigo e recuperacao de senha
 - Catalogo de servicos e produtos
 - Despesas e resumo financeiro diario
+- Equipe, convites e separacao de dados por barbearia
+- Foto de perfil dos barbeiros na agenda
 - Backend com API REST e validacao de ambiente
+
+## App publicado
+
+- Frontend: https://kurt-barbearia.vercel.app
+- Backend/API: https://kurt-api.onrender.com
+
+Observacao: o backend esta no plano Free do Render. A primeira chamada depois de
+inatividade pode demorar alguns segundos enquanto o servico acorda.
 
 ## Destaques tecnicos
 
@@ -64,6 +75,8 @@ npm run dev
 
 1. Crie o .env:
    - [frontend/.env.example](frontend/.env.example) -> [frontend/.env](frontend/.env)
+   - `VITE_API_URL` aponta para o backend
+   - `VITE_API_TIMEOUT_MS` pode ficar em `75000` para tolerar cold start do Render Free
 
 2. Instale e rode:
 
@@ -131,3 +144,5 @@ Smoke test com backend e frontend ja rodando:
 - O backend usa `SUPABASE_SERVICE_KEY` para operacoes administrativas e seed.
 - CORS e `APP_URL` podem ser ajustados no .env do backend.
 - O frontend aplica viewport dinamico (100dvh/100svh) e safe area no iOS Safari.
+- Em producao gratuita no Render, o envio de email deve usar Brevo API
+  (`EMAIL_PROVIDER=brevo`) em vez de SMTP.

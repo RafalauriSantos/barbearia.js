@@ -2,7 +2,7 @@
 
 Este arquivo e a fonte unica de verdade para acompanhar o app do TCC.
 
-Data-base: 2026-05-30.
+Data-base: 2026-05-31.
 
 Este roadmap substitui o antigo checklist de frontend. Qualquer decisao de escopo, status de entrega, validacao, risco conhecido ou proximo passo deve ser atualizado aqui para evitar documentos conflitantes.
 
@@ -59,44 +59,39 @@ O projeto ja tem uma base full stack funcional:
 - agenda, catalogo, equipe, despesas, financeiro, perfil, login, landing e convites;
 - scripts de raiz para rodar, testar e validar;
 - CI configurado em `.github/workflows/ci.yml`.
+- frontend publicado na Vercel;
+- backend publicado no Render;
+- envio de email preparado para Brevo API, com SMTP apenas como fallback;
+- UX ajustada para mobile/iOS Safari e cold start do Render Free.
 
 ### Validacao mais recente
 
-Rodado em 2026-05-30:
+Rodado em 2026-05-31:
 
-- `.\scripts\check-all.ps1`: passou.
-- Backend unit/API tests: passou.
-- Frontend lint: passou com `--max-warnings=0`.
-- Frontend tests: passou, 7 arquivos de teste e 12 testes.
-- Frontend production build: passou.
-- `.\scripts\run-and-test-dev.ps1 -NoBrowser`: passou, subindo backend e frontend locais.
-- Teste live completo por API: passou para cadastro de owner, verificacao por codigo, login, sessao, perfil, servico, produto, despesa, agendamento, financeiro e isolamento entre dois usuarios.
-- Validacao manual no navegador reportada pelo usuario: passou para app local, cadastro pelo formulario, codigo, login, `/app`, agenda, catalogo, despesas, financeiro, perfil e equipe/convite.
+- Backend `npm test`: passou.
+- Frontend `npm run lint`: passou.
+- Frontend `npm test`: passou, 8 arquivos de teste e 16 testes.
+- Frontend `npm run build:artifact`: passou.
+- Backend publicado `https://kurt-api.onrender.com/health`: respondeu `{"ok":true}`.
+- Frontend publicado `https://kurt-barbearia.vercel.app`: carregou com titulo `KURT - Gestao para Barbearias`.
 
-Resultado atual:
+Historico ja validado:
 
-- Gate local completo verde.
-- O warning de lint em `frontend/src/components/AppointmentDialog.jsx` foi corrigido.
-- Backend e frontend responderam localmente em runtime.
-- Fluxos principais de negocio passaram por API autenticada.
-- Fluxo principal tambem foi validado manualmente no navegador pelo usuario.
+- `.\scripts\check-all.ps1`: passou em 2026-05-30.
+- `.\scripts\run-and-test-dev.ps1 -NoBrowser`: passou em 2026-05-30.
+- Teste live completo por API passou para cadastro de owner, verificacao por codigo, login, sessao, perfil, servico, produto, despesa, agendamento, financeiro e isolamento entre dois usuarios.
+- Validacao manual no navegador reportada pelo usuario passou para app local, cadastro pelo formulario, codigo, login, `/app`, agenda, catalogo, despesas, financeiro, perfil e equipe/convite.
 
-Atualizacao 2026-05-31:
+Atualizacoes de 2026-05-31:
 
-- Ajuste de viewport dinamico para iOS Safari (100dvh/100svh) e safe area.
-- Remocao de alturas fixas em containers raiz e padding seguro para bottom nav.
-- Meta viewport atualizada com `height=device-height` e `viewport-fit=cover`.
+- Email: suporte a Brevo API por HTTPS, com testes automatizados.
+- Render Free: timeout do frontend aumentado para 75s e warmup em `/health`.
+- iOS Safari/mobile: viewport com `height=device-height`, `viewport-fit=cover`, safe area e remocao de alturas fixas problemáticas.
+- Deploy: frontend e backend publicados em Vercel/Render.
 
 ### Worktree observado
 
-Existem alteracoes locais intencionais em:
-
-- `README.md`;
-- `docs/ROADMAP_DESENVOLVIMENTO_TCC.md`;
-- `frontend/src/components/AppointmentDialog.jsx`;
-- remocao de documentos, scripts e arquivos redundantes.
-
-Nao ha mais alteracao pendente em `frontend/src/App.jsx`.
+Worktree estava limpo antes desta rodada de atualizacao documental.
 
 ## 4. Arquitetura Atual
 
@@ -111,7 +106,8 @@ Stack:
 - Zod;
 - JWT;
 - Argon2;
-- Nodemailer.
+- Nodemailer;
+- Brevo API para email transacional em producao gratuita.
 
 Arquivos centrais:
 
@@ -122,6 +118,7 @@ Arquivos centrais:
 - `backend/src/middleware/auth.js`: valida `Authorization: Bearer`.
 - `backend/src/services/authService.js`: cadastro, login, verificacao, reset e usuario atual.
 - `backend/src/repositories/authRepository.js`: cria usuario, cria workspace e resolve contexto.
+- `backend/src/services/emailService.js`: envia codigos e convites por Brevo API ou SMTP fallback.
 
 Rotas principais:
 
@@ -230,6 +227,7 @@ Ponto importante:
 
 - O fluxo principal nao usa mais localStorage como fonte de dados de negocio.
 - `store.js` ainda remove chaves antigas no `clearAllData`, mas isso e limpeza de legado, nao persistencia principal.
+- `apiClient` usa timeout configuravel por `VITE_API_TIMEOUT_MS` e faz warmup de `/health` para reduzir o impacto do cold start do Render Free.
 
 ## 5. Status por Area
 
@@ -381,7 +379,7 @@ Falta:
 
 ### Catalogo de Servicos e Produtos
 
-Status: feito, pendente apenas de validacao live final.
+Status: feito.
 
 Feito:
 
@@ -402,12 +400,11 @@ Feito:
 
 Falta:
 
-- teste frontend dedicado para CRUD de servicos/produtos;
 - teste frontend dedicado para CRUD de servicos/produtos, se quiser aumentar garantia automatizada.
 
 ### Despesas
 
-Status: feito, pendente apenas de validacao live final.
+Status: feito.
 
 Feito:
 
@@ -509,22 +506,27 @@ Falta:
 
 ### Deploy e Demonstracao
 
-Status: pendente.
+Status: parcial avancado.
 
 Feito:
 
 - guia `docs/DEPLOY_RENDER_VERCEL.md` existe;
 - comandos de Render e Vercel estao documentados;
-- variaveis principais estao listadas.
+- variaveis principais estao listadas;
+- backend publicado no Render em `https://kurt-api.onrender.com`;
+- frontend publicado na Vercel em `https://kurt-barbearia.vercel.app`;
+- frontend usa `VITE_API_URL` apontando para o Render;
+- CORS e `APP_URL` foram configurados para a URL publica da Vercel;
+- frontend tolera cold start do Render Free com timeout maior e warmup em `/health`;
+- suporte a Brevo API foi implementado e testado no backend.
 
 Falta:
 
-- corrigir gate local;
-- validar browser local;
-- configurar ambiente Render/Vercel;
-- configurar CORS e `APP_URL`;
-- configurar SMTP ou fallback de email;
-- rodar smoke test em ambiente publicado;
+- criar/configurar conta Brevo Free, API key e remetente verificado;
+- salvar `BREVO_API_KEY`, `EMAIL_PROVIDER=brevo` e `EMAIL_FROM` verificado no Render;
+- fazer redeploy do backend apos ativar a Brevo;
+- validar cadastro real em producao recebendo codigo por email;
+- rodar smoke test completo em ambiente publicado;
 - preparar roteiro de demo.
 
 ## 6. Checklist Consolidado
@@ -562,6 +564,12 @@ Falta:
 - [x] Smoke live local com backend e frontend no ar.
 - [x] Isolamento entre dois usuarios validado em runtime.
 - [x] Fluxo completo validado manualmente no navegador.
+- [x] Frontend publicado na Vercel.
+- [x] Backend publicado no Render.
+- [x] CORS e `APP_URL` ajustados para producao.
+- [x] Timeout/warmup do frontend ajustado para Render Free.
+- [x] Suporte a Brevo API para email transacional.
+- [x] Viewport/safe area ajustados para iOS Safari.
 
 ### Parcial
 
@@ -577,12 +585,12 @@ Falta:
 
 - [x] Proteger ou remover `/reset`.
 - [x] Confirmar que `/test-email` nao fica exposto em producao.
+- [x] Configurar Render.
+- [x] Configurar Vercel.
+- [x] Ajustar CORS e `APP_URL`.
 - [ ] Definir politica final de refresh token.
-- [ ] Configurar SMTP real ou estrategia de demo.
+- [ ] Configurar Brevo Free no Render com remetente verificado.
 - [ ] Confirmar bucket `barber-avatars`/`AVATAR_BUCKET` no Supabase de producao.
-- [ ] Configurar Render.
-- [ ] Configurar Vercel.
-- [ ] Ajustar CORS e `APP_URL`.
 - [ ] Rodar smoke test em producao/staging.
 - [ ] Preparar roteiro de apresentacao.
 
@@ -592,12 +600,13 @@ O proximo passo correto nao e criar tela nova.
 
 Ordem recomendada:
 
-1. definir politica final de refresh token para MVP vs producao;
-2. fechar estrategia de SMTP/demo;
-3. preparar deploy Render + Vercel;
-4. rodar smoke em staging/producao.
+1. configurar Brevo Free no Render com remetente verificado;
+2. fazer redeploy do backend;
+3. testar cadastro real em producao recebendo codigo por email;
+4. rodar smoke completo no app publicado;
+5. preparar roteiro de apresentacao.
 
-Fluxo local, API, navegador e rotas internas de sistema ja foram validados. Agora o foco e reduzir risco de producao/demo.
+Fluxo local, API, navegador, rotas internas de sistema e deploy base ja foram validados. Agora o foco e fechar o email gratuito de producao e ensaiar a demonstracao.
 
 ## 8. Roadmap por Prioridade
 
@@ -676,12 +685,12 @@ Objetivo: deixar pronto para demonstrar.
 
 Tarefas:
 
-- preparar Render;
-- preparar Vercel;
-- configurar variaveis;
-- configurar CORS;
-- validar email;
-- rodar smoke em ambiente publicado;
+- preparar Render - feito;
+- preparar Vercel - feito;
+- configurar variaveis principais - feito;
+- configurar CORS - feito;
+- validar email com Brevo API em producao;
+- rodar smoke completo em ambiente publicado;
 - preparar roteiro de apresentacao.
 
 Entrega:

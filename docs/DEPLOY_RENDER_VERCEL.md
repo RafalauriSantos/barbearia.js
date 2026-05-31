@@ -2,6 +2,18 @@
 
 Este guia descreve o deploy em duas partes: backend no Render e frontend na Vercel.
 
+## Estado atual do deploy
+
+- Frontend Vercel: https://kurt-barbearia.vercel.app
+- Backend Render: https://kurt-api.onrender.com
+- `GET /health` no backend publicado respondeu `{"ok":true}` em 2026-05-31.
+- O frontend publicado carregou em 2026-05-31 com titulo `KURT - Gestao para Barbearias`.
+
+Observacao importante: no plano Free do Render, o backend pode dormir apos
+inatividade. O frontend ja usa timeout maior e uma chamada `/health` em segundo
+plano para reduzir erro no primeiro login, mas a primeira abertura ainda pode
+demorar alguns segundos.
+
 ## 1) Preparar variaveis do backend (Render)
 
 Crie um Web Service no Render apontando para o repositorio. Use os comandos abaixo.
@@ -89,6 +101,7 @@ Variavel de ambiente obrigatoria:
 
 ```
 VITE_API_URL=https://seuapp.onrender.com
+VITE_API_TIMEOUT_MS=75000
 ```
 
 Nota iOS Safari:
@@ -118,12 +131,16 @@ Salve e faca o redeploy do backend.
 5. Se o cadastro travar ou falhar no envio do codigo, confira se
    `BREVO_API_KEY`, `EMAIL_PROVIDER=brevo` e `EMAIL_FROM` verificado estao
    salvos no Render e faca redeploy.
+6. Se o primeiro login der timeout logo depois de longo periodo sem uso, abra
+   `https://kurt-api.onrender.com/health`, aguarde `{"ok":true}` e teste de novo.
 
 ## 5) Checklist rapido
 
-- [ ] Render: backend respondeu /health
-- [ ] Vercel: frontend carregou e recebeu dados
-- [ ] CORS configurado com a URL da Vercel
-- [ ] APP_URL configurado com a URL da Vercel
-- [ ] VITE_API_URL configurado com a URL do Render
+- [x] Render: backend respondeu /health
+- [x] Vercel: frontend carregou
+- [x] CORS configurado com a URL da Vercel
+- [x] APP_URL configurado com a URL da Vercel
+- [x] VITE_API_URL configurado com a URL do Render
+- [x] Timeout/warmup do frontend ajustado para Render Free
 - [ ] Brevo API configurada no Render para envio dos codigos por email
+- [ ] Cadastro real em producao validado recebendo codigo por email
