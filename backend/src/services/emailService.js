@@ -1,6 +1,8 @@
 const nodemailer = require("nodemailer");
 const { env } = require("../config/env");
 
+const BREVO_SEND_EMAIL_URL = "https://api.brevo.com/v3/smtp/email";
+
 function escapeHtml(value) {
 	return String(value)
 		.replace(/&/g, "&amp;")
@@ -58,6 +60,39 @@ function hasSmtpConfig() {
 	return Boolean(env.SMTP_HOST && env.SMTP_USER && env.SMTP_PASS);
 }
 
+function hasBrevoConfig() {
+	return Boolean(env.BREVO_API_KEY);
+}
+
+function getEmailProvider() {
+	if (env.EMAIL_PROVIDER) {
+		return env.EMAIL_PROVIDER;
+	}
+
+	return hasBrevoConfig() ? "brevo" : "smtp";
+}
+
+function parseEmailAddress(value) {
+	const rawValue = String(value || "").trim();
+	const match = rawValue.match(/^(.*?)<([^>]+)>$/);
+
+	if (!match) {
+		return { email: rawValue };
+	}
+
+	const rawName = match[1].trim().replace(/^["']|["']$/g, "");
+	return {
+		name: rawName || undefined,
+		email: match[2].trim(),
+	};
+}
+
+function parseRecipients(value) {
+	const values = Array.isArray(value) ? value : String(value || "").split(",");
+
+	return values.map(parseEmailAddress).filter((recipient) => recipient.email);
+}
+
 function createTransporter() {
 	if (!hasSmtpConfig()) {
 		return nodemailer.createTransport({
@@ -71,6 +106,9 @@ function createTransporter() {
 		host: env.SMTP_HOST,
 		port: env.SMTP_PORT || 587,
 		secure: env.SMTP_SECURE,
+		connectionTimeout: env.EMAIL_TIMEOUT_MS,
+		greetingTimeout: env.EMAIL_TIMEOUT_MS,
+		socketTimeout: env.EMAIL_TIMEOUT_MS,
 		auth: {
 			user: env.SMTP_USER,
 			pass: env.SMTP_PASS,
@@ -78,8 +116,95 @@ function createTransporter() {
 	});
 }
 
-exports.sendCustomEmail = async function ({ to, subject, text }) {
+async function fetchWithTimeout(url, options) {
+	const controller = new AbortController();
+	const timeout = setTimeout(() => controller.abort(), env.EMAIL_TIMEOUT_MS);
+
+	try {
+		return await fetch(url, { ...options, signal: controller.signal });
+	} catch (error) {
+		if (error.name === "AbortError") {
+			throw new Error(
+				`Brevo email API timed out after ${env.EMAIL_TIMEOUT_MS}ms`,
+			);
+		}
+
+		throw error;
+	} finally {
+		clearTimeout(timeout);
+	}
+}
+
+async function sendViaBrevo(message) {
+	if (typeof fetch !== "function") {
+		throw new Error("Brevo email API requires Node.js 18+ with global fetch");
+	}
+
+	if (!hasBrevoConfig()) {
+		throw new Error("BREVO_API_KEY is required when EMAIL_PROVIDER=brevo");
+	}
+
+	const sender = parseEmailAddress(message.from || env.EMAIL_FROM);
+	const recipients = parseRecipients(message.to);
+
+	if (!sender.email) {
+		throw new Error("EMAIL_FROM must include a sender email address");
+	}
+
+	if (!recipients.length) {
+		throw new Error("Email recipient is required");
+	}
+
+	const response = await fetchWithTimeout(BREVO_SEND_EMAIL_URL, {
+		method: "POST",
+		headers: {
+			accept: "application/json",
+			"api-key": env.BREVO_API_KEY,
+			"content-type": "application/json",
+		},
+		body: JSON.stringify({
+			sender,
+			to: recipients,
+			subject: message.subject,
+			htmlContent: message.html,
+			textContent: message.text,
+		}),
+	});
+
+	const body = await response.text();
+	let parsedBody = body;
+
+	try {
+		parsedBody = body ? JSON.parse(body) : {};
+	} catch {
+		// Keep Brevo's original response text when it is not JSON.
+	}
+
+	if (!response.ok) {
+		throw new Error(
+			`Brevo email API failed with status ${response.status}: ${body}`,
+		);
+	}
+
+	return parsedBody;
+}
+
+async function sendEmail(message, debugLog) {
+	if (getEmailProvider() === "brevo") {
+		return sendViaBrevo(message);
+	}
+
 	const transporter = createTransporter();
+	const info = await transporter.sendMail(message);
+
+	if (!hasSmtpConfig() && debugLog) {
+		console.log(debugLog.label, debugLog.value);
+	}
+
+	return info;
+}
+
+exports.sendCustomEmail = async function ({ to, subject, text }) {
 	const message = {
 		from: env.EMAIL_FROM,
 		to,
@@ -91,17 +216,10 @@ exports.sendCustomEmail = async function ({ to, subject, text }) {
 		}),
 	};
 
-	const info = await transporter.sendMail(message);
-
-	if (!hasSmtpConfig()) {
-		console.log("[custom-email]", text);
-	}
-
-	return info;
+	return sendEmail(message, { label: "[custom-email]", value: text });
 };
 
 exports.sendVerificationCodeEmail = async function ({ to, code, shopName }) {
-	const transporter = createTransporter();
 	const brandName = shopName || "Kash Flow";
 	const message = {
 		from: env.EMAIL_FROM,
@@ -122,17 +240,13 @@ exports.sendVerificationCodeEmail = async function ({ to, code, shopName }) {
 		}),
 	};
 
-	const info = await transporter.sendMail(message);
-
-	if (!hasSmtpConfig()) {
-		console.log("[email-verification-code]", code);
-	}
-
-	return info;
+	return sendEmail(message, {
+		label: "[email-verification-code]",
+		value: code,
+	});
 };
 
 exports.sendPasswordResetCodeEmail = async function ({ to, code, shopName }) {
-	const transporter = createTransporter();
 	const brandName = shopName || "Kash Flow";
 	const message = {
 		from: env.EMAIL_FROM,
@@ -153,13 +267,10 @@ exports.sendPasswordResetCodeEmail = async function ({ to, code, shopName }) {
 		}),
 	};
 
-	const info = await transporter.sendMail(message);
-
-	if (!hasSmtpConfig()) {
-		console.log("[password-reset-code]", code);
-	}
-
-	return info;
+	return sendEmail(message, {
+		label: "[password-reset-code]",
+		value: code,
+	});
 };
 
 exports.sendVerificationEmail = async function ({
@@ -167,7 +278,6 @@ exports.sendVerificationEmail = async function ({
 	verificationUrl,
 	shopName,
 }) {
-	const transporter = createTransporter();
 	const brandName = shopName || "Kash Flow";
 	const message = {
 		from: env.EMAIL_FROM,
@@ -188,13 +298,10 @@ exports.sendVerificationEmail = async function ({
 		}),
 	};
 
-	const info = await transporter.sendMail(message);
-
-	if (!hasSmtpConfig()) {
-		console.log("[email-verification]", verificationUrl);
-	}
-
-	return info;
+	return sendEmail(message, {
+		label: "[email-verification]",
+		value: verificationUrl,
+	});
 };
 
 exports.sendBarberInviteEmail = async function ({
@@ -203,7 +310,6 @@ exports.sendBarberInviteEmail = async function ({
 	shopName,
 	inviteUrl,
 }) {
-	const transporter = createTransporter();
 	const message = {
 		from: env.EMAIL_FROM,
 		to,
@@ -224,11 +330,10 @@ exports.sendBarberInviteEmail = async function ({
 		}),
 	};
 
-	const info = await transporter.sendMail(message);
+	return sendEmail(message, { label: "[barber-invite]", value: inviteUrl });
+};
 
-	if (!hasSmtpConfig()) {
-		console.log("[barber-invite]", inviteUrl);
-	}
-
-	return info;
+exports._private = {
+	parseEmailAddress,
+	parseRecipients,
 };

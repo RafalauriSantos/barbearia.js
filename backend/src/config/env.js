@@ -24,6 +24,9 @@ const envSchema = z
 		SMTP_USER: z.string().optional(),
 		SMTP_PASS: z.string().optional(),
 		EMAIL_FROM: z.string().default("Kash Flow <no-reply@localhost>"),
+		EMAIL_PROVIDER: z.enum(["smtp", "brevo"]).optional(),
+		EMAIL_TIMEOUT_MS: z.coerce.number().int().positive().default(10000),
+		BREVO_API_KEY: z.string().optional(),
 		AVATAR_BUCKET: z.string().default("barber-avatars"),
 	})
 	.superRefine((env, ctx) => {
@@ -73,6 +76,9 @@ const parsed = envSchema.parse({
 	SMTP_USER: process.env.SMTP_USER,
 	SMTP_PASS: process.env.SMTP_PASS,
 	EMAIL_FROM: process.env.EMAIL_FROM,
+	EMAIL_PROVIDER: process.env.EMAIL_PROVIDER,
+	EMAIL_TIMEOUT_MS: process.env.EMAIL_TIMEOUT_MS,
+	BREVO_API_KEY: process.env.BREVO_API_KEY,
 	AVATAR_BUCKET: process.env.AVATAR_BUCKET,
 });
 

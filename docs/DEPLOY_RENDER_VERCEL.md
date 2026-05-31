@@ -31,6 +31,10 @@ DEFAULT_BARBEARIA_ID=...
 CORS_ORIGIN=true
 APP_URL=http://localhost:5173
 AVATAR_BUCKET=barber-avatars
+EMAIL_FROM=Kash Flow <seu-email-verificado@seudominio.com>
+EMAIL_PROVIDER=brevo
+BREVO_API_KEY=...
+EMAIL_TIMEOUT_MS=10000
 ```
 
 Observacoes:
@@ -39,6 +43,11 @@ Observacoes:
 - CORS_ORIGIN e APP_URL serao atualizados depois do deploy do frontend.
 - Se precisar, defina PORT=3000 (o Render normalmente injeta PORT automaticamente).
 - `AVATAR_BUCKET` e usado para fotos de perfil dos barbeiros no Supabase Storage.
+- No plano Free do Render, evite SMTP. Configure `EMAIL_PROVIDER=brevo` e
+  `BREVO_API_KEY` para enviar codigos por API HTTPS. O remetente de
+  `EMAIL_FROM` precisa estar cadastrado e verificado na Brevo.
+- `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER` e `SMTP_PASS` podem ficar vazios em
+  producao quando a Brevo API estiver ativa.
 
 Depois do deploy, copie a URL publica do Render (ex: https://seuapp.onrender.com).
 
@@ -101,6 +110,9 @@ Salve e faca o redeploy do backend.
 2. Tente fazer login ou cadastro.
 3. Abra o DevTools > Network e confirme que as chamadas vao para o backend do Render.
 4. Se houver erro de CORS, confira CORS_ORIGIN no Render.
+5. Se o cadastro travar ou falhar no envio do codigo, confira se
+   `BREVO_API_KEY`, `EMAIL_PROVIDER=brevo` e `EMAIL_FROM` verificado estao
+   salvos no Render e faca redeploy.
 
 ## 5) Checklist rapido
 
@@ -109,3 +121,4 @@ Salve e faca o redeploy do backend.
 - [ ] CORS configurado com a URL da Vercel
 - [ ] APP_URL configurado com a URL da Vercel
 - [ ] VITE_API_URL configurado com a URL do Render
+- [ ] Brevo API configurada no Render para envio dos codigos por email
