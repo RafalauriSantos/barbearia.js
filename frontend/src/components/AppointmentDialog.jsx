@@ -57,7 +57,19 @@ export function AppointmentDialog({
 	);
 	const [status, setStatus] = useState(appointment?.status || "normal");
 	const [prazoDate, setPrazoDate] = useState(appointment?.prazo_date || "");
-	const [autoValue, setAutoValue] = useState(true);
+	const [autoValue, setAutoValue] = useState(() => {
+		const initialValue = Number(appointment?.value || 0);
+		const initialItemsTotal = [
+			...selectedServices,
+			...selectedProducts,
+		].reduce(
+			(sum, item) => sum + Number(item.price || 0) * Number(item.quantity || 1),
+			0,
+		);
+
+		if (initialValue === 0 && initialItemsTotal > 0) return true;
+		return Math.abs(initialValue - initialItemsTotal) < 0.01;
+	});
 	const [isSubmitting, setIsSubmitting] = useState(false);
 	const [errorMessage, setErrorMessage] = useState("");
 
@@ -137,16 +149,6 @@ export function AppointmentDialog({
 		(sum, item) => sum + Number(item.price || 0) * Number(item.quantity || 1),
 		0,
 	);
-
-	useEffect(() => {
-		const initialValue = Number(value || 0);
-		if (initialValue === 0 && itemsTotal > 0) {
-			setAutoValue(true);
-			return;
-		}
-		const delta = Math.abs(initialValue - itemsTotal);
-		setAutoValue(delta < 0.01);
-	}, []);
 
 	useEffect(() => {
 		if (!autoValue) return;

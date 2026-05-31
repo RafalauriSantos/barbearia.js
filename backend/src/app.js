@@ -67,6 +67,7 @@ function registerErrorHandler(app) {
 async function buildApp() {
 	const app = fastify({
 		logger: env.NODE_ENV !== "test",
+		bodyLimit: 4 * 1024 * 1024,
 	});
 
 	supabase.ensureConfigured();

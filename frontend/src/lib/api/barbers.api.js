@@ -9,6 +9,8 @@ function normalizeBarber(raw) {
 		active: raw.active ?? raw.ativo ?? true,
 		comissao_percent: Number(raw.comissao_percent || 0),
 		email: raw.email || "",
+		photo_url: raw.photo_url || raw.foto_url || "",
+		foto_url: raw.foto_url || raw.photo_url || "",
 		barbearia_id: raw.barbearia_id,
 		usuario_id: raw.usuario_id || null,
 		convite_pendente: raw.convite_pendente || null,

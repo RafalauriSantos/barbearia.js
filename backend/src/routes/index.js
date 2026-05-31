@@ -1,4 +1,5 @@
 const supabase = require("../lib/supabase");
+const { env } = require("../config/env");
 const { getDefaultBarbeariaId } = require("../lib/tenant");
 
 module.exports = async function (fastify, opts) {
@@ -24,6 +25,8 @@ module.exports = async function (fastify, opts) {
 	fastify.register(require("./financial"), { prefix: "/financial" });
 	fastify.register(require("./profile"), { prefix: "/profile" });
 	fastify.register(require("./invites"), { prefix: "/invites" });
-	fastify.register(require("./system"));
+	if (env.NODE_ENV !== "production") {
+		fastify.register(require("./system"));
+	}
 	fastify.register(require("./auth"), { prefix: "/auth" });
 };

@@ -31,8 +31,9 @@ beforeEach(() => {
 		appointmentDuration: 30,
 		scheduleInterval: 30,
 		barberName: "Rafael",
+		barberPhotoUrl: "",
 	});
-	storeMock.saveProfile.mockResolvedValue({});
+	storeMock.saveProfile.mockResolvedValue({ barberPhotoUrl: "" });
 });
 
 describe("SettingsPage", () => {
@@ -77,6 +78,40 @@ describe("SettingsPage", () => {
 					closingTime: "18:00",
 					appointmentDuration: 45,
 					scheduleInterval: 30,
+				}),
+			);
+		});
+	});
+
+	it("sends selected profile photo with the profile payload", async () => {
+		storeMock.saveProfile.mockResolvedValue({
+			barberPhotoUrl: "https://cdn.example.com/avatar.png",
+		});
+
+		render(
+			<MemoryRouter initialEntries={["/settings"]}>
+				<SettingsPage />
+			</MemoryRouter>,
+		);
+
+		await screen.findByDisplayValue("Rafael");
+
+		const file = new File(["avatar"], "avatar.png", { type: "image/png" });
+		fireEvent.change(screen.getByLabelText("Foto da agenda"), {
+			target: { files: [file] },
+		});
+
+		expect(await screen.findByText("Foto pronta para salvar.")).toBeTruthy();
+		fireEvent.click(screen.getByRole("button", { name: "Salvar alterações" }));
+
+		await waitFor(() => {
+			expect(storeMock.saveProfile).toHaveBeenCalledWith(
+				expect.objectContaining({
+					barberPhoto: expect.objectContaining({
+						dataUrl: expect.stringContaining("data:image/png;base64,"),
+						fileName: "avatar.png",
+						mimeType: "image/png",
+					}),
 				}),
 			);
 		});

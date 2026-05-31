@@ -1,5 +1,6 @@
 const supabase = require("../lib/supabase");
 const { AppError } = require("../lib/errors");
+const AvatarStorageService = require("../services/avatarStorageService");
 
 async function findShop(barbeariaId) {
 	const { data, error } = await supabase
@@ -39,6 +40,8 @@ function toProfile({ shop, barber }) {
 		appointmentDuration: shop?.duracao_atendimento_min || 30,
 		scheduleInterval: shop?.intervalo_agenda_min || 30,
 		barberName: barber?.nome || "",
+		barberPhotoUrl: barber?.foto_url || "",
+		photo_url: barber?.foto_url || "",
 		barbearia_id: shop?.id,
 		barbeiro_id: barber?.id,
 	};
@@ -96,10 +99,36 @@ exports.upsert = async function (payload, user) {
 	}
 
 	let barber = await findBarber(user);
-	if (payload.barberName !== undefined && user.barbeiro_id) {
+	const barberUpdates = {};
+
+	if (payload.barberName !== undefined) {
+		barberUpdates.nome = payload.barberName || "";
+	}
+
+	if (payload.removeBarberPhoto) {
+		barberUpdates.foto_url = null;
+	}
+
+	if (payload.barberPhoto?.dataUrl) {
+		if (!user.barbeiro_id) {
+			throw new AppError(
+				400,
+				"BARBER_PROFILE_NOT_FOUND",
+				"Perfil de barbeiro nao encontrado.",
+			);
+		}
+
+		barberUpdates.foto_url = await AvatarStorageService.uploadBarberAvatar({
+			barbeariaId: user.barbearia_id,
+			barbeiroId: user.barbeiro_id,
+			dataUrl: payload.barberPhoto.dataUrl,
+		});
+	}
+
+	if (Object.keys(barberUpdates).length > 0 && user.barbeiro_id) {
 		const { data, error } = await supabase
 			.from("barbeiros")
-			.update({ nome: payload.barberName || "" })
+			.update(barberUpdates)
 			.eq("id", user.barbeiro_id)
 			.eq("barbearia_id", user.barbearia_id)
 			.select()

@@ -32,7 +32,7 @@ Projeto full stack para gestao de barbearia: agenda diaria, servicos, produtos, 
 
 - backend/ - API, rotas e integracao com banco
 - frontend/ - app web
-- docs/ - planos, roadmap e guias
+- docs/ - roadmap principal e guia de deploy
 - scripts/ - scripts de desenvolvimento
 
 ## Como rodar (local)
@@ -50,6 +50,7 @@ Requisitos: Node.js LTS e conta no Supabase.
    - `DATABASE_URL`
    - `JWT_SECRET`
    - `DEFAULT_BARBEARIA_ID`
+   - `AVATAR_BUCKET` (opcional; padrao: `barber-avatars`)
 
 3. Instale e rode:
 
@@ -107,35 +108,23 @@ npm run test
 npm run build
 ```
 
-Smoke test com backend e frontend rodando:
+Smoke test com backend e frontend ja rodando:
 
 ```bash
 .\testar-tudo.cmd
 ```
 
-Subir os servidores e testar o fluxo local automaticamente:
-
-```bash
-.\rodar-e-testar.cmd
-```
-
 ## Scripts de raiz
 
 - `rodar-tudo.cmd` - sobe backend e frontend
-- `testar-tudo.cmd` - executa smoke tests contra servidores rodando
+- `fechar-portas.cmd` - para backend e frontend locais
+- `testar-tudo.cmd` - executa smoke tests contra servidores ja rodando
 - `validar-tudo.cmd` - roda backend tests, frontend lint, frontend tests e build; se passar, sobe e abre o app
-- `rodar-e-testar.cmd` - sobe backend/frontend e executa os smoke tests
-- `ver-portas.cmd` - verifica portas locais
 
 ## Documentacao
 
-- [docs/PLAN_MVP_SAAS.md](docs/PLAN_MVP_SAAS.md)
-- [docs/PLANO_INTEGRACAO_FRONT_BACK.md](docs/PLANO_INTEGRACAO_FRONT_BACK.md)
-- [docs/ROADMAP_DESENVOLVIMENTO_TCC.md](docs/ROADMAP_DESENVOLVIMENTO_TCC.md)
-- [docs/backend/README.md](docs/backend/README.md)
-- [docs/backend/PLAN_BACKEND_RESTRUCTURE.md](docs/backend/PLAN_BACKEND_RESTRUCTURE.md)
-- [docs/frontend/README.md](docs/frontend/README.md)
-- [docs/frontend/CHECKLIST_FRONTEND_PRE_BACKEND.md](docs/frontend/CHECKLIST_FRONTEND_PRE_BACKEND.md)
+- [docs/ROADMAP_DESENVOLVIMENTO_TCC.md](docs/ROADMAP_DESENVOLVIMENTO_TCC.md) - fonte unica de verdade do status, backlog e criterios de pronto
+- [docs/DEPLOY_RENDER_VERCEL.md](docs/DEPLOY_RENDER_VERCEL.md) - guia de deploy separado em Render + Vercel
 
 ## Observacoes
 

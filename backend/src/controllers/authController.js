@@ -22,6 +22,19 @@ function toPublicUser(user) {
 	};
 }
 
+function createSession(user) {
+	const accessToken = jwt.sign({ userId: user.id }, env.JWT_SECRET, {
+		expiresIn: "15m",
+	});
+	const refreshToken = jwt.sign(
+		{ userId: user.id, type: "refresh" },
+		env.JWT_SECRET,
+		{ expiresIn: "30d" },
+	);
+
+	return { accessToken, refreshToken, user: toPublicUser(user) };
+}
+
 exports.register = async (request, reply) => {
 	const payload = validateRegister(request.body);
 	const { user, verificationCode } = await AuthService.register(payload);
@@ -42,16 +55,7 @@ exports.login = async (request, reply) => {
 	);
 	if (!user) return reply.code(401).send({ error: "Invalid credentials" });
 
-	const accessToken = jwt.sign({ userId: user.id }, env.JWT_SECRET, {
-		expiresIn: "15m",
-	});
-	const refreshToken = jwt.sign(
-		{ userId: user.id, type: "refresh" },
-		env.JWT_SECRET,
-		{ expiresIn: "30d" },
-	);
-
-	return reply.send({ accessToken, refreshToken, user: toPublicUser(user) });
+	return reply.send(createSession(user));
 };
 
 exports.refresh = async (request, reply) => {
@@ -85,8 +89,16 @@ exports.verifyEmail = async (request, reply) => {
 
 exports.verifyEmailCode = async (request, reply) => {
 	const payload = validateVerifyCode(request.body);
-	const user = await AuthService.verifyEmailCode(payload);
-	return reply.send({ ok: true, user: toPublicUser(user) });
+	const result = await AuthService.verifyEmailCode(payload);
+	if (result.verifiedNow) {
+		return reply.send({ ok: true, ...createSession(result.user) });
+	}
+
+	return reply.send({
+		ok: true,
+		alreadyVerified: true,
+		user: toPublicUser(result.user),
+	});
 };
 
 exports.resendEmailCode = async (request, reply) => {

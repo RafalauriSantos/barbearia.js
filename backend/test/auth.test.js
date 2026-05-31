@@ -220,7 +220,58 @@ t.test("POST /auth/verify-code marks user as verified", async (t) => {
 	const body = JSON.parse(res.payload);
 	t.equal(body.ok, true);
 	t.equal(body.user.id, "u6");
+	t.ok(body.accessToken);
+	t.ok(body.refreshToken);
 	t.notOk(body.user.password_hash);
+
+	await app.close();
+});
+
+t.test("POST /auth/verify-code does not issue tokens for already verified email", async (t) => {
+	const repoPath = require.resolve("../src/repositories/authRepository");
+	const verificationRepoPath = require.resolve(
+		"../src/repositories/emailVerificationRepository",
+	);
+	require.cache[repoPath] = {
+		exports: {
+			findByEmail: async (email) => ({
+				id: "u6",
+				nome: "Renan",
+				email,
+				role: "admin",
+				barbearia_id: "barbearia-1",
+				barbeiro_id: null,
+				email_verificado_em: new Date().toISOString(),
+			}),
+		},
+	};
+	require.cache[verificationRepoPath] = {
+		exports: {
+			findValidByUserAndHash: async () => null,
+			markUsed: async () => true,
+		},
+	};
+
+	delete require.cache[require.resolve("../src/services/authService")];
+	delete require.cache[require.resolve("../src/controllers/authController")];
+	delete require.cache[require.resolve("../src/routes/auth")];
+	delete require.cache[require.resolve("../src/index")];
+
+	const { buildApp } = require("../src/index");
+	const app = await buildApp();
+
+	const res = await app.inject({
+		method: "POST",
+		url: "/auth/verify-code",
+		payload: { email: "renan@kashflow.com", code: "123456" },
+	});
+	t.equal(res.statusCode, 200);
+	const body = JSON.parse(res.payload);
+	t.equal(body.ok, true);
+	t.equal(body.alreadyVerified, true);
+	t.notOk(body.accessToken);
+	t.notOk(body.refreshToken);
+	t.equal(body.user.id, "u6");
 
 	await app.close();
 });

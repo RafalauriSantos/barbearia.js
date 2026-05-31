@@ -8,6 +8,7 @@ function clearAppCache() {
 	for (const modulePath of [
 		"../src/index",
 		"../src/app",
+		"../src/config/env",
 		"../src/routes/index",
 		"../src/routes/products",
 		"../src/routes/expenses",
@@ -199,6 +200,42 @@ t.test("core CRUD routes respond through layered modules", async (t) => {
 
 	const reset = await app.inject({ method: "DELETE", url: "/reset" });
 	t.equal(reset.statusCode, 204);
+
+	await app.close();
+});
+
+t.test("system routes are not available in production", async (t) => {
+	const previousNodeEnv = process.env.NODE_ENV;
+	const previousJwtSecret = process.env.JWT_SECRET;
+
+	process.env.NODE_ENV = "production";
+	process.env.JWT_SECRET = "production-test-secret-with-at-least-32-chars";
+
+	t.teardown(() => {
+		if (previousNodeEnv === undefined) {
+			delete process.env.NODE_ENV;
+		} else {
+			process.env.NODE_ENV = previousNodeEnv;
+		}
+
+		if (previousJwtSecret === undefined) {
+			delete process.env.JWT_SECRET;
+		} else {
+			process.env.JWT_SECRET = previousJwtSecret;
+		}
+
+		clearAppCache();
+	});
+
+	clearAppCache();
+	const { buildApp } = require("../src/index");
+	const app = await buildApp();
+
+	const reset = await app.inject({ method: "DELETE", url: "/reset" });
+	t.equal(reset.statusCode, 404);
+
+	const testEmail = await app.inject({ method: "POST", url: "/test-email" });
+	t.equal(testEmail.statusCode, 404);
 
 	await app.close();
 });

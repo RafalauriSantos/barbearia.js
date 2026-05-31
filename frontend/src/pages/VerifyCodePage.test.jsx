@@ -1,14 +1,19 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { MemoryRouter } from "react-router-dom";
+import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import VerifyCodePage from "./VerifyCodePage";
 
 const authApiMock = vi.hoisted(() => ({
-	verifyEmailCode: vi.fn(),
 	resendEmailCode: vi.fn(),
+}));
+const authContextMock = vi.hoisted(() => ({
+	verifyEmailCode: vi.fn(),
 }));
 
 vi.mock("@/lib/api/auth.api", () => authApiMock);
+vi.mock("@/context/AuthContext", () => ({
+	useAuth: () => authContextMock,
+}));
 
 afterEach(() => {
 	vi.clearAllMocks();
@@ -21,11 +26,18 @@ describe("VerifyCodePage", () => {
 			"kash_flow_pending_verification_email",
 			"cliente@example.com",
 		);
-		authApiMock.verifyEmailCode.mockResolvedValueOnce({ ok: true });
+		authContextMock.verifyEmailCode.mockResolvedValueOnce({
+			ok: true,
+			accessToken: "access-token",
+			refreshToken: "refresh-token",
+		});
 
 		render(
 			<MemoryRouter initialEntries={["/verify-code"]}>
-				<VerifyCodePage />
+				<Routes>
+					<Route path="/verify-code" element={<VerifyCodePage />} />
+					<Route path="/app" element={<div>Agenda operacional</div>} />
+				</Routes>
 			</MemoryRouter>,
 		);
 
@@ -38,10 +50,11 @@ describe("VerifyCodePage", () => {
 		fireEvent.click(screen.getByRole("button", { name: "Confirmar codigo" }));
 
 		await waitFor(() => {
-			expect(authApiMock.verifyEmailCode).toHaveBeenCalledWith({
+			expect(authContextMock.verifyEmailCode).toHaveBeenCalledWith({
 				email: "cliente@example.com",
 				code: "123456",
 			});
 		});
+		expect(await screen.findByText("Agenda operacional")).toBeTruthy();
 	});
 });

@@ -50,6 +50,8 @@ function toApi(row) {
 		cargo: row.cargo,
 		active: row.ativo,
 		ativo: row.ativo,
+		foto_url: row.foto_url || null,
+		photo_url: row.foto_url || null,
 		comissao_percent: Number(row.comissao_percent || 0),
 		email: row.email || null,
 		barbearia_id: row.barbearia_id,
@@ -62,7 +64,9 @@ function toApi(row) {
 exports.findAllByBarbearia = async function (barbeariaId) {
 	const { data, error } = await supabase
 		.from("barbeiros")
-		.select("id,nome,cargo,ativo,comissao_percent,email,barbearia_id,usuario_id")
+		.select(
+			"id,nome,foto_url,cargo,ativo,comissao_percent,email,barbearia_id,usuario_id",
+		)
 		.eq("barbearia_id", barbeariaId)
 		.eq("ativo", true)
 		.order("nome", { ascending: true });
@@ -73,7 +77,9 @@ exports.findAllByBarbearia = async function (barbeariaId) {
 exports.findByIdInBarbearia = async function (id, barbeariaId) {
 	const { data, error } = await supabase
 		.from("barbeiros")
-		.select("id,nome,cargo,ativo,comissao_percent,email,barbearia_id,usuario_id")
+		.select(
+			"id,nome,foto_url,cargo,ativo,comissao_percent,email,barbearia_id,usuario_id",
+		)
 		.eq("id", id)
 		.eq("barbearia_id", barbeariaId)
 		.eq("ativo", true)
@@ -92,7 +98,9 @@ exports.create = async function ({ barbeariaId, nome, email, comissao_percent })
 			comissao_percent: comissao_percent ?? 50,
 			ativo: true,
 		})
-		.select("id,nome,cargo,ativo,comissao_percent,email,barbearia_id,usuario_id")
+		.select(
+			"id,nome,foto_url,cargo,ativo,comissao_percent,email,barbearia_id,usuario_id",
+		)
 		.single();
 	if (error) throw error;
 	return toApi(data);
@@ -112,7 +120,9 @@ exports.update = async function (id, barbeariaId, updates) {
 		.update(row)
 		.eq("id", id)
 		.eq("barbearia_id", barbeariaId)
-		.select("id,nome,cargo,ativo,comissao_percent,email,barbearia_id,usuario_id")
+		.select(
+			"id,nome,foto_url,cargo,ativo,comissao_percent,email,barbearia_id,usuario_id",
+		)
 		.single();
 	if (error) throw error;
 	return toApi(data);
@@ -128,7 +138,9 @@ exports.linkUser = async function (id, barbeariaId, userId, email) {
 		.eq("id", id)
 		.eq("barbearia_id", barbeariaId)
 		.is("usuario_id", null)
-		.select("id,nome,cargo,ativo,comissao_percent,email,barbearia_id,usuario_id")
+		.select(
+			"id,nome,foto_url,cargo,ativo,comissao_percent,email,barbearia_id,usuario_id",
+		)
 		.maybeSingle();
 	if (error && error.code !== "PGRST116") throw error;
 	return toApi(data);

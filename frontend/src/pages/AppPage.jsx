@@ -89,6 +89,28 @@ function getAvatarColor(index) {
 	return AVATAR_COLORS[index % AVATAR_COLORS.length];
 }
 
+function normalizeText(value) {
+	return String(value || "")
+		.trim()
+		.toLowerCase();
+}
+
+function isOwnBarber(barber, user) {
+	if (!barber || !user) return false;
+
+	if (user.barbeiro_id && barber.id === user.barbeiro_id) return true;
+	if (user.id && barber.usuario_id === user.id) return true;
+	if (user.id && barber.id === user.id) return true;
+
+	const barberEmail = normalizeText(barber.email);
+	const userEmail = normalizeText(user.email);
+	if (barberEmail && userEmail && barberEmail === userEmail) return true;
+
+	const barberName = normalizeText(barber.name || barber.nome);
+	const userName = normalizeText(user.nome || user.name);
+	return Boolean(barberName && userName && barberName === userName);
+}
+
 function getDefaultTimeSlot() {
 	const now = new Date();
 	const nowMinutes = now.getHours() * 60 + now.getMinutes();
@@ -131,31 +153,38 @@ export default function AppPage() {
 	const [itemError, setItemError] = useState("");
 	const [barbers, setBarbers] = useState([]);
 	const [profile, setProfile] = useState(null);
-	const [activeBarberId, setActiveBarberId] = useState("all");
+	const [activeBarberId, setActiveBarberId] = useState("");
 	const navigate = useNavigate();
 	const { user } = useAuth();
 	const isAdmin = user?.role === "admin";
 	const dayKey = formatDayKey(currentDate);
 	const ownBarberId = user?.barbeiro_id || "";
-	const selectedBarberId = activeBarberId === "all" ? "" : activeBarberId;
+	const selectedBarberId = activeBarberId || ownBarberId || "";
 	const barberOptions = useMemo(() => {
-		if (!isAdmin) {
-			const fallbackName = user?.nome || user?.email || "Minha agenda";
-			return [
-				{
-					id: ownBarberId || "mine",
-					name: fallbackName,
-					photo_url: user?.photo_url,
-					color: getAvatarColor(0),
-				},
-			];
-		}
-		return barbers.map((barber, index) => ({
-			...barber,
-			photo_url: barber.photo_url || barber.foto_url || null,
-			color: getAvatarColor(index),
-		}));
-	}, [barbers, isAdmin, ownBarberId, user]);
+		if (!isAdmin) return [];
+		return barbers
+			.filter((barber) => !isOwnBarber(barber, user))
+			.map((barber, index) => ({
+				...barber,
+				photo_url: barber.photo_url || barber.foto_url || null,
+				color: getAvatarColor(index),
+			}));
+	}, [barbers, isAdmin, user]);
+	const activeExternalBarber = useMemo(
+		() => barberOptions.find((barber) => barber.id === activeBarberId) || null,
+		[activeBarberId, barberOptions],
+	);
+	const ownAgendaName = profile?.barberName || user?.nome || "Minha agenda";
+	const ownAgendaPhotoUrl = profile?.barberPhotoUrl || profile?.photo_url || "";
+	const activeAgendaName = activeExternalBarber ?
+		activeExternalBarber.name || activeExternalBarber.nome
+	:	ownAgendaName;
+	const activeAgendaPhotoUrl = activeExternalBarber ?
+		activeExternalBarber.photo_url || activeExternalBarber.foto_url
+	:	ownAgendaPhotoUrl;
+	const agendaSubtitle = activeExternalBarber ?
+		`agenda de ${activeExternalBarber.name || activeExternalBarber.nome}`
+	:	"sua agenda";
 	const todaySelected = isToday(currentDate);
 	const canGoBack = !todaySelected;
 	const sortedAppointments = useMemo(() => {
@@ -172,36 +201,25 @@ export default function AppPage() {
 
 	useEffect(() => {
 		if (!isAdmin) return;
-		if (!ownBarberId && activeBarberId === "mine") {
-			setActiveBarberId("all");
-		}
-	}, [activeBarberId, isAdmin, ownBarberId]);
-
-	useEffect(() => {
-		if (!isAdmin) return;
 		loadBarbers()
 			.then((list) => {
 				setBarbers(list);
 				setActiveBarberId((current) => {
-					const availableIds = new Set(list.map((barber) => barber.id));
-					if (current === "all") return "all";
+					const availableIds = new Set(
+						list
+							.filter((barber) => !isOwnBarber(barber, user))
+							.map((barber) => barber.id),
+					);
+					if (!current) return "";
 					if (current && availableIds.has(current)) return current;
-					if (ownBarberId && availableIds.has(ownBarberId)) return ownBarberId;
-					return "all";
+					return "";
 				});
 			})
 			.catch((error) => {
 				setBarbers([]);
 				setErrorMessage(error.message || "Falha ao carregar barbeiros.");
 			});
-	}, [isAdmin, ownBarberId]);
-
-	useEffect(() => {
-		if (isAdmin) return;
-		if (ownBarberId) {
-			setActiveBarberId(ownBarberId);
-		}
-	}, [isAdmin, ownBarberId]);
+	}, [isAdmin, user]);
 
 	const reload = useCallback(async () => {
 		setIsLoading(!hasLoaded);
@@ -410,9 +428,30 @@ export default function AppPage() {
 		<div className="app-shell flex flex-col overflow-hidden bg-background">
 			<header className="shrink-0 border-b border-border bg-background/95 px-4 pb-3 pt-3 backdrop-blur">
 				<div className="flex items-center justify-between gap-3">
-					<h1 className="truncate font-logo text-[22px] font-semibold text-foreground">
-						{shopName}
-					</h1>
+					<div className="flex min-w-0 items-center gap-3">
+						<div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full border border-[#4ade80]/35 bg-card text-xs font-semibold text-[#86efac] shadow-[0_0_0_3px_rgba(74,222,128,0.08)]">
+							{activeAgendaPhotoUrl ? (
+								<img
+									src={activeAgendaPhotoUrl}
+									alt={activeAgendaName}
+									className="h-full w-full object-cover"
+								/>
+							) : (
+								<span>{getInitials(activeAgendaName)}</span>
+							)}
+						</div>
+						<div className="min-w-0">
+							<h1 className="truncate font-logo text-[20px] font-semibold text-foreground">
+								{activeAgendaName}
+							</h1>
+							<p className="mt-0.5 truncate font-mono-ui text-[11px] lowercase text-[#86efac]/70">
+								{agendaSubtitle}
+							</p>
+							<p className="mt-0.5 truncate font-client text-[11px] text-foreground-faint">
+								{shopName}
+							</p>
+						</div>
+					</div>
 					<div className="flex items-center gap-2">
 						<ThemeToggle className="h-9 w-9 rounded-full border border-border bg-card" />
 						<IconButton
@@ -424,52 +463,11 @@ export default function AppPage() {
 					</div>
 				</div>
 
+				{barberOptions.length > 0 && (
 				<div className="mt-3">
 					<div className="flex gap-3 overflow-x-auto pb-1 no-scrollbar">
-						{isAdmin && (
-							<button
-								type="button"
-								onClick={() => {
-									setActiveBarberId("all");
-									setFeedbackMessage("");
-								}}
-								className="flex shrink-0 flex-col items-center gap-1">
-								<div
-									className={`flex h-9 w-9 items-center justify-center rounded-full border-2 ${
-										activeBarberId === "all" ?
-											"border-[#4ade80]"
-										: "border-transparent"
-									}`}
-									style={{ background: "#1f2937" }}>
-									<svg
-										width="14"
-										height="14"
-										viewBox="0 0 24 24"
-										fill="none"
-										stroke="currentColor"
-										strokeWidth="1.6"
-										strokeLinecap="round"
-										strokeLinejoin="round"
-										className="text-foreground">
-										<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
-										<circle cx="9" cy="7" r="4" />
-										<path d="M22 21v-2a4 4 0 0 0-3-3.87" />
-										<path d="M16 3.13a4 4 0 0 1 0 7.75" />
-									</svg>
-								</div>
-								<span
-									className={`text-[8px] ${
-										activeBarberId === "all" ?
-											"text-[#4ade80]"
-										: "text-foreground-faint"
-									}`}>
-									Todos
-								</span>
-							</button>
-						)}
 						{barberOptions.map((barber, index) => {
-							const isActive = activeBarberId === barber.id ||
-								(!isAdmin && barber.id === ownBarberId);
+							const isActive = activeBarberId === barber.id;
 							return (
 								<button
 									key={barber.id}
@@ -505,8 +503,20 @@ export default function AppPage() {
 								</button>
 							);
 						})}
+						{activeExternalBarber && (
+							<button
+								type="button"
+								onClick={() => {
+									setActiveBarberId("");
+									setFeedbackMessage("");
+								}}
+								className="mt-0.5 flex h-9 shrink-0 items-center rounded-full border border-[#14532d]/80 bg-[#052e1b] px-3 font-mono-ui text-[10px] lowercase text-[#86efac] transition-colors hover:border-[#22c55e]/50">
+								← minha agenda
+							</button>
+						)}
 					</div>
 				</div>
+				)}
 
 				<div className="mt-3 grid grid-cols-3 gap-2">
 					<div className="flex items-center justify-center gap-2 rounded-full border border-border bg-card px-2 py-1">

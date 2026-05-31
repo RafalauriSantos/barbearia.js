@@ -11,6 +11,7 @@ import {
 	login as loginRequest,
 	me as fetchCurrentUser,
 	register as registerRequest,
+	verifyEmailCode as verifyEmailCodeRequest,
 	acceptInvite as acceptInviteRequest,
 } from "@/lib/api/auth.api";
 
@@ -60,6 +61,18 @@ export function AuthProvider({ children }) {
 		[],
 	);
 
+	const verifyEmailCode = useCallback(async ({ email, code }) => {
+		const session = await verifyEmailCodeRequest({ email, code });
+		if (!session?.accessToken || !session?.refreshToken) {
+			return session;
+		}
+
+		setSessionTokens(session);
+		const currentUser = await fetchCurrentUser();
+		setUser(currentUser);
+		return { ...session, user: currentUser };
+	}, []);
+
 	const acceptInvite = useCallback(async ({ token, password, nome }) => {
 		const session = await acceptInviteRequest(token, { password, nome });
 		setSessionTokens(session);
@@ -80,11 +93,21 @@ export function AuthProvider({ children }) {
 			isAuthenticated: Boolean(user),
 			login,
 			signup,
+			verifyEmailCode,
 			acceptInvite,
 			logout,
 			reloadUser: loadCurrentUser,
 		}),
-		[user, isLoading, login, signup, acceptInvite, logout, loadCurrentUser],
+		[
+			user,
+			isLoading,
+			login,
+			signup,
+			verifyEmailCode,
+			acceptInvite,
+			logout,
+			loadCurrentUser,
+		],
 	);
 
 	return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

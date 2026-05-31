@@ -30,6 +30,7 @@ JWT_SECRET=...
 DEFAULT_BARBEARIA_ID=...
 CORS_ORIGIN=true
 APP_URL=http://localhost:5173
+AVATAR_BUCKET=barber-avatars
 ```
 
 Observacoes:
@@ -37,6 +38,7 @@ Observacoes:
 - Use um JWT_SECRET com pelo menos 32 caracteres.
 - CORS_ORIGIN e APP_URL serao atualizados depois do deploy do frontend.
 - Se precisar, defina PORT=3000 (o Render normalmente injeta PORT automaticamente).
+- `AVATAR_BUCKET` e usado para fotos de perfil dos barbeiros no Supabase Storage.
 
 Depois do deploy, copie a URL publica do Render (ex: https://seuapp.onrender.com).
 

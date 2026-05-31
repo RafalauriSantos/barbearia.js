@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
-import { resendEmailCode, verifyEmailCode } from "@/lib/api/auth.api";
+import { useAuth } from "@/context/AuthContext";
+import { resendEmailCode } from "@/lib/api/auth.api";
 
 const PENDING_VERIFICATION_EMAIL_KEY = "kash_flow_pending_verification_email";
 
@@ -22,6 +23,7 @@ function clearPendingEmail() {
 export default function VerifyCodePage() {
 	const [searchParams] = useSearchParams();
 	const navigate = useNavigate();
+	const { verifyEmailCode } = useAuth();
 	const [email, setEmail] = useState(() => getPendingEmail());
 	const [code, setCode] = useState("");
 	const [status, setStatus] = useState("idle");
@@ -45,10 +47,14 @@ export default function VerifyCodePage() {
 		setStatus("loading");
 		setMessage("");
 		try {
-			await verifyEmailCode({ email: email.trim(), code });
+			const result = await verifyEmailCode({ email: email.trim(), code });
 			setStatus("success");
 			clearPendingEmail();
-			setMessage("Conta confirmada. Agora voce ja pode entrar.");
+			if (result?.accessToken) {
+				navigate("/app", { replace: true });
+				return;
+			}
+			setMessage("Conta ja confirmada. Entre com seu email e senha.");
 		} catch (error) {
 			setStatus("error");
 			setMessage(error.message || "Nao foi possivel confirmar a conta.");

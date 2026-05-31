@@ -125,7 +125,7 @@ exports.verifyEmailCode = async function ({ email, code }) {
 		throw new AppError(400, "INVALID_EMAIL", "Email nao encontrado.");
 	}
 	if (user.email_verificado_em) {
-		return user;
+		return { user, verifiedNow: false };
 	}
 
 	const codeHash = hashVerificationCode(code);
@@ -144,7 +144,7 @@ exports.verifyEmailCode = async function ({ email, code }) {
 
 	await verificationRepo.markUsed(record.id);
 	const updated = await AuthRepository.markEmailVerified(user.id);
-	return updated;
+	return { user: updated, verifiedNow: true };
 };
 
 exports.resendEmailCode = async function ({ email }) {

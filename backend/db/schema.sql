@@ -59,6 +59,7 @@ CREATE TABLE IF NOT EXISTS public.barbeiros (
     usuario_id uuid REFERENCES public.usuarios (id) ON DELETE SET NULL,
     email varchar,
     nome varchar NOT NULL,
+    foto_url text,
     cargo varchar NOT NULL DEFAULT 'barbeiro',
     comissao_percent numeric(5, 2) NOT NULL DEFAULT 50.00 CHECK (
         comissao_percent >= 0

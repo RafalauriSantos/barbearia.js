@@ -24,6 +24,7 @@ const envSchema = z
 		SMTP_USER: z.string().optional(),
 		SMTP_PASS: z.string().optional(),
 		EMAIL_FROM: z.string().default("Kash Flow <no-reply@localhost>"),
+		AVATAR_BUCKET: z.string().default("barber-avatars"),
 	})
 	.superRefine((env, ctx) => {
 		if (env.NODE_ENV === "production" && !env.JWT_SECRET) {
@@ -72,6 +73,7 @@ const parsed = envSchema.parse({
 	SMTP_USER: process.env.SMTP_USER,
 	SMTP_PASS: process.env.SMTP_PASS,
 	EMAIL_FROM: process.env.EMAIL_FROM,
+	AVATAR_BUCKET: process.env.AVATAR_BUCKET,
 });
 
 const env = {
