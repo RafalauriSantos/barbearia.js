@@ -54,26 +54,26 @@ existam antes do app mobile usar a API publica.
 
 ## 2) Preparar variaveis do frontend (Vercel)
 
-Crie um projeto na Vercel apontando para o repositorio. O arquivo `vercel.json`
-na raiz ja define a instalacao, build e pasta publicada corretas para o app em
-`frontend/`.
+Crie um projeto na Vercel apontando para o repositorio e defina o Root Directory
+como `frontend`. O arquivo `frontend/vercel.json` ja define a instalacao, build
+e pasta publicada corretas.
 
 Install command:
 
 ```
-cd frontend && npm install
+npm install
 ```
 
 Build command:
 
 ```
-cd frontend && npm run build:artifact
+npm run build:artifact
 ```
 
 Output directory:
 
 ```
-frontend/.output
+.output
 ```
 
 Variavel de ambiente obrigatoria:

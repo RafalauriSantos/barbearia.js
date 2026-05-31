@@ -40,3 +40,4 @@ backend/node_modules
 frontend/dist
 frontend/.output
 backend/dist
+.vercel
