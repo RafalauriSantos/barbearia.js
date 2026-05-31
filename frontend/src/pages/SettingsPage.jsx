@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import {
@@ -14,6 +14,15 @@ const DEFAULT_APPOINTMENT_DURATION = "30";
 const DEFAULT_SCHEDULE_INTERVAL = "30";
 const AVATAR_MAX_BYTES = 2 * 1024 * 1024;
 const ACCEPTED_AVATAR_TYPES = ["image/jpeg", "image/png", "image/webp"];
+const AVATAR_OUTPUT_SIZE = 512;
+const AVATAR_OUTPUT_TYPE = "image/jpeg";
+const AVATAR_OUTPUT_QUALITY = 0.9;
+const DEFAULT_AVATAR_FOCUS = { x: 50, y: 50 };
+const DEFAULT_AVATAR_ZOOM = 1;
+
+function clamp(value, min, max) {
+	return Math.min(Math.max(value, min), max);
+}
 
 function getInitials(name) {
 	const trimmed = String(name || "").trim();
@@ -30,6 +39,84 @@ function readFileAsDataUrl(file) {
 		reader.onerror = () => reject(new Error("Nao foi possivel ler a imagem."));
 		reader.readAsDataURL(file);
 	});
+}
+
+function loadImage(dataUrl) {
+	return new Promise((resolve, reject) => {
+		const image = new Image();
+		image.onload = () => resolve(image);
+		image.onerror = () => reject(new Error("Nao foi possivel preparar a foto."));
+		image.src = dataUrl;
+	});
+}
+
+function makeAvatarFileName(fileName) {
+	const baseName =
+		String(fileName || "foto")
+			.replace(/\.[^.]+$/u, "")
+			.replace(/[^\w-]+/gu, "-")
+			.replace(/^-+|-+$/gu, "")
+			.slice(0, 80) || "foto";
+
+	return `${baseName}-avatar.jpg`;
+}
+
+async function createCroppedAvatarUpload({ draft, focus, zoom }) {
+	const image = await loadImage(draft.dataUrl);
+	const canvas = document.createElement("canvas");
+	canvas.width = AVATAR_OUTPUT_SIZE;
+	canvas.height = AVATAR_OUTPUT_SIZE;
+
+	const context = canvas.getContext("2d");
+	if (!context) {
+		throw new Error("Nao foi possivel ajustar a foto neste navegador.");
+	}
+
+	const naturalWidth = image.naturalWidth || image.width;
+	const naturalHeight = image.naturalHeight || image.height;
+	if (!naturalWidth || !naturalHeight) {
+		throw new Error("Nao foi possivel medir a foto selecionada.");
+	}
+
+	const sourceSize = Math.max(
+		1,
+		Math.min(naturalWidth, naturalHeight) / clamp(zoom, 1, 2.5),
+	);
+	const centerX = naturalWidth * (clamp(focus.x, 0, 100) / 100);
+	const centerY = naturalHeight * (clamp(focus.y, 0, 100) / 100);
+	const sourceX = clamp(centerX - sourceSize / 2, 0, naturalWidth - sourceSize);
+	const sourceY = clamp(centerY - sourceSize / 2, 0, naturalHeight - sourceSize);
+
+	context.fillStyle = "#050b09";
+	context.fillRect(0, 0, AVATAR_OUTPUT_SIZE, AVATAR_OUTPUT_SIZE);
+	context.drawImage(
+		image,
+		sourceX,
+		sourceY,
+		sourceSize,
+		sourceSize,
+		0,
+		0,
+		AVATAR_OUTPUT_SIZE,
+		AVATAR_OUTPUT_SIZE,
+	);
+
+	const dataUrl = canvas.toDataURL(AVATAR_OUTPUT_TYPE, AVATAR_OUTPUT_QUALITY);
+	if (!dataUrl.startsWith(`data:${AVATAR_OUTPUT_TYPE};base64,`)) {
+		throw new Error("Nao foi possivel gerar a foto ajustada.");
+	}
+
+	const base64 = dataUrl.split(",")[1] || "";
+	const byteCount = Math.ceil((base64.length * 3) / 4);
+	if (byteCount > AVATAR_MAX_BYTES) {
+		throw new Error("A foto ajustada ficou acima de 2MB.");
+	}
+
+	return {
+		dataUrl,
+		fileName: makeAvatarFileName(draft.fileName),
+		mimeType: AVATAR_OUTPUT_TYPE,
+	};
 }
 
 function SettingSection({ eyebrow, title, children, action }) {
@@ -99,12 +186,15 @@ export default function SettingsPage() {
 	);
 	const [barberName, setBarberName] = useState("");
 	const [barberPhotoUrl, setBarberPhotoUrl] = useState("");
-	const [barberPhotoUpload, setBarberPhotoUpload] = useState(null);
+	const [barberPhotoDraft, setBarberPhotoDraft] = useState(null);
+	const [avatarFocus, setAvatarFocus] = useState(DEFAULT_AVATAR_FOCUS);
+	const [avatarZoom, setAvatarZoom] = useState(DEFAULT_AVATAR_ZOOM);
 	const [removeBarberPhoto, setRemoveBarberPhoto] = useState(false);
 	const [isLoading, setIsLoading] = useState(true);
 	const [isSaving, setIsSaving] = useState(false);
 	const [errorMessage, setErrorMessage] = useState("");
 	const [successMessage, setSuccessMessage] = useState("");
+	const avatarDragRef = useRef(null);
 
 	useEffect(() => {
 		let mounted = true;
@@ -126,7 +216,9 @@ export default function SettingsPage() {
 					);
 					setBarberName(profile?.barberName || "");
 					setBarberPhotoUrl(profile?.barberPhotoUrl || profile?.photo_url || "");
-					setBarberPhotoUpload(null);
+					setBarberPhotoDraft(null);
+					setAvatarFocus(DEFAULT_AVATAR_FOCUS);
+					setAvatarZoom(DEFAULT_AVATAR_ZOOM);
 					setRemoveBarberPhoto(false);
 				}
 			} catch (error) {
@@ -168,14 +260,17 @@ export default function SettingsPage() {
 
 		try {
 			const dataUrl = await readFileAsDataUrl(file);
-			setBarberPhotoUpload({
+			setBarberPhotoDraft({
 				dataUrl,
 				fileName: file.name,
 				mimeType: file.type,
 			});
+			setAvatarFocus(DEFAULT_AVATAR_FOCUS);
+			setAvatarZoom(DEFAULT_AVATAR_ZOOM);
 			setRemoveBarberPhoto(false);
 			setErrorMessage("");
-			setSuccessMessage("Foto pronta para salvar.");
+			setSuccessMessage("Ajuste o foco da foto e salve.");
+			event.target.value = "";
 		} catch (error) {
 			setErrorMessage(error.message || "Nao foi possivel carregar a foto.");
 			setSuccessMessage("");
@@ -183,10 +278,53 @@ export default function SettingsPage() {
 	};
 
 	const handleRemovePhoto = () => {
-		setBarberPhotoUpload(null);
+		setBarberPhotoDraft(null);
 		setBarberPhotoUrl("");
+		setAvatarFocus(DEFAULT_AVATAR_FOCUS);
+		setAvatarZoom(DEFAULT_AVATAR_ZOOM);
 		setRemoveBarberPhoto(true);
 		setSuccessMessage("Foto marcada para remocao.");
+		setErrorMessage("");
+	};
+
+	const updateAvatarFocusFromPointer = (event) => {
+		const rect = event.currentTarget.getBoundingClientRect();
+		if (!rect.width || !rect.height) return;
+
+		setAvatarFocus({
+			x: clamp(((event.clientX - rect.left) / rect.width) * 100, 0, 100),
+			y: clamp(((event.clientY - rect.top) / rect.height) * 100, 0, 100),
+		});
+	};
+
+	const handleAvatarPointerDown = (event) => {
+		if (!barberPhotoDraft || isSaving || isLoading) return;
+		avatarDragRef.current = true;
+		event.currentTarget.setPointerCapture?.(event.pointerId);
+		updateAvatarFocusFromPointer(event);
+	};
+
+	const handleAvatarPointerMove = (event) => {
+		if (!avatarDragRef.current) return;
+		updateAvatarFocusFromPointer(event);
+	};
+
+	const handleAvatarPointerUp = (event) => {
+		avatarDragRef.current = false;
+		event.currentTarget.releasePointerCapture?.(event.pointerId);
+	};
+
+	const handleResetAvatarFrame = () => {
+		setAvatarFocus(DEFAULT_AVATAR_FOCUS);
+		setAvatarZoom(DEFAULT_AVATAR_ZOOM);
+	};
+
+	const handleCancelPhotoDraft = () => {
+		setBarberPhotoDraft(null);
+		setAvatarFocus(DEFAULT_AVATAR_FOCUS);
+		setAvatarZoom(DEFAULT_AVATAR_ZOOM);
+		setRemoveBarberPhoto(false);
+		setSuccessMessage("");
 		setErrorMessage("");
 	};
 
@@ -230,8 +368,12 @@ export default function SettingsPage() {
 				barberName: cleanBarberName,
 			};
 
-			if (barberPhotoUpload) {
-				payload.barberPhoto = barberPhotoUpload;
+			if (barberPhotoDraft) {
+				payload.barberPhoto = await createCroppedAvatarUpload({
+					draft: barberPhotoDraft,
+					focus: avatarFocus,
+					zoom: avatarZoom,
+				});
 			}
 
 			if (removeBarberPhoto) {
@@ -254,7 +396,9 @@ export default function SettingsPage() {
 			setBarberPhotoUrl(
 				savedProfile?.barberPhotoUrl || savedProfile?.photo_url || "",
 			);
-			setBarberPhotoUpload(null);
+			setBarberPhotoDraft(null);
+			setAvatarFocus(DEFAULT_AVATAR_FOCUS);
+			setAvatarZoom(DEFAULT_AVATAR_ZOOM);
 			setRemoveBarberPhoto(false);
 			setSuccessMessage("Configuracoes salvas.");
 			window.dispatchEvent(new Event("profile-updated"));
@@ -273,7 +417,14 @@ export default function SettingsPage() {
 	const inputClass =
 		"w-full rounded-md border border-border bg-secondary px-3 py-3 text-sm text-foreground transition-colors focus-visible:border-foreground disabled:opacity-60";
 	const avatarPreviewUrl =
-		barberPhotoUpload?.dataUrl || (!removeBarberPhoto ? barberPhotoUrl : "");
+		barberPhotoDraft?.dataUrl || (!removeBarberPhoto ? barberPhotoUrl : "");
+	const avatarImageStyle = barberPhotoDraft ?
+		{
+			objectPosition: `${avatarFocus.x}% ${avatarFocus.y}%`,
+			transform: `scale(${avatarZoom})`,
+			transformOrigin: `${avatarFocus.x}% ${avatarFocus.y}%`,
+		}
+	:	undefined;
 
 	return (
 		<div className="app-shell flex flex-col overflow-hidden bg-background">
@@ -454,52 +605,138 @@ export default function SettingsPage() {
 					</SettingSection>
 
 					<SettingSection eyebrow="Minha conta" title="Perfil de acesso">
-						<div className="flex items-center gap-4 rounded-lg border border-border bg-background-deep p-3">
-							<div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-full border border-[#4ade80]/35 bg-card text-sm font-semibold text-[#86efac]">
-								{avatarPreviewUrl ? (
-									<img
-										src={avatarPreviewUrl}
-										alt={barberName || "Foto do perfil"}
-										className="h-full w-full object-cover"
-									/>
-								) : (
-									<span>{getInitials(barberName || user?.email)}</span>
-								)}
-							</div>
-							<div className="min-w-0 flex-1">
-								<p className="font-mono-ui text-[10px] uppercase text-foreground-faint">
-									Foto da agenda
-								</p>
-								<p className="mt-1 font-client text-sm leading-snug text-foreground">
-									Aparece no topo da sua agenda e nos avatares da equipe.
-								</p>
-								<div className="mt-3 flex flex-wrap gap-2">
-									<input
-										id="barberPhoto"
-										name="barberPhoto"
-										type="file"
-										accept="image/jpeg,image/png,image/webp"
-										aria-label="Foto da agenda"
-										onChange={handlePhotoChange}
-										className="sr-only"
-										disabled={isSaving || isLoading}
-									/>
-									<label
-										htmlFor="barberPhoto"
-										className="cursor-pointer rounded-md border border-border bg-secondary px-3 py-2 font-mono-ui text-[11px] text-foreground transition-colors hover:bg-card">
-										Trocar foto
-									</label>
-									{avatarPreviewUrl && (
-										<button
-											type="button"
-											onClick={handleRemovePhoto}
-											disabled={isSaving || isLoading}
-											className="rounded-md border border-border px-3 py-2 font-mono-ui text-[11px] text-foreground-faint transition-colors hover:text-foreground disabled:opacity-60">
-											Remover
-										</button>
+						<div className="rounded-lg border border-border bg-background-deep p-3">
+							<input
+								id="barberPhoto"
+								name="barberPhoto"
+								type="file"
+								accept="image/jpeg,image/png,image/webp"
+								aria-label="Foto da agenda"
+								onChange={handlePhotoChange}
+								className="sr-only"
+								disabled={isSaving || isLoading}
+							/>
+							<div className="flex items-center gap-4">
+								<div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-full border border-[#4ade80]/35 bg-card text-sm font-semibold text-[#86efac]">
+									{avatarPreviewUrl ? (
+										<img
+											src={avatarPreviewUrl}
+											alt={barberName || "Foto do perfil"}
+											className="h-full w-full object-cover"
+											style={avatarImageStyle}
+										/>
+									) : (
+										<span>{getInitials(barberName || user?.email)}</span>
 									)}
 								</div>
+								<div className="min-w-0 flex-1">
+									<p className="font-mono-ui text-[10px] uppercase text-foreground-faint">
+										Foto da agenda
+									</p>
+									<p className="mt-1 font-client text-sm leading-snug text-foreground">
+										{barberPhotoDraft ?
+											"Ajuste a foto antes de salvar."
+										:	"Aparece no topo da sua agenda e nos avatares da equipe."}
+									</p>
+									<div
+										className={
+											barberPhotoDraft ? "hidden" : "mt-3 flex flex-wrap gap-2"
+										}>
+										<label
+											htmlFor="barberPhoto"
+											className="cursor-pointer rounded-md border border-border bg-secondary px-3 py-2 font-mono-ui text-[11px] text-foreground transition-colors hover:bg-card">
+											Trocar foto
+										</label>
+										{avatarPreviewUrl && (
+											<button
+												type="button"
+												onClick={handleRemovePhoto}
+												disabled={isSaving || isLoading}
+												className="rounded-md border border-border px-3 py-2 font-mono-ui text-[11px] text-foreground-faint transition-colors hover:text-foreground disabled:opacity-60">
+												Remover
+											</button>
+										)}
+									</div>
+								</div>
 							</div>
+
+							{barberPhotoDraft && (
+								<div className="mt-4 border-t border-border pt-4">
+									<div className="grid gap-4 md:grid-cols-[190px_1fr] md:items-center">
+										<div
+											role="img"
+											aria-label="Prévia ajustável da foto"
+											onPointerDown={handleAvatarPointerDown}
+											onPointerMove={handleAvatarPointerMove}
+											onPointerUp={handleAvatarPointerUp}
+											onPointerCancel={handleAvatarPointerUp}
+											className="mx-auto flex h-44 w-44 touch-none items-center justify-center overflow-hidden rounded-full border border-[#4ade80]/50 bg-card shadow-[0_0_0_6px_rgba(74,222,128,0.06)]">
+											<img
+												src={barberPhotoDraft.dataUrl}
+												alt=""
+												className="h-full w-full select-none object-cover"
+												style={avatarImageStyle}
+												draggable={false}
+											/>
+										</div>
+
+										<div className="min-w-0 space-y-4">
+											<div>
+												<div className="flex items-center justify-between gap-3">
+													<label
+														htmlFor="avatarZoom"
+														className="font-mono-ui text-[10px] uppercase text-foreground-faint">
+														Zoom da foto
+													</label>
+													<span className="font-value text-[11px] text-[#86efac]">
+														{Math.round(avatarZoom * 100)}%
+													</span>
+												</div>
+												<input
+													id="avatarZoom"
+													type="range"
+													min="1"
+													max="2.5"
+													step="0.05"
+													value={avatarZoom}
+													onChange={(event) =>
+														setAvatarZoom(Number(event.target.value))
+													}
+													className="mt-2 w-full accent-[#4ade80]"
+													disabled={isSaving || isLoading}
+												/>
+											</div>
+
+											<p className="font-client text-xs leading-snug text-foreground-faint">
+												Toque ou arraste na prévia para escolher o foco.
+											</p>
+										</div>
+									</div>
+									<div
+										data-testid="avatar-editor-actions"
+										className="mt-4 grid grid-cols-3 gap-2">
+										<label
+											htmlFor="barberPhoto"
+											className="flex h-10 cursor-pointer items-center justify-center rounded-md border border-border bg-secondary px-2 text-center font-mono-ui text-[10px] text-foreground transition-colors hover:bg-card">
+											Trocar foto
+										</label>
+										<button
+											type="button"
+											onClick={handleResetAvatarFrame}
+											disabled={isSaving || isLoading}
+											className="h-10 rounded-md border border-border bg-secondary px-2 font-mono-ui text-[10px] text-foreground transition-colors hover:bg-card disabled:opacity-60">
+											Centralizar
+										</button>
+										<button
+											type="button"
+											onClick={handleCancelPhotoDraft}
+											disabled={isSaving || isLoading}
+											className="h-10 rounded-md border border-border px-2 font-mono-ui text-[10px] text-foreground-faint transition-colors hover:text-foreground disabled:opacity-60">
+											Cancelar
+										</button>
+									</div>
+								</div>
+							)}
 						</div>
 
 						<Field id="barberName" label="Nome na agenda">

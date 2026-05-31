@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import SettingsPage from "./SettingsPage";
 
 const storeMock = vi.hoisted(() => ({
@@ -35,6 +35,44 @@ beforeEach(() => {
 	});
 	storeMock.saveProfile.mockResolvedValue({ barberPhotoUrl: "" });
 });
+
+afterEach(() => {
+	vi.restoreAllMocks();
+	vi.unstubAllGlobals();
+});
+
+function mockAvatarCanvas() {
+	const context = {
+		fillStyle: "",
+		fillRect: vi.fn(),
+		drawImage: vi.fn(),
+	};
+
+	vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue(context);
+	vi.spyOn(HTMLCanvasElement.prototype, "toDataURL").mockReturnValue(
+		"data:image/jpeg;base64,cropped-avatar",
+	);
+	vi.stubGlobal(
+		"Image",
+		class {
+			constructor() {
+				this.naturalWidth = 800;
+				this.naturalHeight = 600;
+			}
+
+			set src(value) {
+				this.source = value;
+				queueMicrotask(() => this.onload?.());
+			}
+
+			get src() {
+				return this.source;
+			}
+		},
+	);
+
+	return context;
+}
 
 describe("SettingsPage", () => {
 	it("shows operational settings without dev-only actions", async () => {
@@ -84,6 +122,7 @@ describe("SettingsPage", () => {
 	});
 
 	it("sends selected profile photo with the profile payload", async () => {
+		const canvasContext = mockAvatarCanvas();
 		storeMock.saveProfile.mockResolvedValue({
 			barberPhotoUrl: "https://cdn.example.com/avatar.png",
 		});
@@ -101,19 +140,32 @@ describe("SettingsPage", () => {
 			target: { files: [file] },
 		});
 
-		expect(await screen.findByText("Foto pronta para salvar.")).toBeTruthy();
+		expect(await screen.findByText("Ajuste o foco da foto e salve.")).toBeTruthy();
+		const avatarEditor = screen.getByRole("img", {
+			name: "Prévia ajustável da foto",
+		});
+		const avatarActions = screen.getByTestId("avatar-editor-actions");
+		expect(
+			avatarEditor.compareDocumentPosition(avatarActions) &
+				Node.DOCUMENT_POSITION_FOLLOWING,
+		).toBeTruthy();
+
+		fireEvent.change(screen.getByLabelText("Zoom da foto"), {
+			target: { value: "1.6" },
+		});
 		fireEvent.click(screen.getByRole("button", { name: "Salvar alterações" }));
 
 		await waitFor(() => {
 			expect(storeMock.saveProfile).toHaveBeenCalledWith(
 				expect.objectContaining({
 					barberPhoto: expect.objectContaining({
-						dataUrl: expect.stringContaining("data:image/png;base64,"),
-						fileName: "avatar.png",
-						mimeType: "image/png",
+						dataUrl: "data:image/jpeg;base64,cropped-avatar",
+						fileName: "avatar-avatar.jpg",
+						mimeType: "image/jpeg",
 					}),
 				}),
 			);
 		});
+		expect(canvasContext.drawImage).toHaveBeenCalled();
 	});
 });
