@@ -8,6 +8,9 @@ import {
 
 export const API_BASE_URL =
 	import.meta.env.VITE_API_URL || "http://localhost:3000";
+export const API_TIMEOUT_MS = Number(
+	import.meta.env.VITE_API_TIMEOUT_MS || 75000,
+);
 
 export class AppApiError extends Error {
 	constructor(message, status, details) {
@@ -23,11 +26,19 @@ function toAppApiError(error, fallbackMessage) {
 
 	const status = error?.response?.status;
 	const details = error?.response?.data;
+	const isTimeout =
+		error?.code === "ECONNABORTED" ||
+		String(error?.message || "")
+			.toLowerCase()
+			.includes("timeout");
 	const message =
 		fallbackMessage ||
 		details?.erro ||
 		details?.error ||
 		details?.message ||
+		(isTimeout ?
+			"O servidor demorou para responder. Aguarde alguns segundos e tente novamente."
+		:	null) ||
 		error?.message ||
 		"Nao foi possivel concluir a requisicao.";
 
@@ -36,10 +47,31 @@ function toAppApiError(error, fallbackMessage) {
 
 export const apiClient = axios.create({
 	baseURL: API_BASE_URL,
-	timeout: 10000,
+	timeout: API_TIMEOUT_MS,
 });
 
 let refreshRequest = null;
+let warmUpRequest = null;
+
+export function warmUpApi() {
+	if (import.meta.env.MODE === "test") {
+		return Promise.resolve(null);
+	}
+
+	warmUpRequest =
+		warmUpRequest ||
+		axios
+			.get(`${API_BASE_URL}/health`, {
+				timeout: API_TIMEOUT_MS,
+				validateStatus: () => true,
+			})
+			.catch(() => null)
+			.finally(() => {
+				warmUpRequest = null;
+			});
+
+	return warmUpRequest;
+}
 
 apiClient.interceptors.request.use((config) => {
 	const token = getAccessToken();
@@ -74,7 +106,7 @@ apiClient.interceptors.response.use(
 						.post(
 							`${API_BASE_URL}/auth/refresh`,
 							{ refreshToken },
-							{ timeout: 10000 },
+							{ timeout: API_TIMEOUT_MS },
 						)
 						.finally(() => {
 							refreshRequest = null;

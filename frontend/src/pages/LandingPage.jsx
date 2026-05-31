@@ -1,4 +1,6 @@
+import { useEffect } from "react";
 import { Link } from "react-router-dom";
+import { warmUpApi } from "@/lib/api/client";
 
 const benefits = [
 	{
@@ -25,6 +27,10 @@ const timeline = [
 ];
 
 export default function LandingPage() {
+	useEffect(() => {
+		warmUpApi();
+	}, []);
+
 	return (
 		<div className="min-h-[100dvh] overflow-x-hidden bg-[#07110f] text-white">
 			<section className="relative min-h-[88svh] overflow-hidden">

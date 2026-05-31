@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, Navigate, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import { resendEmailCode } from "@/lib/api/auth.api";
+import { warmUpApi } from "@/lib/api/client";
 
 const SIGNUP_SUCCESS_MESSAGE =
 	"Conta criada. Enviamos um codigo de 6 digitos para seu email.";
@@ -23,6 +24,10 @@ export default function LoginPage() {
 	const [successMessage, setSuccessMessage] = useState("");
 
 	const from = location.state?.from?.pathname || "/app";
+
+	useEffect(() => {
+		warmUpApi();
+	}, []);
 
 	if (!isLoading && isAuthenticated) {
 		return <Navigate to={from} replace />;
