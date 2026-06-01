@@ -1,7 +1,9 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
 	formatCurrency,
 	formatDayKey,
+	getCachedProducts,
+	getCachedServices,
 	updateAppointment,
 	deleteAppointment,
 	loadServices,
@@ -234,10 +236,22 @@ function InlineEditor({ appointment, onUpdate, onClose, onEdit }) {
 
 // Lista de servicos para adicionar ao atendimento.
 function ServicePicker({ appointment, onUpdate, onClose }) {
-	const [services, setServices] = useState([]);
-	const [isLoadingServices, setIsLoadingServices] = useState(true);
-	const [products, setProducts] = useState([]);
-	const [isLoadingProducts, setIsLoadingProducts] = useState(true);
+	const initialCatalogRef = useRef(null);
+	if (!initialCatalogRef.current) {
+		initialCatalogRef.current = {
+			services: getCachedServices(),
+			products: getCachedProducts(),
+		};
+	}
+	const initialCatalog = initialCatalogRef.current;
+	const [services, setServices] = useState(initialCatalog.services || []);
+	const [isLoadingServices, setIsLoadingServices] = useState(
+		!initialCatalog.services,
+	);
+	const [products, setProducts] = useState(initialCatalog.products || []);
+	const [isLoadingProducts, setIsLoadingProducts] = useState(
+		!initialCatalog.products,
+	);
 	const [isSubmitting, setIsSubmitting] = useState(false);
 	const [errorMessage, setErrorMessage] = useState("");
 
@@ -247,15 +261,18 @@ function ServicePicker({ appointment, onUpdate, onClose }) {
 		async function fetchCatalog() {
 			try {
 				const [serviceList, productList] = await Promise.all([
-					loadServices(),
-					loadProducts(),
+					loadServices({ force: Boolean(initialCatalog.services) }),
+					loadProducts({ force: Boolean(initialCatalog.products) }),
 				]);
 				if (mounted) {
 					setServices(serviceList);
 					setProducts(productList);
 				}
 			} catch {
-				if (mounted) {
+				if (
+					mounted &&
+					!(initialCatalog.services && initialCatalog.products)
+				) {
 					setServices([]);
 					setProducts([]);
 				}
@@ -272,7 +289,7 @@ function ServicePicker({ appointment, onUpdate, onClose }) {
 		return () => {
 			mounted = false;
 		};
-	}, []);
+	}, [initialCatalog.products, initialCatalog.services]);
 	const handleSelect = async (svc) => {
 		if (isSubmitting) return;
 		setIsSubmitting(true);

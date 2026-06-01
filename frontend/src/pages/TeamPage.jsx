@@ -11,6 +11,8 @@ import {
 import {
 	formatDateDisplay,
 	formatDayKey,
+	getCachedAppointmentsForDay,
+	getCachedBarbers,
 	getAppointmentsForDayWithFilters,
 	loadBarbers,
 } from "@/lib/store";
@@ -47,15 +49,21 @@ function getOwnerBarberIds(barbers, user) {
 }
 
 export default function TeamPage() {
-	const [currentDate, setCurrentDate] = useState(new Date());
-	const [appointments, setAppointments] = useState([]);
-	const [barbers, setBarbers] = useState([]);
-	const [isLoading, setIsLoading] = useState(true);
-	const hasLoadedRef = useRef(false);
-	const [errorMessage, setErrorMessage] = useState("");
 	const navigate = useNavigate();
 	const { user } = useAuth();
 	const isAdmin = user?.role === "admin";
+	const initialDate = new Date();
+	const initialDayKey = formatDayKey(initialDate);
+	const initialAppointments = getCachedAppointmentsForDay(initialDayKey);
+	const initialBarbers = getCachedBarbers();
+	const [currentDate, setCurrentDate] = useState(initialDate);
+	const [appointments, setAppointments] = useState(initialAppointments || []);
+	const [barbers, setBarbers] = useState(initialBarbers || []);
+	const [isLoading, setIsLoading] = useState(
+		!(initialAppointments && initialBarbers),
+	);
+	const hasLoadedRef = useRef(Boolean(initialAppointments && initialBarbers));
+	const [errorMessage, setErrorMessage] = useState("");
 	const dayKey = formatDayKey(currentDate);
 	const ownerBarberIds = useMemo(
 		() => getOwnerBarberIds(barbers, user),
@@ -78,10 +86,14 @@ export default function TeamPage() {
 		setIsLoading(!hasLoaded);
 		setErrorMessage("");
 		try {
-			const list = await getAppointmentsForDayWithFilters(dayKey);
+			const list = await getAppointmentsForDayWithFilters(dayKey, {}, {
+				force: true,
+			});
 			setAppointments(list);
 		} catch (error) {
-			setAppointments([]);
+			if (!hasLoaded) {
+				setAppointments([]);
+			}
 			setErrorMessage(error.message || "Falha ao carregar dados da equipe.");
 		} finally {
 			setIsLoading(false);
@@ -90,12 +102,15 @@ export default function TeamPage() {
 	}, [dayKey]);
 
 	const reloadBarbers = useCallback(async () => {
+		const hasLoaded = hasLoadedRef.current;
 		try {
-			const list = await loadBarbers();
+			const list = await loadBarbers({ force: true });
 			setBarbers(list);
 			return list;
 		} catch (error) {
-			setBarbers([]);
+			if (!hasLoaded) {
+				setBarbers([]);
+			}
 			setErrorMessage(error.message || "Falha ao carregar barbeiros.");
 			return [];
 		}

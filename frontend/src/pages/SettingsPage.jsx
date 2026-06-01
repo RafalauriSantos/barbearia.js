@@ -6,7 +6,7 @@ import {
 	Notice,
 	ScreenHeader,
 } from "@/components/ScreenPrimitives";
-import { loadProfile, saveProfile } from "@/lib/store";
+import { getCachedProfile, loadProfile, saveProfile } from "@/lib/store";
 
 const DEFAULT_OPENING_TIME = "08:00";
 const DEFAULT_CLOSING_TIME = "18:00";
@@ -178,24 +178,37 @@ export default function SettingsPage() {
 	const navigate = useNavigate();
 	const { logout, user } = useAuth();
 	const isAdmin = user?.role === "admin";
-	const [shopName, setShopName] = useState("");
-	const [phone, setPhone] = useState("");
-	const [address, setAddress] = useState("");
-	const [openingTime, setOpeningTime] = useState(DEFAULT_OPENING_TIME);
-	const [closingTime, setClosingTime] = useState(DEFAULT_CLOSING_TIME);
+	const initialProfileRef = useRef(null);
+	if (initialProfileRef.current === null) {
+		initialProfileRef.current = getCachedProfile() || false;
+	}
+	const initialProfile = initialProfileRef.current || null;
+	const [shopName, setShopName] = useState(initialProfile?.shopName || "");
+	const [phone, setPhone] = useState(initialProfile?.phone || "");
+	const [address, setAddress] = useState(initialProfile?.address || "");
+	const [openingTime, setOpeningTime] = useState(
+		initialProfile?.openingTime || DEFAULT_OPENING_TIME,
+	);
+	const [closingTime, setClosingTime] = useState(
+		initialProfile?.closingTime || DEFAULT_CLOSING_TIME,
+	);
 	const [appointmentDuration, setAppointmentDuration] = useState(
-		DEFAULT_APPOINTMENT_DURATION,
+		String(initialProfile?.appointmentDuration || DEFAULT_APPOINTMENT_DURATION),
 	);
 	const [scheduleInterval, setScheduleInterval] = useState(
-		DEFAULT_SCHEDULE_INTERVAL,
+		String(initialProfile?.scheduleInterval || DEFAULT_SCHEDULE_INTERVAL),
 	);
-	const [barberName, setBarberName] = useState("");
-	const [barberPhotoUrl, setBarberPhotoUrl] = useState("");
+	const [barberName, setBarberName] = useState(
+		initialProfile?.barberName || "",
+	);
+	const [barberPhotoUrl, setBarberPhotoUrl] = useState(
+		initialProfile?.barberPhotoUrl || initialProfile?.photo_url || "",
+	);
 	const [barberPhotoDraft, setBarberPhotoDraft] = useState(null);
 	const [avatarFocus, setAvatarFocus] = useState(DEFAULT_AVATAR_FOCUS);
 	const [avatarZoom, setAvatarZoom] = useState(DEFAULT_AVATAR_ZOOM);
 	const [removeBarberPhoto, setRemoveBarberPhoto] = useState(false);
-	const [isLoading, setIsLoading] = useState(true);
+	const [isLoading, setIsLoading] = useState(!initialProfile);
 	const [isSaving, setIsSaving] = useState(false);
 	const [errorMessage, setErrorMessage] = useState("");
 	const [successMessage, setSuccessMessage] = useState("");
@@ -206,7 +219,7 @@ export default function SettingsPage() {
 
 		async function fetchProfile() {
 			try {
-				const profile = await loadProfile();
+				const profile = await loadProfile({ force: Boolean(initialProfile) });
 				if (mounted) {
 					setShopName(profile?.shopName || "");
 					setPhone(profile?.phone || "");
@@ -247,7 +260,7 @@ export default function SettingsPage() {
 		return () => {
 			mounted = false;
 		};
-	}, []);
+	}, [initialProfile]);
 
 	const handlePhotoChange = async (event) => {
 		const file = event.target.files?.[0];

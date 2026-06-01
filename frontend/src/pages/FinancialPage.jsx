@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { BottomNav } from "@/components/BottomNav";
 import { FinancialSummaryCompact } from "@/components/FinancialSummaryCompact";
 import {
@@ -9,31 +9,47 @@ import {
 import {
 	formatDateDisplay,
 	formatDayKey,
+	getCachedFinancialSummary,
 	loadFinancialSummary,
 } from "@/lib/store";
 
 export default function FinancialPage() {
-	const [currentDate, setCurrentDate] = useState(new Date());
-	const [summary, setSummary] = useState(null);
-	const [isLoading, setIsLoading] = useState(true);
+	const initialDate = new Date();
+	const initialDayKey = formatDayKey(initialDate);
+	const initialSummaryParams = {
+		start_date: initialDayKey,
+		end_date: initialDayKey,
+	};
+	const initialSummary = getCachedFinancialSummary(initialSummaryParams);
+	const [currentDate, setCurrentDate] = useState(initialDate);
+	const [summary, setSummary] = useState(initialSummary || null);
+	const [isLoading, setIsLoading] = useState(!initialSummary);
+	const hasLoadedRef = useRef(Boolean(initialSummary));
 	const [errorMessage, setErrorMessage] = useState("");
 
 	const dayKey = formatDayKey(currentDate);
 
 	const reload = useCallback(async () => {
-		setIsLoading(true);
+		const hasLoaded = hasLoadedRef.current;
+		setIsLoading(!hasLoaded);
 		setErrorMessage("");
 		try {
-			const nextSummary = await loadFinancialSummary({
-				start_date: dayKey,
-				end_date: dayKey,
-			});
+			const nextSummary = await loadFinancialSummary(
+				{
+					start_date: dayKey,
+					end_date: dayKey,
+				},
+				{ force: true },
+			);
 			setSummary(nextSummary);
 		} catch (error) {
-			setSummary(null);
+			if (!hasLoaded) {
+				setSummary(null);
+			}
 			setErrorMessage(error.message || "Falha ao carregar resumo financeiro.");
 		} finally {
 			setIsLoading(false);
+			hasLoadedRef.current = true;
 		}
 	}, [dayKey]);
 

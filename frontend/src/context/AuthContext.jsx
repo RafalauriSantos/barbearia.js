@@ -14,6 +14,7 @@ import {
 	verifyEmailCode as verifyEmailCodeRequest,
 	acceptInvite as acceptInviteRequest,
 } from "@/lib/api/auth.api";
+import { clearAppDataCache, prefetchAppData } from "@/lib/store";
 
 const AuthContext = createContext(null);
 
@@ -32,8 +33,10 @@ export function AuthProvider({ children }) {
 		try {
 			const currentUser = await fetchCurrentUser();
 			setUser(currentUser);
+			void prefetchAppData(currentUser);
 			return currentUser;
 		} catch {
+			clearAppDataCache();
 			clearSessionTokens();
 			setUser(null);
 			return null;
@@ -48,9 +51,11 @@ export function AuthProvider({ children }) {
 
 	const login = useCallback(async ({ email, password }) => {
 		const session = await loginRequest({ email, password });
+		clearAppDataCache();
 		setSessionTokens(session);
 		const currentUser = await fetchCurrentUser();
 		setUser(currentUser);
+		void prefetchAppData(currentUser);
 		return currentUser;
 	}, []);
 
@@ -67,21 +72,26 @@ export function AuthProvider({ children }) {
 			return session;
 		}
 
+		clearAppDataCache();
 		setSessionTokens(session);
 		const currentUser = await fetchCurrentUser();
 		setUser(currentUser);
+		void prefetchAppData(currentUser);
 		return { ...session, user: currentUser };
 	}, []);
 
 	const acceptInvite = useCallback(async ({ token, password, nome }) => {
 		const session = await acceptInviteRequest(token, { password, nome });
+		clearAppDataCache();
 		setSessionTokens(session);
 		const currentUser = await fetchCurrentUser();
 		setUser(currentUser);
+		void prefetchAppData(currentUser);
 		return currentUser;
 	}, []);
 
 	const logout = useCallback(() => {
+		clearAppDataCache();
 		clearSessionTokens();
 		setUser(null);
 	}, []);

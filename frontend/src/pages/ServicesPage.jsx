@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
+	getCachedProducts,
+	getCachedServices,
 	loadServices,
 	addService,
 	updateService,
@@ -25,13 +27,25 @@ import {
 
 // Tela para cadastrar servicos e produtos.
 export default function ServicesPage() {
+	const initialCacheRef = useRef(null);
+	if (!initialCacheRef.current) {
+		initialCacheRef.current = {
+			services: getCachedServices(),
+			products: getCachedProducts(),
+		};
+	}
+	const initialCache = initialCacheRef.current;
 	// Controla aba ativa e listas exibidas.
 	const [tab, setTab] = useState("services");
-	const [services, setServices] = useState([]);
-	const [products, setProducts] = useState([]);
-	const [isLoading, setIsLoading] = useState(true);
+	const [services, setServices] = useState(initialCache.services || []);
+	const [products, setProducts] = useState(initialCache.products || []);
+	const [isLoading, setIsLoading] = useState(
+		!(initialCache.services && initialCache.products),
+	);
 	const [isRefreshing, setIsRefreshing] = useState(false);
-	const hasLoadedRef = useRef(false);
+	const hasLoadedRef = useRef(
+		Boolean(initialCache.services && initialCache.products),
+	);
 	const [isSubmitting, setIsSubmitting] = useState(false);
 	const [errorMessage, setErrorMessage] = useState("");
 	const [formError, setFormError] = useState("");
@@ -47,15 +61,17 @@ export default function ServicesPage() {
 		setErrorMessage("");
 		try {
 			const [nextServices, nextProducts] = await Promise.all([
-				loadServices(),
-				loadProducts(),
+				loadServices({ force: true }),
+				loadProducts({ force: true }),
 			]);
 			setServices(nextServices);
 			setProducts(nextProducts);
 		} catch (error) {
 			setErrorMessage(error.message || "Falha ao carregar catalogo.");
-			setServices([]);
-			setProducts([]);
+			if (!hasLoaded) {
+				setServices([]);
+				setProducts([]);
+			}
 		} finally {
 			setIsLoading(false);
 			setIsRefreshing(false);

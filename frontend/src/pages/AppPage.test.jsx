@@ -8,6 +8,12 @@ const storeMock = vi.hoisted(() => ({
 	formatCurrency: vi.fn(),
 	formatDateDisplay: vi.fn(),
 	formatDayKey: vi.fn(),
+	getCachedAppointmentsForDay: vi.fn(),
+	getCachedBarbers: vi.fn(),
+	getCachedDaySummaryFromAppointments: vi.fn(),
+	getCachedProducts: vi.fn(),
+	getCachedProfile: vi.fn(),
+	getCachedServices: vi.fn(),
 	getAppointmentsForDayWithFilters: vi.fn(),
 	getDaySummaryFromAppointments: vi.fn(),
 	isToday: vi.fn(),
@@ -126,6 +132,7 @@ describe("AppPage barber avatar row", () => {
 			expect(storeMock.getAppointmentsForDayWithFilters).toHaveBeenCalledWith(
 				"2026-05-30",
 				{ barbeiro_id: "barber-owner" },
+				{ force: true },
 			);
 		});
 

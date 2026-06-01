@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import SettingsPage from "./SettingsPage";
 
 const storeMock = vi.hoisted(() => ({
+	getCachedProfile: vi.fn(),
 	loadProfile: vi.fn(),
 	saveProfile: vi.fn(),
 }));
@@ -16,6 +17,7 @@ vi.mock("@/context/AuthContext", () => ({
 }));
 
 vi.mock("@/lib/store", () => ({
+	getCachedProfile: storeMock.getCachedProfile,
 	loadProfile: storeMock.loadProfile,
 	saveProfile: storeMock.saveProfile,
 }));

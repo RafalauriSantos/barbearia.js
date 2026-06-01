@@ -1,12 +1,22 @@
-import { useEffect, useState } from "react";
-import { formatDateDisplay, isToday, loadProfile } from "@/lib/store";
+import { useEffect, useRef, useState } from "react";
+import {
+	formatDateDisplay,
+	getCachedProfile,
+	isToday,
+	loadProfile,
+} from "@/lib/store";
 import { useAuth } from "@/context/AuthContext";
 import { DateStepper, IconButton } from "@/components/ScreenPrimitives";
 import { ThemeToggle } from "@/components/ThemeToggle";
 
 // Cabecalho da tela com dados do perfil e controle de data.
 export function AppHeader({ currentDate, onPrevDay, onNextDay, onSettings }) {
-	const [profile, setProfile] = useState();
+	const initialProfileRef = useRef(null);
+	if (initialProfileRef.current === null) {
+		initialProfileRef.current = getCachedProfile() || false;
+	}
+	const initialProfile = initialProfileRef.current || undefined;
+	const [profile, setProfile] = useState(initialProfile);
 	const { user } = useAuth();
 
 	useEffect(() => {
@@ -14,7 +24,7 @@ export function AppHeader({ currentDate, onPrevDay, onNextDay, onSettings }) {
 
 		async function loadProfileData() {
 			try {
-				const data = await loadProfile();
+				const data = await loadProfile({ force: Boolean(initialProfile) });
 				if (mounted) {
 					setProfile(data || {});
 				}
@@ -34,7 +44,7 @@ export function AppHeader({ currentDate, onPrevDay, onNextDay, onSettings }) {
 			window.removeEventListener("profile-updated", loadProfileData);
 			mounted = false;
 		};
-	}, []);
+	}, [initialProfile]);
 
 	// Mostra "Hoje" quando a data atual esta selecionada.
 	const dateLabel =

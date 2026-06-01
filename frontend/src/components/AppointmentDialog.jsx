@@ -1,5 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
+	getCachedProducts,
+	getCachedServices,
 	loadServices,
 	loadProducts,
 	addAppointment,
@@ -26,10 +28,22 @@ export function AppointmentDialog({
 	onSave,
 	onError,
 }) {
-	const [services, setServices] = useState([]);
-	const [isLoadingServices, setIsLoadingServices] = useState(true);
-	const [products, setProducts] = useState([]);
-	const [isLoadingProducts, setIsLoadingProducts] = useState(true);
+	const initialCatalogRef = useRef(null);
+	if (!initialCatalogRef.current) {
+		initialCatalogRef.current = {
+			services: getCachedServices(),
+			products: getCachedProducts(),
+		};
+	}
+	const initialCatalog = initialCatalogRef.current;
+	const [services, setServices] = useState(initialCatalog.services || []);
+	const [isLoadingServices, setIsLoadingServices] = useState(
+		!initialCatalog.services,
+	);
+	const [products, setProducts] = useState(initialCatalog.products || []);
+	const [isLoadingProducts, setIsLoadingProducts] = useState(
+		!initialCatalog.products,
+	);
 	// Campos do formulario (novo ou edicao).
 	const [clientName, setClientName] = useState(appointment?.client_name || "");
 	const [timeSlot, setTimeSlot] = useState(
@@ -79,15 +93,18 @@ export function AppointmentDialog({
 		async function fetchCatalog() {
 			try {
 				const [serviceList, productList] = await Promise.all([
-					loadServices(),
-					loadProducts(),
+					loadServices({ force: Boolean(initialCatalog.services) }),
+					loadProducts({ force: Boolean(initialCatalog.products) }),
 				]);
 				if (mounted) {
 					setServices(serviceList);
 					setProducts(productList);
 				}
 			} catch {
-				if (mounted) {
+				if (
+					mounted &&
+					!(initialCatalog.services && initialCatalog.products)
+				) {
 					setServices([]);
 					setProducts([]);
 				}
@@ -104,7 +121,7 @@ export function AppointmentDialog({
 		return () => {
 			mounted = false;
 		};
-	}, []);
+	}, [initialCatalog.products, initialCatalog.services]);
 	const addService = (svc) => {
 		setSelectedServices((prev) => {
 			const existing = prev.find((item) => item.id === svc.id);

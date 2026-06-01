@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AppointmentDialog } from "@/components/AppointmentDialog";
 import { BottomNav } from "@/components/BottomNav";
 import { IconButton, LoadingCard, Notice } from "@/components/ScreenPrimitives";
@@ -8,6 +8,12 @@ import {
 	formatCurrency,
 	formatDateDisplay,
 	formatDayKey,
+	getCachedAppointmentsForDay,
+	getCachedBarbers,
+	getCachedDaySummaryFromAppointments,
+	getCachedProducts,
+	getCachedProfile,
+	getCachedServices,
 	getAppointmentsForDayWithFilters,
 	getDaySummaryFromAppointments,
 	isToday,
@@ -30,6 +36,16 @@ const AVATAR_COLORS = [
 	"#4c1d95",
 	"#0f172a",
 ];
+const EMPTY_SUMMARY = {
+	totalReceived: 0,
+	totalClients: 0,
+	totalIncome: 0,
+	totalExpenses: 0,
+	paid: 0,
+	pending: 0,
+	toCollect: 0,
+	overdue: 0,
+};
 
 function toTimeLabel(totalMinutes) {
 	const hours = Math.floor(totalMinutes / 60);
@@ -124,39 +140,59 @@ function getDefaultTimeSlot() {
 }
 
 export default function AppPage() {
+	const navigate = useNavigate();
+	const { user } = useAuth();
+	const isAdmin = user?.role === "admin";
+	const initialCacheRef = useRef(null);
+	if (!initialCacheRef.current) {
+		const initialDayKey = formatDayKey(new Date());
+		const initialOwnBarberId = user?.barbeiro_id || "";
+		const initialAppointmentFilters =
+			initialOwnBarberId ? { barbeiro_id: initialOwnBarberId } : {};
+		const cachedAppointments = getCachedAppointmentsForDay(
+			initialDayKey,
+			initialAppointmentFilters,
+		);
+		initialCacheRef.current = {
+			dayKey: initialDayKey,
+			appointments: cachedAppointments,
+			profile: getCachedProfile(),
+			barbers: getCachedBarbers(),
+			services: getCachedServices(),
+			products: getCachedProducts(),
+		};
+	}
+	const initialCache = initialCacheRef.current;
 	const [currentDate, setCurrentDate] = useState(new Date());
-	const [appointments, setAppointments] = useState([]);
-	const [summary, setSummary] = useState({
-		totalReceived: 0,
-		totalClients: 0,
-		totalIncome: 0,
-		totalExpenses: 0,
-		paid: 0,
-		pending: 0,
-		toCollect: 0,
-		overdue: 0,
-	});
-	const [isLoading, setIsLoading] = useState(true);
-	const [hasLoaded, setHasLoaded] = useState(false);
+	const [appointments, setAppointments] = useState(
+		initialCache.appointments || [],
+	);
+	const [summary, setSummary] = useState(
+		getCachedDaySummaryFromAppointments(
+			initialCache.dayKey,
+			initialCache.appointments || [],
+		) || EMPTY_SUMMARY,
+	);
+	const [isLoading, setIsLoading] = useState(!initialCache.appointments);
+	const hasLoadedRef = useRef(Boolean(initialCache.appointments));
 	const [errorMessage, setErrorMessage] = useState("");
 	const [feedbackMessage, setFeedbackMessage] = useState("");
 	const [dialogOpen, setDialogOpen] = useState(false);
 	const [editingAppt, setEditingAppt] = useState();
 	const [defaultTimeSlot, setDefaultTimeSlot] = useState("09:00");
 	const [selectedAppointment, setSelectedAppointment] = useState(null);
-	const [services, setServices] = useState([]);
-	const [products, setProducts] = useState([]);
-	const [isLoadingCatalog, setIsLoadingCatalog] = useState(true);
+	const [services, setServices] = useState(initialCache.services || []);
+	const [products, setProducts] = useState(initialCache.products || []);
+	const [isLoadingCatalog, setIsLoadingCatalog] = useState(
+		!(initialCache.services && initialCache.products),
+	);
 	const [itemDraft, setItemDraft] = useState({ services: [], products: [] });
 	const [autoValueForDraft, setAutoValueForDraft] = useState(true);
 	const [isSavingItems, setIsSavingItems] = useState(false);
 	const [itemError, setItemError] = useState("");
-	const [barbers, setBarbers] = useState([]);
-	const [profile, setProfile] = useState(null);
+	const [barbers, setBarbers] = useState(initialCache.barbers || []);
+	const [profile, setProfile] = useState(initialCache.profile || null);
 	const [activeBarberId, setActiveBarberId] = useState("");
-	const navigate = useNavigate();
-	const { user } = useAuth();
-	const isAdmin = user?.role === "admin";
 	const dayKey = formatDayKey(currentDate);
 	const ownBarberId = user?.barbeiro_id || "";
 	const selectedBarberId = activeBarberId || ownBarberId || "";
@@ -199,14 +235,16 @@ export default function AppPage() {
 	}, [appointments]);
 
 	useEffect(() => {
-		loadProfile()
+		loadProfile({ force: Boolean(initialCache.profile) })
 			.then((data) => setProfile(data || {}))
-			.catch(() => setProfile({}));
-	}, []);
+			.catch(() => {
+				if (!initialCache.profile) setProfile({});
+			});
+	}, [initialCache.profile]);
 
 	useEffect(() => {
 		if (!isAdmin) return;
-		loadBarbers()
+		loadBarbers({ force: Boolean(initialCache.barbers) })
 			.then((list) => {
 				setBarbers(list);
 				setActiveBarberId((current) => {
@@ -221,40 +259,38 @@ export default function AppPage() {
 				});
 			})
 			.catch((error) => {
-				setBarbers([]);
+				if (!initialCache.barbers) setBarbers([]);
 				setErrorMessage(error.message || "Falha ao carregar barbeiros.");
 			});
-	}, [isAdmin, user]);
+	}, [initialCache.barbers, isAdmin, user]);
 
 	const reload = useCallback(async () => {
+		const hasLoaded = hasLoadedRef.current;
 		setIsLoading(!hasLoaded);
 		setErrorMessage("");
 		try {
 			const params = selectedBarberId ? { barbeiro_id: selectedBarberId } : {};
-			const list = await getAppointmentsForDayWithFilters(dayKey, params);
+			const list = await getAppointmentsForDayWithFilters(dayKey, params, {
+				force: true,
+			});
 			setAppointments(list);
-			const nextSummary = await getDaySummaryFromAppointments(dayKey, list);
+			const nextSummary = await getDaySummaryFromAppointments(dayKey, list, {
+				force: true,
+			});
 			setSummary(nextSummary);
 		} catch (error) {
-			setAppointments([]);
-			setSummary({
-				totalReceived: 0,
-				totalClients: 0,
-				totalIncome: 0,
-				totalExpenses: 0,
-				paid: 0,
-				pending: 0,
-				toCollect: 0,
-				overdue: 0,
-			});
+			if (!hasLoaded) {
+				setAppointments([]);
+				setSummary(EMPTY_SUMMARY);
+			}
 			setErrorMessage(
 				error.message || "Falha ao carregar os agendamentos do dia.",
 			);
 		} finally {
 			setIsLoading(false);
-			setHasLoaded(true);
+			hasLoadedRef.current = true;
 		}
-	}, [dayKey, hasLoaded, selectedBarberId]);
+	}, [dayKey, selectedBarberId]);
 
 	useEffect(() => {
 		reload();
@@ -265,15 +301,18 @@ export default function AppPage() {
 		async function fetchCatalog() {
 			try {
 				const [serviceList, productList] = await Promise.all([
-					loadServices(),
-					loadProducts(),
+					loadServices({ force: Boolean(initialCache.services) }),
+					loadProducts({ force: Boolean(initialCache.products) }),
 				]);
 				if (mounted) {
 					setServices(serviceList);
 					setProducts(productList);
 				}
 			} catch {
-				if (mounted) {
+				if (
+					mounted &&
+					!(initialCache.services && initialCache.products)
+				) {
 					setServices([]);
 					setProducts([]);
 				}
@@ -288,7 +327,7 @@ export default function AppPage() {
 		return () => {
 			mounted = false;
 		};
-	}, []);
+	}, [initialCache.products, initialCache.services]);
 
 	const prevDay = () => {
 		if (!canGoBack) return;

@@ -7,6 +7,7 @@ const storeMock = vi.hoisted(() => ({
 	addExpense: vi.fn(),
 	updateExpense: vi.fn(),
 	deleteExpense: vi.fn(),
+	getCachedExpenses: vi.fn(),
 	loadExpenses: vi.fn(),
 }));
 
@@ -21,6 +22,7 @@ vi.mock("@/lib/store", () => ({
 	addExpense: storeMock.addExpense,
 	updateExpense: storeMock.updateExpense,
 	deleteExpense: storeMock.deleteExpense,
+	getCachedExpenses: storeMock.getCachedExpenses,
 	loadExpenses: storeMock.loadExpenses,
 }));
 

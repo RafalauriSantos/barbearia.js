@@ -14,6 +14,7 @@ import {
 	addExpense,
 	updateExpense,
 	deleteExpense,
+	getCachedExpenses,
 	loadExpenses,
 } from "@/lib/store";
 import {
@@ -28,12 +29,15 @@ const initialForm = {
 };
 
 export default function ExpensesPage() {
-	const [currentDate, setCurrentDate] = useState(new Date());
-	const [expenses, setExpenses] = useState([]);
+	const initialDate = new Date();
+	const initialDayKey = formatDayKey(initialDate);
+	const initialExpenses = getCachedExpenses(initialDayKey);
+	const [currentDate, setCurrentDate] = useState(initialDate);
+	const [expenses, setExpenses] = useState(initialExpenses || []);
 	const [form, setForm] = useState(initialForm);
-	const [isLoading, setIsLoading] = useState(true);
+	const [isLoading, setIsLoading] = useState(!initialExpenses);
 	const [isRefreshing, setIsRefreshing] = useState(false);
-	const hasLoadedRef = useRef(false);
+	const hasLoadedRef = useRef(Boolean(initialExpenses));
 	const [isSubmitting, setIsSubmitting] = useState(false);
 	const [errorMessage, setErrorMessage] = useState("");
 	const [formError, setFormError] = useState("");
@@ -48,11 +52,13 @@ export default function ExpensesPage() {
 		setIsRefreshing(hasLoaded);
 		setErrorMessage("");
 		try {
-			const list = await loadExpenses(dayKey);
+			const list = await loadExpenses(dayKey, { force: true });
 			setExpenses(list);
 		} catch (error) {
 			setErrorMessage(error.message || "Falha ao carregar despesas.");
-			setExpenses([]);
+			if (!hasLoaded) {
+				setExpenses([]);
+			}
 		} finally {
 			setIsLoading(false);
 			setIsRefreshing(false);

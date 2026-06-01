@@ -32,6 +32,100 @@ import {
 } from "@/lib/api/barbers.api";
 import { getFinancialSummary } from "@/lib/api/financial.api";
 
+const DEFAULT_TTL_MS = 60000;
+
+const cache = new Map();
+
+function normalizeCacheValue(value) {
+	if (Array.isArray(value)) return [...value];
+	if (value && typeof value === "object") return { ...value };
+	return value;
+}
+
+function makeStableKey(prefix, params = {}) {
+	const entries = Object.entries(params)
+		.filter(([, value]) => value !== undefined && value !== null && value !== "")
+		.sort(([first], [second]) => first.localeCompare(second));
+
+	if (entries.length === 0) return prefix;
+	return `${prefix}:${entries
+		.map(([key, value]) => `${key}=${String(value)}`)
+		.join("&")}`;
+}
+
+function readCache(key) {
+	const entry = cache.get(key);
+	return entry?.data === undefined ? undefined : normalizeCacheValue(entry.data);
+}
+
+function hasFreshCache(key, ttlMs = DEFAULT_TTL_MS) {
+	const entry = cache.get(key);
+	return Boolean(
+		entry?.data !== undefined && Date.now() - entry.updatedAt < ttlMs,
+	);
+}
+
+function writeCache(key, data) {
+	cache.set(key, {
+		data: normalizeCacheValue(data),
+		updatedAt: Date.now(),
+		promise: null,
+	});
+	return readCache(key);
+}
+
+function invalidateCache(match) {
+	for (const key of cache.keys()) {
+		if (typeof match === "string" ? key.startsWith(match) : match(key)) {
+			cache.delete(key);
+		}
+	}
+}
+
+export function clearAppDataCache() {
+	cache.clear();
+}
+
+async function loadCached(key, fetcher, options = {}) {
+	const { force = false, ttlMs = DEFAULT_TTL_MS } = options;
+	const entry = cache.get(key);
+
+	if (!force && hasFreshCache(key, ttlMs)) {
+		return readCache(key);
+	}
+
+	if (entry?.promise) {
+		return entry.promise;
+	}
+
+	const request = fetcher()
+		.then((data) => writeCache(key, data))
+		.catch((error) => {
+			const current = cache.get(key);
+			if (current) current.promise = null;
+			throw error;
+		});
+
+	cache.set(key, {
+		data: entry?.data,
+		updatedAt: entry?.updatedAt || 0,
+		promise: request,
+	});
+
+	return request;
+}
+
+const cacheKeys = {
+	profile: "profile",
+	services: "services",
+	products: "products",
+	barbers: "barbers",
+	expenses: (dayKey) => (dayKey ? `expenses:day:${dayKey}` : "expenses:all"),
+	appointments: (dayKey, filters = {}) =>
+		makeStableKey(`appointments:${dayKey}`, filters),
+	financialSummary: (params = {}) => makeStableKey("financial:summary", params),
+};
+
 // Chaves usadas para salvar dados no navegador.
 const APPT_KEY = "kurt_appointments";
 const SVC_KEY = "kurt_services";
@@ -40,135 +134,263 @@ const EXP_KEY = "kurt_expenses";
 const PROFILE_KEY = "kurt_profile";
 
 // Carrega os dados basicos de perfil.
-export async function loadProfile() {
-	return getProfile();
+export function getCachedProfile() {
+	return readCache(cacheKeys.profile);
+}
+
+export async function loadProfile(options = {}) {
+	return loadCached(cacheKeys.profile, getProfile, options);
 }
 
 // Salva os dados basicos de perfil.
 export async function saveProfile(profile) {
-	return updateProfile(profile);
+	const savedProfile = await updateProfile(profile);
+	writeCache(cacheKeys.profile, savedProfile);
+	invalidateCache(cacheKeys.barbers);
+	return savedProfile;
 }
 // ── Appointments ──
 
 // Envia um novo agendamento para o backend.
 export async function addAppointment(appt) {
-	return createAppointment(appt);
+	const created = await createAppointment(appt);
+	invalidateCache("appointments:");
+	invalidateCache("financial:");
+	return created;
 }
 
 // Atualiza um agendamento local pelo id.
 export async function updateAppointment(id, updates) {
-	return updateAppointmentById(id, updates);
+	const updated = await updateAppointmentById(id, updates);
+	invalidateCache("appointments:");
+	invalidateCache("financial:");
+	return updated;
 }
 
 // Exclui um agendamento local pelo id.
 export async function deleteAppointment(id) {
 	await deleteAppointmentById(id);
+	invalidateCache("appointments:");
+	invalidateCache("financial:");
 }
 
 // Filtra os agendamentos de um dia e ordena por horario.
-export async function getAppointmentsForDay(dayKey) {
-	return listAppointmentsByDay(dayKey);
+export function getCachedAppointmentsForDay(dayKey, filters = {}) {
+	return readCache(cacheKeys.appointments(dayKey, filters));
 }
 
-export async function getAppointmentsForDayWithFilters(dayKey, filters = {}) {
-	return listAppointmentsByDay(dayKey, filters);
+export async function getAppointmentsForDay(dayKey, options = {}) {
+	return loadCached(
+		cacheKeys.appointments(dayKey),
+		() => listAppointmentsByDay(dayKey),
+		options,
+	);
 }
 
-export async function loadBarbers() {
-	return listBarbers();
+export async function getAppointmentsForDayWithFilters(
+	dayKey,
+	filters = {},
+	options = {},
+) {
+	return loadCached(
+		cacheKeys.appointments(dayKey, filters),
+		() => listAppointmentsByDay(dayKey, filters),
+		options,
+	);
+}
+
+export function getCachedBarbers() {
+	return readCache(cacheKeys.barbers);
+}
+
+export async function loadBarbers(options = {}) {
+	return loadCached(cacheKeys.barbers, listBarbers, options);
 }
 
 export async function addBarber(payload) {
-	return createBarber(payload);
+	const barber = await createBarber(payload);
+	invalidateCache(cacheKeys.barbers);
+	return barber;
 }
 
 export async function saveBarber(id, payload) {
-	return updateBarber(id, payload);
+	const barber = await updateBarber(id, payload);
+	invalidateCache(cacheKeys.barbers);
+	invalidateCache("appointments:");
+	return barber;
 }
 
 export async function sendBarberInvite(id, payload) {
 	return inviteBarber(id, payload);
 }
 
-export async function loadFinancialSummary(params = {}) {
-	return getFinancialSummary(params);
+export function getCachedFinancialSummary(params = {}) {
+	return readCache(cacheKeys.financialSummary(params));
+}
+
+export async function loadFinancialSummary(params = {}, options = {}) {
+	return loadCached(
+		cacheKeys.financialSummary(params),
+		() => getFinancialSummary(params),
+		options,
+	);
 }
 // ── Services ──
 
 // Carrega os servicos cadastrados.
-export async function loadServices() {
-	return listServices();
+export function getCachedServices() {
+	return readCache(cacheKeys.services);
+}
+
+export async function loadServices(options = {}) {
+	return loadCached(cacheKeys.services, listServices, options);
 }
 
 // Adiciona um novo servico.
 export async function addService(svc) {
-	return createService(svc);
+	const service = await createService(svc);
+	const cached = readCache(cacheKeys.services);
+	if (Array.isArray(cached)) {
+		writeCache(cacheKeys.services, [...cached, service]);
+	} else {
+		invalidateCache(cacheKeys.services);
+	}
+	return service;
 }
 
 // Atualiza um servico existente.
 export async function updateService(id, updates) {
-	return updateServiceById(id, updates);
+	const service = await updateServiceById(id, updates);
+	const cached = readCache(cacheKeys.services);
+	if (Array.isArray(cached)) {
+		writeCache(
+			cacheKeys.services,
+			cached.map((item) => (item.id === id ? service : item)),
+		);
+	} else {
+		invalidateCache(cacheKeys.services);
+	}
+	return service;
 }
 
 // Exclui um servico existente.
 export async function deleteService(id) {
 	await deleteServiceById(id);
+	const cached = readCache(cacheKeys.services);
+	if (Array.isArray(cached)) {
+		writeCache(
+			cacheKeys.services,
+			cached.filter((item) => item.id !== id),
+		);
+	} else {
+		invalidateCache(cacheKeys.services);
+	}
 }
 // ── Products ──
 
 // Carrega os produtos cadastrados.
-export async function loadProducts() {
-	return listProducts();
+export function getCachedProducts() {
+	return readCache(cacheKeys.products);
+}
+
+export async function loadProducts(options = {}) {
+	return loadCached(cacheKeys.products, listProducts, options);
 }
 
 // Adiciona um novo produto.
 export async function addProduct(prod) {
-	return createProduct(prod);
+	const product = await createProduct(prod);
+	const cached = readCache(cacheKeys.products);
+	if (Array.isArray(cached)) {
+		writeCache(cacheKeys.products, [...cached, product]);
+	} else {
+		invalidateCache(cacheKeys.products);
+	}
+	return product;
 }
 
 // Atualiza um produto existente.
 export async function updateProduct(id, updates) {
-	return updateProductById(id, updates);
+	const product = await updateProductById(id, updates);
+	const cached = readCache(cacheKeys.products);
+	if (Array.isArray(cached)) {
+		writeCache(
+			cacheKeys.products,
+			cached.map((item) => (item.id === id ? product : item)),
+		);
+	} else {
+		invalidateCache(cacheKeys.products);
+	}
+	return product;
 }
 
 // Exclui um produto existente.
 export async function deleteProduct(id) {
 	await deleteProductById(id);
+	const cached = readCache(cacheKeys.products);
+	if (Array.isArray(cached)) {
+		writeCache(
+			cacheKeys.products,
+			cached.filter((item) => item.id !== id),
+		);
+	} else {
+		invalidateCache(cacheKeys.products);
+	}
 }
 // ── Expenses ──
 
 // Carrega as despesas cadastradas.
-export async function loadExpenses(dayKey) {
+export function getCachedExpenses(dayKey) {
+	return readCache(cacheKeys.expenses(dayKey));
+}
+
+export async function loadExpenses(dayKey, options = {}) {
 	if (dayKey) {
-		return listExpensesByDay(dayKey);
+		return loadCached(
+			cacheKeys.expenses(dayKey),
+			() => listExpensesByDay(dayKey),
+			options,
+		);
 	}
-	return listExpenses();
+	return loadCached(cacheKeys.expenses(), listExpenses, options);
 }
 
 // Adiciona uma nova despesa.
 export async function addExpense(exp) {
-	return createExpense(exp);
+	const expense = await createExpense(exp);
+	invalidateCache("expenses:");
+	invalidateCache("financial:");
+	return expense;
 }
 
 // Atualiza uma despesa existente.
 export async function updateExpense(id, updates) {
-	return updateExpenseById(id, updates);
+	const expense = await updateExpenseById(id, updates);
+	invalidateCache("expenses:");
+	invalidateCache("financial:");
+	return expense;
 }
 
 // Exclui uma despesa existente.
 export async function deleteExpense(id) {
 	await deleteExpenseById(id);
+	invalidateCache("expenses:");
+	invalidateCache("financial:");
 }
 
 // Filtra as despesas de um dia especifico.
-export async function getExpensesForDay(dayKey) {
-	return listExpensesByDay(dayKey);
+export async function getExpensesForDay(dayKey, options = {}) {
+	return loadExpenses(dayKey, options);
 }
 // ── Summaries ──
 
-// Monta os totais do dia com a lista de agendamentos recebida da API.
-export async function getDaySummaryFromAppointments(dayKey, appointments) {
-	const expenses = await getExpensesForDay(dayKey);
+export function getCachedDaySummaryFromAppointments(dayKey, appointments) {
+	const expenses = getCachedExpenses(dayKey);
+	if (!expenses) return null;
+	return buildDaySummary(appointments, expenses);
+}
+
+function buildDaySummary(appointments, expenses) {
 	const today = formatDayKey(new Date());
 	let totalReceived = 0;
 	let paid = 0;
@@ -205,6 +427,32 @@ export async function getDaySummaryFromAppointments(dayKey, appointments) {
 		toCollect,
 		overdue,
 	};
+}
+
+// Monta os totais do dia com a lista de agendamentos recebida da API.
+export async function getDaySummaryFromAppointments(
+	dayKey,
+	appointments,
+	options = {},
+) {
+	const expenses = await getExpensesForDay(dayKey, options);
+	return buildDaySummary(appointments, expenses);
+}
+
+export function prefetchAppData(user, options = {}) {
+	const dayKey = options.dayKey || formatDayKey(new Date());
+	const ownBarberId = user?.barbeiro_id || "";
+	const appointmentFilters = ownBarberId ? { barbeiro_id: ownBarberId } : {};
+
+	return Promise.allSettled([
+		loadProfile(),
+		loadServices(),
+		loadProducts(),
+		loadExpenses(dayKey),
+		loadFinancialSummary({ start_date: dayKey, end_date: dayKey }),
+		getAppointmentsForDayWithFilters(dayKey, appointmentFilters),
+		user?.role === "admin" ? loadBarbers() : Promise.resolve([]),
+	]);
 }
 // ── Formatting ──
 
@@ -256,6 +504,7 @@ export function isToday(date) {
 // Limpa todos os dados salvos localmente no navegador.
 export async function clearAllData() {
 	await resetAllData();
+	clearAppDataCache();
 	localStorage.removeItem(APPT_KEY);
 	localStorage.removeItem(SVC_KEY);
 	localStorage.removeItem(PROD_KEY);
