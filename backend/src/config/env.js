@@ -23,7 +23,7 @@ const envSchema = z
 		SMTP_SECURE: z.coerce.boolean().default(false),
 		SMTP_USER: z.string().optional(),
 		SMTP_PASS: z.string().optional(),
-		EMAIL_FROM: z.string().default("Kash Flow <no-reply@localhost>"),
+		EMAIL_FROM: z.string().default("Gestor Barbearia <no-reply@localhost>"),
 		EMAIL_PROVIDER: z.enum(["smtp", "brevo"]).optional(),
 		EMAIL_TIMEOUT_MS: z.coerce.number().int().positive().default(10000),
 		BREVO_API_KEY: z.string().optional(),

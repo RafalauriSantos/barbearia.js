@@ -109,7 +109,7 @@ export default function LoginPage() {
 				<div className="mb-6 flex items-start justify-between gap-4">
 					<div>
 						<p className="font-mono-ui text-[10px] uppercase text-paid">
-							Kash Flow
+							Gestor Barbearia
 						</p>
 						<h1 className="mt-2 font-logo text-4xl leading-none text-foreground">
 							Acesso da barbearia

@@ -6,7 +6,7 @@ const NotFound = () => {
 		<div className="flex min-h-[var(--app-height)] items-center justify-center bg-background px-4">
 			<div className="text-center border border-border rounded p-6 bg-card max-w-md w-full">
 				<p className="font-mono-ui text-[10px] uppercase text-foreground-faint">
-					Kash Flow
+					Gestor Barbearia
 				</p>
 				<h1 className="mb-3 mt-2 text-3xl font-bold">404</h1>
 				<p className="mb-4 text-sm text-muted-foreground">

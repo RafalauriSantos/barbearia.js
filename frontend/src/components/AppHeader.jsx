@@ -60,7 +60,7 @@ export function AppHeader({ currentDate, onPrevDay, onNextDay, onSettings }) {
 						Agenda
 					</p>
 					<h1 className="truncate font-logo text-lg leading-tight text-foreground">
-						{profile?.shopName || "Kurt"}
+						{profile?.shopName || "Gestor Barbearia"}
 					</h1>
 				</div>
 				<div className="flex items-center gap-2">

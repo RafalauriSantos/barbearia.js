@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="KURT">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Gestor Barbearia">
   <rect width="64" height="64" rx="12" fill="#111827" />
-  <text x="32" y="40" text-anchor="middle" font-size="28" fill="#f9fafb" font-family="Arial, sans-serif">K</text>
+  <text x="32" y="39" text-anchor="middle" font-size="22" font-weight="700" fill="#f9fafb" font-family="Arial, sans-serif">GB</text>
 </svg>

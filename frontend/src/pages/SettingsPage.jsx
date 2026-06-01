@@ -533,7 +533,7 @@ export default function SettingsPage() {
 					:	<SettingSection eyebrow="Barbearia" title="Dados da loja">
 							<ReadOnlyRow
 								label="Nome da barbearia"
-								value={shopName || "Kurt"}
+								value={shopName || "Gestor Barbearia"}
 							/>
 							<ReadOnlyRow
 								label="Permissão"

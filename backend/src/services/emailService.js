@@ -220,7 +220,7 @@ exports.sendCustomEmail = async function ({ to, subject, text }) {
 };
 
 exports.sendVerificationCodeEmail = async function ({ to, code, shopName }) {
-	const brandName = shopName || "Kash Flow";
+	const brandName = shopName || "Gestor Barbearia";
 	const message = {
 		from: env.EMAIL_FROM,
 		to,
@@ -247,7 +247,7 @@ exports.sendVerificationCodeEmail = async function ({ to, code, shopName }) {
 };
 
 exports.sendPasswordResetCodeEmail = async function ({ to, code, shopName }) {
-	const brandName = shopName || "Kash Flow";
+	const brandName = shopName || "Gestor Barbearia";
 	const message = {
 		from: env.EMAIL_FROM,
 		to,
@@ -278,7 +278,7 @@ exports.sendVerificationEmail = async function ({
 	verificationUrl,
 	shopName,
 }) {
-	const brandName = shopName || "Kash Flow";
+	const brandName = shopName || "Gestor Barbearia";
 	const message = {
 		from: env.EMAIL_FROM,
 		to,
@@ -313,7 +313,7 @@ exports.sendBarberInviteEmail = async function ({
 	const message = {
 		from: env.EMAIL_FROM,
 		to,
-		subject: `Convite para acessar ${shopName || "Kash Flow"}`,
+		subject: `Convite para acessar ${shopName || "Gestor Barbearia"}`,
 		text: [
 			"Ola.",
 			"",

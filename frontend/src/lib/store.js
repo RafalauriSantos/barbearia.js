@@ -127,11 +127,11 @@ const cacheKeys = {
 };
 
 // Chaves usadas para salvar dados no navegador.
-const APPT_KEY = "kurt_appointments";
-const SVC_KEY = "kurt_services";
-const PROD_KEY = "kurt_products";
-const EXP_KEY = "kurt_expenses";
-const PROFILE_KEY = "kurt_profile";
+const APPT_KEY = "gestor_barbearia_appointments";
+const SVC_KEY = "gestor_barbearia_services";
+const PROD_KEY = "gestor_barbearia_products";
+const EXP_KEY = "gestor_barbearia_expenses";
+const PROFILE_KEY = "gestor_barbearia_profile";
 
 // Carrega os dados basicos de perfil.
 export function getCachedProfile() {

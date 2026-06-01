@@ -57,7 +57,7 @@ t.test("admin creates barber invite and dev url", async (t) => {
 					barbeiro_id: "barber-1",
 					expira_em: new Date(Date.now() + 1000).toISOString(),
 					barbeiro: { id: "barber-1", nome: "Joao" },
-					barbearia: { id: "shop-1", nome: "Kash Flow" },
+					barbearia: { id: "shop-1", nome: "Gestor Barbearia" },
 				};
 			},
 		},
@@ -120,7 +120,7 @@ t.test("accept invite creates verified user and links barber", async (t) => {
 					nome: "Joao",
 					usuario_id: null,
 				},
-				barbearia: { id: "shop-1", nome: "Kash Flow" },
+				barbearia: { id: "shop-1", nome: "Gestor Barbearia" },
 			}),
 			markAccepted: async () => true,
 		},

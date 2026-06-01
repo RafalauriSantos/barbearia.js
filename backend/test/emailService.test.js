@@ -20,7 +20,7 @@ function loadEmailService(overrides = {}) {
 
 	Object.assign(process.env, {
 		NODE_ENV: "test",
-		EMAIL_FROM: "Kash Flow <no-reply@example.com>",
+		EMAIL_FROM: "Gestor Barbearia <no-reply@example.com>",
 		EMAIL_TIMEOUT_MS: "1000",
 		SMTP_HOST: "",
 		SMTP_PORT: "587",
@@ -60,7 +60,7 @@ t.test("sendVerificationCodeEmail uses Brevo HTTP API", async (t) => {
 	const result = await emailService.sendVerificationCodeEmail({
 		to: "Rafael <rafael@example.com>",
 		code: "123456",
-		shopName: "Kash Flow",
+		shopName: "Gestor Barbearia",
 	});
 
 	const body = JSON.parse(capturedRequest.options.body);
@@ -69,7 +69,7 @@ t.test("sendVerificationCodeEmail uses Brevo HTTP API", async (t) => {
 	t.equal(capturedRequest.options.method, "POST");
 	t.equal(capturedRequest.options.headers["api-key"], "xkeysib-test");
 	t.same(body.sender, {
-		name: "Kash Flow",
+		name: "Gestor Barbearia",
 		email: "no-reply@example.com",
 	});
 	t.same(body.to, [{ name: "Rafael", email: "rafael@example.com" }]);
@@ -122,7 +122,7 @@ t.test("without Brevo or SMTP, email is logged with stream transport", async (t)
 	await emailService.sendPasswordResetCodeEmail({
 		to: "rafael@example.com",
 		code: "654321",
-		shopName: "Kash Flow",
+		shopName: "Gestor Barbearia",
 	});
 
 	t.same(logs, [["[password-reset-code]", "654321"]]);

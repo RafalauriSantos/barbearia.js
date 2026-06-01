@@ -9,7 +9,7 @@ export default function VerifyEmailPage() {
 						Verificação de email
 					</p>
 					<h1 className="mt-2 font-logo text-4xl leading-none text-foreground">
-						Kash Flow
+						Gestor Barbearia
 					</h1>
 					<p className="mt-5 rounded-md border border-border bg-card px-3 py-3 font-client text-sm leading-relaxed text-foreground-faint">
 						A confirmacao agora e feita por codigo de 6 digitos. Abra a tela de

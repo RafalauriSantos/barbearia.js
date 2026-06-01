@@ -115,7 +115,10 @@ t.test("core CRUD routes respond through layered modules", async (t) => {
 
 	require.cache[require.resolve("../src/repositories/profileRepository")] = {
 		exports: {
-			get: async () => ({ shopName: "Kurt", barberName: "Rafael" }),
+			get: async () => ({
+				shopName: "Gestor Barbearia",
+				barberName: "Rafael",
+			}),
 			upsert: async (payload) => ({ id: "singleton", ...payload }),
 		},
 	};
@@ -178,14 +181,14 @@ t.test("core CRUD routes respond through layered modules", async (t) => {
 		headers: authHeaders,
 	});
 	t.equal(profile.statusCode, 200);
-	t.equal(JSON.parse(profile.payload).shopName, "Kurt");
+	t.equal(JSON.parse(profile.payload).shopName, "Gestor Barbearia");
 
 	const updatedProfile = await app.inject({
 		method: "PUT",
 		url: "/profile",
 		headers: authHeaders,
 		payload: {
-			shopName: "Kurt Prime",
+			shopName: "Gestor Barbearia Prime",
 			barberName: "Rafael",
 			phone: "(11) 99999-9999",
 			address: "Rua Central, 100",

@@ -71,7 +71,7 @@ export default function ForgotPasswordPage() {
 							Redefinir senha
 						</p>
 						<h1 className="mt-2 font-logo text-4xl leading-none text-foreground">
-							Kash Flow
+							Gestor Barbearia
 						</h1>
 					</div>
 

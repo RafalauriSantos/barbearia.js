@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 
-const THEME_KEY = "kash_flow_theme";
+const THEME_KEY = "gestor_barbearia_theme";
 
 function getStoredTheme() {
 	if (typeof window === "undefined") return "dark";

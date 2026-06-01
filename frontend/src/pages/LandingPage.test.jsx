@@ -12,7 +12,7 @@ describe("LandingPage", () => {
 		);
 
 		expect(
-			screen.getByRole("heading", { name: "Kash Flow", level: 1 }),
+			screen.getByRole("heading", { name: "Gestor Barbearia", level: 1 }),
 		).toBeTruthy();
 		expect(screen.getByText(/Agenda, caixa e equipe/i)).toBeTruthy();
 		expect(screen.getByRole("link", { name: "Entrar" })).toBeTruthy();

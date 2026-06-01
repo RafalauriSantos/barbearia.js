@@ -69,7 +69,7 @@ beforeEach(() => {
 	storeMock.formatDayKey.mockReturnValue("2026-05-30");
 	storeMock.isToday.mockReturnValue(true);
 	storeMock.loadProfile.mockResolvedValue({
-		shopName: "Kurt Prime",
+		shopName: "Gestor Barbearia Prime",
 		barberName: "Rafael",
 		barberPhotoUrl: "https://cdn.example.com/rafael.png",
 	});

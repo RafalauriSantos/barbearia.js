@@ -74,7 +74,7 @@ Rodado em 2026-05-31:
 - Frontend `npm test`: passou, 8 arquivos de teste e 16 testes.
 - Frontend `npm run build:artifact`: passou.
 - Backend publicado `https://kurt-api.onrender.com/health`: respondeu `{"ok":true}`.
-- Frontend publicado `https://kurt-barbearia.vercel.app`: carregou com titulo `KURT - Gestao para Barbearias`.
+- Frontend publicado `https://kurt-barbearia.vercel.app`: carregou com titulo `Gestor Barbearia - Gestao para Barbearias`.
 
 Historico ja validado:
 

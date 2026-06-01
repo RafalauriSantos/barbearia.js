@@ -7,7 +7,7 @@ Este guia descreve o deploy em duas partes: backend no Render e frontend na Verc
 - Frontend Vercel: https://kurt-barbearia.vercel.app
 - Backend Render: https://kurt-api.onrender.com
 - `GET /health` no backend publicado respondeu `{"ok":true}` em 2026-05-31.
-- O frontend publicado carregou em 2026-05-31 com titulo `KURT - Gestao para Barbearias`.
+- O frontend publicado carregou em 2026-05-31 com titulo `Gestor Barbearia - Gestao para Barbearias`.
 
 Observacao importante: no plano Free do Render, o backend pode dormir apos
 inatividade. O frontend ja usa timeout maior e uma chamada `/health` em segundo
@@ -48,7 +48,7 @@ DEFAULT_BARBEARIA_ID=...
 CORS_ORIGIN=true
 APP_URL=http://localhost:5173
 AVATAR_BUCKET=barber-avatars
-EMAIL_FROM=Kash Flow <seu-email-verificado@seudominio.com>
+EMAIL_FROM=Gestor Barbearia <seu-email-verificado@seudominio.com>
 EMAIL_PROVIDER=brevo
 BREVO_API_KEY=...
 EMAIL_TIMEOUT_MS=10000

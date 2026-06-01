@@ -11,7 +11,7 @@ const storeMock = vi.hoisted(() => ({
 
 vi.mock("@/context/AuthContext", () => ({
 	useAuth: () => ({
-		user: { email: "admin@kurt.com", role: "admin" },
+		user: { email: "admin@gestorbarbearia.com", role: "admin" },
 		logout: vi.fn(),
 	}),
 }));
@@ -25,7 +25,7 @@ vi.mock("@/lib/store", () => ({
 beforeEach(() => {
 	vi.clearAllMocks();
 	storeMock.loadProfile.mockResolvedValue({
-		shopName: "Kurt",
+		shopName: "Gestor Barbearia",
 		phone: "(11) 99999-9999",
 		address: "Rua Central, 100",
 		openingTime: "08:00",
@@ -84,7 +84,7 @@ describe("SettingsPage", () => {
 			</MemoryRouter>,
 		);
 
-		expect(await screen.findByDisplayValue("Kurt")).toBeTruthy();
+		expect(await screen.findByDisplayValue("Gestor Barbearia")).toBeTruthy();
 		expect(screen.getByText("Padrões de atendimento")).toBeTruthy();
 		expect(screen.getByLabelText("Telefone")).toBeTruthy();
 		expect(screen.queryByText("Email de teste")).toBeNull();
@@ -100,7 +100,7 @@ describe("SettingsPage", () => {
 		);
 
 		fireEvent.change(await screen.findByLabelText("Nome da barbearia"), {
-			target: { value: "Kurt Prime" },
+			target: { value: "Gestor Barbearia Prime" },
 		});
 		fireEvent.change(screen.getByLabelText("Duração padrão"), {
 			target: { value: "45" },
@@ -110,7 +110,7 @@ describe("SettingsPage", () => {
 		await waitFor(() => {
 			expect(storeMock.saveProfile).toHaveBeenCalledWith(
 				expect.objectContaining({
-					shopName: "Kurt Prime",
+					shopName: "Gestor Barbearia Prime",
 					barberName: "Rafael",
 					phone: "(11) 99999-9999",
 					address: "Rua Central, 100",

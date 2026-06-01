@@ -44,11 +44,11 @@ export default function LandingPage() {
 					<nav className="mx-auto flex w-full max-w-6xl items-center justify-between px-5 py-5 sm:px-7">
 						<Link to="/" className="flex min-w-0 items-center gap-3">
 							<span className="flex h-10 w-10 items-center justify-center rounded-md border border-emerald-300/30 bg-emerald-300/10 font-value text-lg text-emerald-200">
-								K
+								GB
 							</span>
 							<span>
 								<span className="block font-logo text-lg leading-none">
-									Kash Flow
+									Gestor Barbearia
 								</span>
 								<span className="block font-mono-ui text-[10px] uppercase text-emerald-200/70">
 									Operacao em tempo real
@@ -68,8 +68,8 @@ export default function LandingPage() {
 						<p className="font-mono-ui text-[11px] uppercase tracking-normal text-emerald-200">
 							Agenda, caixa e equipe no mesmo ritmo
 						</p>
-						<h1 className="mt-4 font-logo text-[clamp(3.2rem,10vw,7.4rem)] leading-[0.82] text-white">
-							Kash Flow
+						<h1 className="mt-4 max-w-[760px] font-logo text-[clamp(2.9rem,10vw,6.8rem)] leading-[0.86] text-white">
+							Gestor Barbearia
 						</h1>
 						<p className="mt-5 max-w-md font-client text-base leading-relaxed text-white/[0.74] sm:max-w-[34rem] sm:text-lg">
 							Um painel operacional para barbearias que precisam abrir o dia,
@@ -124,7 +124,7 @@ export default function LandingPage() {
 							A rotina da barbearia sem tela de sistema pesado.
 						</h2>
 						<p className="mt-4 max-w-md font-client text-sm leading-relaxed text-white/60">
-							O Kash Flow coloca primeiro o que realmente acontece no dia:
+							O Gestor Barbearia coloca primeiro o que realmente acontece no dia:
 							cliente chegando, horario mudando, pagamento entrando e despesa
 							aparecendo.
 						</p>
