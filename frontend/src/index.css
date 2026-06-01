@@ -4,6 +4,7 @@
 
 @layer base {
   :root {
+    --app-height: 100vh;
     --background: 165 12% 7%;
     --background-deep: 160 18% 4%;
     --foreground: 46 24% 94%;
@@ -100,6 +101,12 @@
     --sidebar-border: 157 13% 78%;
     --sidebar-ring: 152 65% 37%;
   }
+
+  @supports (height: 100svh) {
+    :root {
+      --app-height: 100svh;
+    }
+  }
 }
 
 @layer base {
@@ -110,7 +117,7 @@
   html,
   body,
   #root {
-    height: 100%;
+    min-height: var(--app-height);
     margin: 0;
     padding: 0;
     overflow-x: hidden;
@@ -122,7 +129,6 @@
 
   body {
     @apply bg-background-deep text-foreground antialiased;
-    min-height: 100vh;
     font-family:
       "Aptos", "Segoe UI", ui-sans-serif, system-ui, -apple-system,
       sans-serif;
@@ -130,7 +136,7 @@
   }
 
   #root {
-    min-height: 100vh;
+    min-height: var(--app-height);
   }
 
   :root[data-theme="light"] body {
@@ -166,15 +172,6 @@
       "Aptos Display", "Segoe UI", ui-sans-serif, system-ui, -apple-system,
       sans-serif;
     font-weight: 800;
-  }
-
-  @supports (height: 100dvh) {
-
-    body,
-    #root,
-    .app-shell {
-      min-height: 100dvh;
-    }
   }
 
   button,
@@ -256,29 +253,13 @@
   width: 100%;
   max-width: min(100%, 480px);
   margin: 0 auto;
-  min-height: 100vh;
-  height: 100vh;
-  max-height: 100vh;
+  min-height: var(--app-height);
+  height: var(--app-height);
+  max-height: var(--app-height);
   position: relative;
   overflow-x: hidden;
   background: hsl(var(--background));
   box-shadow: 0 24px 80px hsl(220 30% 1% / 0.38);
-}
-
-@supports (height: 100svh) {
-  .app-shell {
-    min-height: 100svh;
-    height: 100svh;
-    max-height: 100svh;
-  }
-}
-
-@supports (height: 100dvh) {
-  .app-shell {
-    min-height: 100dvh;
-    height: 100dvh;
-    max-height: 100dvh;
-  }
 }
 
 @media (min-width: 640px) {

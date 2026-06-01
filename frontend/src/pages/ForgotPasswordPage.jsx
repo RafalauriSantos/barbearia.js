@@ -63,8 +63,8 @@ export default function ForgotPasswordPage() {
 	const isSuccess = status === "success";
 
 	return (
-		<div className="min-h-[100dvh] bg-background-deep px-4 py-6">
-			<div className="mx-auto flex min-h-[calc(100dvh-48px)] w-full max-w-[480px] flex-col justify-center bg-background px-4">
+		<div className="min-h-[var(--app-height)] bg-background-deep px-4 py-6">
+			<div className="mx-auto flex min-h-[calc(var(--app-height)-48px)] w-full max-w-[480px] flex-col justify-center bg-background px-4">
 				<div className="rounded-lg border border-border bg-card p-5">
 					<div className="text-center">
 						<p className="font-mono-ui text-[10px] uppercase text-foreground-faint">

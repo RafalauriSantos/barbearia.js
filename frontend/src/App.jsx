@@ -23,7 +23,7 @@ import AcceptInvitePage from "./pages/AcceptInvitePage";
 
 function SessionLoading() {
 	return (
-		<div className="app-shell flex min-h-[100dvh] items-center justify-center bg-background px-4">
+		<div className="app-shell flex items-center justify-center bg-background px-4">
 			<div className="w-full max-w-md">
 				<LoadingCard label="Validando sessão" rows={2} />
 			</div>
