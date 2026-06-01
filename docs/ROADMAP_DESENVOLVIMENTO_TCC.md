@@ -2,7 +2,7 @@
 
 Este arquivo e a fonte unica de verdade para acompanhar o app do TCC.
 
-Data-base: 2026-05-31.
+Data-base: 2026-06-01.
 
 Este roadmap substitui o antigo checklist de frontend. Qualquer decisao de escopo, status de entrega, validacao, risco conhecido ou proximo passo deve ser atualizado aqui para evitar documentos conflitantes.
 
@@ -63,16 +63,19 @@ O projeto ja tem uma base full stack funcional:
 - backend publicado no Render;
 - envio de email preparado para Brevo API, com SMTP apenas como fallback;
 - UX ajustada para mobile/iOS Safari e cold start do Render Free.
-- cache em memoria e prefetch no frontend para reduzir loading perceptivel ao trocar entre Agenda, Catalogo, Despesas, Financeiro, Equipe e Configuracoes.
+- cache persistente, cache em memoria e prefetch no frontend para reduzir loading perceptivel ao abrir o app e trocar entre Agenda, Catalogo, Despesas, Financeiro, Equipe e Configuracoes.
 
 ### Validacao mais recente
 
-Rodado em 2026-05-31:
+Rodado em 2026-06-01:
 
 - Backend `npm test`: passou.
 - Frontend `npm run lint`: passou.
 - Frontend `npm test`: passou, 8 arquivos de teste e 16 testes.
 - Frontend `npm run build:artifact`: passou.
+
+Historico de producao validado anteriormente:
+
 - Backend publicado `https://kurt-api.onrender.com/health`: respondeu `{"ok":true}`.
 - Frontend publicado `https://kurt-barbearia.vercel.app`: carregou com titulo `Gestor Barbearia - Gestao para Barbearias`.
 
@@ -91,6 +94,15 @@ Atualizacoes de 2026-05-31:
 - Deploy: frontend e backend publicados em Vercel/Render.
 - Performance/UX: cache em memoria, deduplicacao de chamadas e prefetch apos login/sessao para dados operacionais do frontend.
 - Commit publicado: `c445604 Melhora cache e prefetch do frontend`.
+
+Atualizacoes de 2026-06-01:
+
+- Performance percebida: cache persistente por usuario no navegador para perfil, agenda, catalogo, despesas, financeiro e equipe.
+- Sessao: snapshot local do usuario autenticado para abrir o shell do app imediatamente quando ja existe token salvo, enquanto `/auth/me` valida a sessao em segundo plano.
+- UX: dados antigos aparecem primeiro e a API atualiza em segundo plano, reduzindo loaders grandes em reaberturas e trocas de tela.
+- Seguranca/isolamento local: cache persistente usa escopo por usuario, barbearia e barbeiro, e e limpo em logout, troca de sessao ou erro de sessao.
+- Tema: evento interno de tema alinhado ao nome `Gestor Barbearia`.
+- Commit publicado: `d43b818 Persiste cache para acelerar carregamento`.
 
 ### Worktree observado
 
@@ -222,17 +234,18 @@ Rotas principais:
 Camada de dados:
 
 - `frontend/src/lib/api/client.js`: Axios centralizado, timeout, erro padrao, header Bearer e refresh em `401`.
-- `frontend/src/lib/auth.js`: storage local de `accessToken` e `refreshToken`.
-- `frontend/src/lib/store.js`: fachada de compatibilidade sobre os modulos de API por dominio, com cache em memoria, deduplicacao de requests, prefetch e invalidacao apos mutacoes.
+- `frontend/src/lib/auth.js`: storage local de `accessToken` e `refreshToken`, com fallback para chaves legadas.
+- `frontend/src/context/AuthContext.jsx`: recupera snapshot local do usuario autenticado para evitar bloquear o shell do app enquanto valida `/auth/me`.
+- `frontend/src/lib/store.js`: fachada de compatibilidade sobre os modulos de API por dominio, com cache persistente por usuario, cache em memoria, deduplicacao de requests, prefetch e invalidacao apos mutacoes.
 - `frontend/src/lib/api/*.api.js`: modulos por dominio.
 
 Ponto importante:
 
-- O fluxo principal nao usa mais localStorage como fonte de dados de negocio.
-- `store.js` ainda remove chaves antigas no `clearAllData`, mas isso e limpeza de legado, nao persistencia principal.
+- O frontend usa `localStorage` apenas como cache local por usuario e snapshot de sessao; a API continua sendo a fonte de verdade.
+- `store.js` remove chaves antigas no `clearAllData` e tambem limpa o cache persistente atual.
 - `apiClient` usa timeout configuravel por `VITE_API_TIMEOUT_MS` e faz warmup de `/health` para reduzir o impacto do cold start do Render Free.
-- apos login, verificacao de codigo ou recuperacao de sessao, o frontend faz prefetch de perfil, agenda do dia, catalogo, despesas, financeiro e equipe.
-- as telas principais usam o dado em cache imediatamente quando existe e atualizam em segundo plano com `force: true`.
+- apos login, verificacao de codigo, aceite de convite ou recuperacao de sessao, o frontend configura o escopo do cache e faz prefetch de perfil, agenda do dia, catalogo, despesas, financeiro e equipe.
+- as telas principais usam o dado em cache imediatamente quando existe, inclusive apos reabrir o app, e atualizam em segundo plano com `force: true`.
 
 ## 5. Status por Area
 
@@ -273,6 +286,7 @@ Feito:
 - `GET /auth/me` funciona com `Authorization`;
 - login no frontend salva sessao;
 - reload tenta recuperar usuario atual;
+- reload com token salvo pode abrir com snapshot local do usuario e validar a sessao em segundo plano;
 - logout limpa tokens locais;
 - reset de senha por codigo existe;
 - testes backend cobrem register, login, me, verify-code, verify-email, forgot-password e reset-password;
@@ -576,6 +590,7 @@ Falta:
 - [x] Suporte a Brevo API para email transacional.
 - [x] Viewport/safe area ajustados para iOS Safari.
 - [x] Cache/prefetch no frontend para reduzir loading entre telas.
+- [x] Cache persistente por usuario e snapshot de sessao para abertura mais rapida.
 
 ### Parcial
 
@@ -606,15 +621,15 @@ O proximo passo correto nao e criar tela nova.
 
 Ordem recomendada:
 
-1. aguardar/confirmar deploy automatico da Vercel do commit `c445604`;
-2. testar no celular real a troca entre Agenda, Catalogo, Custos, Caixa, Equipe e Configuracoes;
+1. aguardar/confirmar deploy automatico da Vercel do commit `d43b818`;
+2. testar no celular real uma segunda abertura do app e a troca entre Agenda, Catalogo, Custos, Caixa, Equipe e Configuracoes;
 3. configurar Brevo Free no Render com remetente verificado;
 4. fazer redeploy do backend;
 5. testar cadastro real em producao recebendo codigo por email;
 6. rodar smoke completo no app publicado;
 7. preparar roteiro de apresentacao.
 
-Fluxo local, API, navegador, rotas internas de sistema e deploy base ja foram validados. A melhoria de performance foi enviada ao GitHub e deve ser conferida no app publicado. Em seguida, o foco e fechar o email gratuito de producao e ensaiar a demonstracao.
+Fluxo local, API, navegador, rotas internas de sistema e deploy base ja foram validados. A melhoria de performance percebida foi enviada ao GitHub e deve ser conferida no app publicado depois do deploy da Vercel. Em seguida, o foco e fechar o email gratuito de producao e ensaiar a demonstracao.
 
 ## 8. Roadmap por Prioridade
 
@@ -679,7 +694,7 @@ Tarefas:
 
 - padronizar mensagens de erro;
 - revisar estados vazios/loading;
-- validar percepcao de fluidez do cache/prefetch em celular real;
+- validar percepcao de fluidez do cache persistente/prefetch em celular real;
 - revisar foco, labels e navegacao por teclado;
 - documentar payloads de request/response;
 - criar testes frontend faltantes para catalogo, financeiro e agenda.
@@ -725,6 +740,7 @@ O MVP do TCC pode ser considerado pronto quando:
 - navegador valida os fluxos principais visualmente;
 - editar e excluir agenda/catalogo/despesas sao validados manualmente ou por E2E;
 - reload mantem ou recupera sessao corretamente;
+- segunda abertura do app com usuario ja autenticado mostra o shell rapidamente e atualiza dados em segundo plano;
 - equipe lista barbeiros e convite funciona;
 - usuario A nao enxerga dados do usuario B;
 - fluxo principal passa no navegador;

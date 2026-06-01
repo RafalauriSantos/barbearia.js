@@ -10,7 +10,7 @@ Projeto full stack para gestao de barbearia: agenda diaria, servicos, produtos, 
 - Despesas e resumo financeiro diario
 - Equipe, convites e separacao de dados por barbearia
 - Foto de perfil dos barbeiros na agenda
-- Cache em memoria e prefetch para reduzir atraso ao trocar de tela
+- Cache persistente, prefetch e abertura com sessao cacheada para reduzir carregamentos visiveis
 - Backend com API REST e validacao de ambiente
 
 ## App publicado
@@ -26,7 +26,7 @@ inatividade pode demorar alguns segundos enquanto o servico acorda.
 - Backend em camadas (routes/controllers/services/repositories)
 - Integracao com Supabase/Postgres via Knex
 - Frontend React com rotas protegidas e cliente HTTP centralizado
-- Cache/prefetch no frontend para agenda, catalogo, despesas, financeiro, equipe e perfil
+- Cache persistente/prefetch no frontend para agenda, catalogo, despesas, financeiro, equipe e perfil
 - Scripts de raiz para subir, testar e validar
 
 ## Stack
@@ -146,6 +146,6 @@ Smoke test com backend e frontend ja rodando:
 - O backend usa `SUPABASE_SERVICE_KEY` para operacoes administrativas e seed.
 - CORS e `APP_URL` podem ser ajustados no .env do backend.
 - O frontend aplica viewport dinamico por `visualViewport`, fallback `100svh` e safe area no iOS Safari.
-- O frontend mantem cache em memoria dos dados operacionais e atualiza em segundo plano para reduzir loading entre abas.
+- O frontend mantem cache persistente por usuario dos dados operacionais, abre com dados salvos quando possivel e atualiza em segundo plano para reduzir loading entre abas.
 - Em producao gratuita no Render, o envio de email deve usar Brevo API
   (`EMAIL_PROVIDER=brevo`) em vez de SMTP.

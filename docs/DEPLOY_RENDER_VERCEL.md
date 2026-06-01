@@ -14,10 +14,12 @@ inatividade. O frontend ja usa timeout maior e uma chamada `/health` em segundo
 plano para reduzir erro no primeiro login, mas a primeira abertura ainda pode
 demorar alguns segundos.
 
-Depois que o usuario autentica, o frontend tambem faz prefetch e cache em
-memoria de dados operacionais. Isso reduz o loading perceptivel ao trocar entre
-Agenda, Catalogo, Custos, Caixa, Equipe e Configuracoes, mas nao elimina o cold
-start inicial do Render Free.
+Depois que o usuario autentica, o frontend tambem faz prefetch e cache
+persistente por usuario dos dados operacionais. Na reabertura ou troca entre
+Agenda, Catalogo, Custos, Caixa, Equipe e Configuracoes, o app pode exibir os
+ultimos dados salvos imediatamente e atualizar em segundo plano. Isso reduz o
+loading perceptivel, mas nao elimina o cold start inicial do Render Free quando
+o backend esta dormindo.
 
 ## 1) Preparar variaveis do backend (Render)
 
@@ -148,5 +150,6 @@ Salve e faca o redeploy do backend.
 - [x] VITE_API_URL configurado com a URL do Render
 - [x] Timeout/warmup do frontend ajustado para Render Free
 - [x] Cache/prefetch do frontend ajustado para reduzir loading entre telas
+- [x] Cache persistente e sessao cacheada no frontend para abertura mais rapida
 - [ ] Brevo API configurada no Render para envio dos codigos por email
 - [ ] Cadastro real em producao validado recebendo codigo por email
