@@ -117,10 +117,15 @@
   html,
   body,
   #root {
+    width: 100%;
     min-height: var(--app-height);
+    height: var(--app-height);
+    max-height: var(--app-height);
     margin: 0;
     padding: 0;
+    overflow: hidden;
     overflow-x: hidden;
+    overscroll-behavior: none;
   }
 
   html {
@@ -136,7 +141,7 @@
   }
 
   #root {
-    min-height: var(--app-height);
+    isolation: isolate;
   }
 
   :root[data-theme="light"] body {
@@ -257,9 +262,15 @@
   height: var(--app-height);
   max-height: var(--app-height);
   position: relative;
-  overflow-x: hidden;
+  overflow: hidden;
+  overscroll-behavior: none;
   background: hsl(var(--background));
   box-shadow: 0 24px 80px hsl(220 30% 1% / 0.38);
+}
+
+.app-shell .overflow-y-auto {
+  overscroll-behavior-y: contain;
+  -webkit-overflow-scrolling: touch;
 }
 
 @media (min-width: 640px) {

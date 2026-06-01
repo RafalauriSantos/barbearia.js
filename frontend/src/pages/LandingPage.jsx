@@ -32,7 +32,7 @@ export default function LandingPage() {
 	}, []);
 
 	return (
-		<div className="min-h-[var(--app-height)] overflow-x-hidden bg-[#07110f] text-white">
+		<div className="h-[var(--app-height)] overflow-y-auto overflow-x-hidden bg-[#07110f] text-white">
 			<section className="relative min-h-[88svh] overflow-hidden">
 				<img
 					src="/images/landing-hero-barbershop.png"

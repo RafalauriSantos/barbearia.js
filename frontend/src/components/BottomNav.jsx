@@ -69,7 +69,7 @@ export function BottomNav() {
 		:	baseTabs;
 	const gridClass = tabs.length === 5 ? "grid-cols-5" : "grid-cols-4";
 	return (
-		<nav className="z-50 shrink-0 border-t border-border bg-background/95 px-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] pt-2 backdrop-blur">
+		<nav className="sticky bottom-0 z-50 shrink-0 border-t border-border bg-background/95 px-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] pt-2 backdrop-blur">
 			<div
 				className={`mx-auto grid ${gridClass} max-w-[760px] gap-1 rounded-lg border border-border bg-background-deep p-1`}>
 				{tabs.map((tab) => {

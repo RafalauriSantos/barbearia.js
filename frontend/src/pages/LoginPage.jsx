@@ -105,7 +105,7 @@ export default function LoginPage() {
 		:	"/forgot-password";
 
 	return (
-		<div className="min-h-[var(--app-height)] bg-background-deep px-4 py-4">
+		<div className="h-[var(--app-height)] overflow-y-auto bg-background-deep px-4 py-4">
 			<div className="mx-auto flex min-h-[calc(var(--app-height)-32px)] w-full max-w-[480px] flex-col justify-center rounded-lg border border-border bg-background px-5 py-6 shadow-2xl shadow-black/30">
 				<div className="mb-6 flex items-start justify-between gap-4">
 					<div>
