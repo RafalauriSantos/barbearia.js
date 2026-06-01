@@ -1,5 +1,7 @@
-const ACCESS_TOKEN_KEY = "kash_flow_access_token";
-const REFRESH_TOKEN_KEY = "kash_flow_refresh_token";
+const ACCESS_TOKEN_KEY = "gestor_barbearia_access_token";
+const REFRESH_TOKEN_KEY = "gestor_barbearia_refresh_token";
+const LEGACY_ACCESS_TOKEN_KEY = "kash_flow_access_token";
+const LEGACY_REFRESH_TOKEN_KEY = "kash_flow_refresh_token";
 
 function getStorage() {
 	if (typeof window === "undefined") return null;
@@ -7,11 +9,23 @@ function getStorage() {
 }
 
 export function getAccessToken() {
-	return getStorage()?.getItem(ACCESS_TOKEN_KEY) || "";
+	const storage = getStorage();
+	if (!storage) return "";
+	return (
+		storage.getItem(ACCESS_TOKEN_KEY) ||
+		storage.getItem(LEGACY_ACCESS_TOKEN_KEY) ||
+		""
+	);
 }
 
 export function getRefreshToken() {
-	return getStorage()?.getItem(REFRESH_TOKEN_KEY) || "";
+	const storage = getStorage();
+	if (!storage) return "";
+	return (
+		storage.getItem(REFRESH_TOKEN_KEY) ||
+		storage.getItem(LEGACY_REFRESH_TOKEN_KEY) ||
+		""
+	);
 }
 
 export function setAccessToken(token) {
@@ -19,9 +33,11 @@ export function setAccessToken(token) {
 	if (!storage) return;
 	if (!token) {
 		storage.removeItem(ACCESS_TOKEN_KEY);
+		storage.removeItem(LEGACY_ACCESS_TOKEN_KEY);
 		return;
 	}
 	storage.setItem(ACCESS_TOKEN_KEY, token);
+	storage.removeItem(LEGACY_ACCESS_TOKEN_KEY);
 }
 
 export function setRefreshToken(token) {
@@ -29,9 +45,11 @@ export function setRefreshToken(token) {
 	if (!storage) return;
 	if (!token) {
 		storage.removeItem(REFRESH_TOKEN_KEY);
+		storage.removeItem(LEGACY_REFRESH_TOKEN_KEY);
 		return;
 	}
 	storage.setItem(REFRESH_TOKEN_KEY, token);
+	storage.removeItem(LEGACY_REFRESH_TOKEN_KEY);
 }
 
 export function setSessionTokens(session = {}) {
@@ -40,7 +58,10 @@ export function setSessionTokens(session = {}) {
 }
 
 export function clearAccessToken() {
-	getStorage()?.removeItem(ACCESS_TOKEN_KEY);
+	const storage = getStorage();
+	if (!storage) return;
+	storage.removeItem(ACCESS_TOKEN_KEY);
+	storage.removeItem(LEGACY_ACCESS_TOKEN_KEY);
 }
 
 export function clearSessionTokens() {
@@ -48,4 +69,6 @@ export function clearSessionTokens() {
 	if (!storage) return;
 	storage.removeItem(ACCESS_TOKEN_KEY);
 	storage.removeItem(REFRESH_TOKEN_KEY);
+	storage.removeItem(LEGACY_ACCESS_TOKEN_KEY);
+	storage.removeItem(LEGACY_REFRESH_TOKEN_KEY);
 }

@@ -3,7 +3,8 @@ import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import { resendEmailCode } from "@/lib/api/auth.api";
 
-const PENDING_VERIFICATION_EMAIL_KEY = "kash_flow_pending_verification_email";
+const PENDING_VERIFICATION_EMAIL_KEY =
+	"gestor_barbearia_pending_verification_email";
 
 function getPendingEmail() {
 	if (typeof window === "undefined") return "";

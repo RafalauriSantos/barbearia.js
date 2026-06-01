@@ -23,7 +23,7 @@ afterEach(() => {
 describe("VerifyCodePage", () => {
 	it("uses the stored email without showing it on the code screen", async () => {
 		window.sessionStorage.setItem(
-			"kash_flow_pending_verification_email",
+			"gestor_barbearia_pending_verification_email",
 			"cliente@example.com",
 		);
 		authContextMock.verifyEmailCode.mockResolvedValueOnce({

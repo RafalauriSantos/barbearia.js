@@ -43,19 +43,10 @@ function RequireAuth({ children }) {
 	return children;
 }
 
-function HomeRedirect() {
-	const { isAuthenticated, isLoading } = useAuth();
-
-	if (isLoading) return <SessionLoading />;
-	if (isAuthenticated) return <Navigate to="/app" replace />;
-
-	return <LandingPage />;
-}
-
 function AppRoutes() {
 	return (
 		<Routes>
-			<Route path="/" element={<HomeRedirect />} />
+			<Route path="/" element={<LandingPage />} />
 			<Route path="/login" element={<LoginPage />} />
 			<Route path="/verify-email" element={<VerifyEmailPage />} />
 			<Route path="/verify-code" element={<VerifyCodePage />} />

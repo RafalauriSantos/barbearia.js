@@ -6,7 +6,8 @@ import { warmUpApi } from "@/lib/api/client";
 
 const SIGNUP_SUCCESS_MESSAGE =
 	"Conta criada. Enviamos um codigo de 6 digitos para seu email.";
-const PENDING_VERIFICATION_EMAIL_KEY = "kash_flow_pending_verification_email";
+const PENDING_VERIFICATION_EMAIL_KEY =
+	"gestor_barbearia_pending_verification_email";
 
 export default function LoginPage() {
 	const { isAuthenticated, isLoading, login, signup } = useAuth();
@@ -121,7 +122,7 @@ export default function LoginPage() {
 					</div>
 					<div className="flex shrink-0 items-center gap-2">
 						<span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md border border-paid/40 bg-paid/10 font-value text-xl text-paid">
-							K
+							GB
 						</span>
 					</div>
 				</div>
