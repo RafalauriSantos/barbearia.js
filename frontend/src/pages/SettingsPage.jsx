@@ -788,7 +788,9 @@ export default function SettingsPage() {
 				</div>
 			</form>
 			{barberPhotoDraft && (
-				<div className="absolute inset-0 z-40 flex flex-col bg-background">
+				<div
+					data-testid="avatar-editor-panel"
+					className="fixed bottom-0 left-1/2 top-0 z-[100] flex w-full max-w-[480px] -translate-x-1/2 flex-col overflow-hidden bg-background shadow-[0_24px_80px_hsl(220_30%_1%/0.38)] md:max-w-[760px] min-[1180px]:max-w-[1120px]">
 					<div className="shrink-0 border-b border-border bg-background/95 px-4 pb-3 pt-[calc(0.75rem+env(safe-area-inset-top))] backdrop-blur">
 						<div className="mx-auto flex max-w-3xl items-center justify-between gap-3">
 							<div className="min-w-0">

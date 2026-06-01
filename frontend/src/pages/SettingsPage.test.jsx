@@ -145,6 +145,9 @@ describe("SettingsPage", () => {
 		});
 
 		expect(await screen.findByText("Ajuste o foco da foto e salve.")).toBeTruthy();
+		expect(screen.getByTestId("avatar-editor-panel").className).toContain(
+			"fixed",
+		);
 		const avatarEditor = screen.getByRole("img", {
 			name: "Prévia ajustável da foto",
 		});
