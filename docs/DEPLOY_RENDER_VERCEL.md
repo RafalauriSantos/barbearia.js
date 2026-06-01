@@ -14,6 +14,11 @@ inatividade. O frontend ja usa timeout maior e uma chamada `/health` em segundo
 plano para reduzir erro no primeiro login, mas a primeira abertura ainda pode
 demorar alguns segundos.
 
+Depois que o usuario autentica, o frontend tambem faz prefetch e cache em
+memoria de dados operacionais. Isso reduz o loading perceptivel ao trocar entre
+Agenda, Catalogo, Custos, Caixa, Equipe e Configuracoes, mas nao elimina o cold
+start inicial do Render Free.
+
 ## 1) Preparar variaveis do backend (Render)
 
 Crie um Web Service no Render apontando para o repositorio. Use os comandos abaixo.
@@ -107,7 +112,7 @@ VITE_API_TIMEOUT_MS=75000
 Nota iOS Safari:
 
 - O `frontend/index.html` ja inclui `height=device-height` e `viewport-fit=cover`.
-- O layout usa `100dvh/100svh` e safe area para evitar espaco preto no fim da tela.
+- O layout usa altura sincronizada por `visualViewport`, fallback `100svh` e safe area para evitar espaco preto no fim da tela.
 
 Depois do deploy, copie a URL publica da Vercel (ex: https://seuapp.vercel.app).
 
@@ -142,5 +147,6 @@ Salve e faca o redeploy do backend.
 - [x] APP_URL configurado com a URL da Vercel
 - [x] VITE_API_URL configurado com a URL do Render
 - [x] Timeout/warmup do frontend ajustado para Render Free
+- [x] Cache/prefetch do frontend ajustado para reduzir loading entre telas
 - [ ] Brevo API configurada no Render para envio dos codigos por email
 - [ ] Cadastro real em producao validado recebendo codigo por email

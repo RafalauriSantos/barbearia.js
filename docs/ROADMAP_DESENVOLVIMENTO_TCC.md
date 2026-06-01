@@ -63,6 +63,7 @@ O projeto ja tem uma base full stack funcional:
 - backend publicado no Render;
 - envio de email preparado para Brevo API, com SMTP apenas como fallback;
 - UX ajustada para mobile/iOS Safari e cold start do Render Free.
+- cache em memoria e prefetch no frontend para reduzir loading perceptivel ao trocar entre Agenda, Catalogo, Despesas, Financeiro, Equipe e Configuracoes.
 
 ### Validacao mais recente
 
@@ -88,6 +89,8 @@ Atualizacoes de 2026-05-31:
 - Render Free: timeout do frontend aumentado para 75s e warmup em `/health`.
 - iOS Safari/mobile: viewport com `height=device-height`, `viewport-fit=cover`, safe area e remocao de alturas fixas problemáticas.
 - Deploy: frontend e backend publicados em Vercel/Render.
+- Performance/UX: cache em memoria, deduplicacao de chamadas e prefetch apos login/sessao para dados operacionais do frontend.
+- Commit publicado: `c445604 Melhora cache e prefetch do frontend`.
 
 ### Worktree observado
 
@@ -220,7 +223,7 @@ Camada de dados:
 
 - `frontend/src/lib/api/client.js`: Axios centralizado, timeout, erro padrao, header Bearer e refresh em `401`.
 - `frontend/src/lib/auth.js`: storage local de `accessToken` e `refreshToken`.
-- `frontend/src/lib/store.js`: fachada de compatibilidade sobre os modulos de API por dominio.
+- `frontend/src/lib/store.js`: fachada de compatibilidade sobre os modulos de API por dominio, com cache em memoria, deduplicacao de requests, prefetch e invalidacao apos mutacoes.
 - `frontend/src/lib/api/*.api.js`: modulos por dominio.
 
 Ponto importante:
@@ -228,6 +231,8 @@ Ponto importante:
 - O fluxo principal nao usa mais localStorage como fonte de dados de negocio.
 - `store.js` ainda remove chaves antigas no `clearAllData`, mas isso e limpeza de legado, nao persistencia principal.
 - `apiClient` usa timeout configuravel por `VITE_API_TIMEOUT_MS` e faz warmup de `/health` para reduzir o impacto do cold start do Render Free.
+- apos login, verificacao de codigo ou recuperacao de sessao, o frontend faz prefetch de perfil, agenda do dia, catalogo, despesas, financeiro e equipe.
+- as telas principais usam o dado em cache imediatamente quando existe e atualizam em segundo plano com `force: true`.
 
 ## 5. Status por Area
 
@@ -570,6 +575,7 @@ Falta:
 - [x] Timeout/warmup do frontend ajustado para Render Free.
 - [x] Suporte a Brevo API para email transacional.
 - [x] Viewport/safe area ajustados para iOS Safari.
+- [x] Cache/prefetch no frontend para reduzir loading entre telas.
 
 ### Parcial
 
@@ -600,13 +606,15 @@ O proximo passo correto nao e criar tela nova.
 
 Ordem recomendada:
 
-1. configurar Brevo Free no Render com remetente verificado;
-2. fazer redeploy do backend;
-3. testar cadastro real em producao recebendo codigo por email;
-4. rodar smoke completo no app publicado;
-5. preparar roteiro de apresentacao.
+1. aguardar/confirmar deploy automatico da Vercel do commit `c445604`;
+2. testar no celular real a troca entre Agenda, Catalogo, Custos, Caixa, Equipe e Configuracoes;
+3. configurar Brevo Free no Render com remetente verificado;
+4. fazer redeploy do backend;
+5. testar cadastro real em producao recebendo codigo por email;
+6. rodar smoke completo no app publicado;
+7. preparar roteiro de apresentacao.
 
-Fluxo local, API, navegador, rotas internas de sistema e deploy base ja foram validados. Agora o foco e fechar o email gratuito de producao e ensaiar a demonstracao.
+Fluxo local, API, navegador, rotas internas de sistema e deploy base ja foram validados. A melhoria de performance foi enviada ao GitHub e deve ser conferida no app publicado. Em seguida, o foco e fechar o email gratuito de producao e ensaiar a demonstracao.
 
 ## 8. Roadmap por Prioridade
 
@@ -671,6 +679,7 @@ Tarefas:
 
 - padronizar mensagens de erro;
 - revisar estados vazios/loading;
+- validar percepcao de fluidez do cache/prefetch em celular real;
 - revisar foco, labels e navegacao por teclado;
 - documentar payloads de request/response;
 - criar testes frontend faltantes para catalogo, financeiro e agenda.
