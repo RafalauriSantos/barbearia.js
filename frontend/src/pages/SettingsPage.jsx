@@ -13,10 +13,11 @@ const DEFAULT_CLOSING_TIME = "18:00";
 const DEFAULT_APPOINTMENT_DURATION = "30";
 const DEFAULT_SCHEDULE_INTERVAL = "30";
 const AVATAR_MAX_BYTES = 2 * 1024 * 1024;
-const ACCEPTED_AVATAR_TYPES = ["image/jpeg", "image/png", "image/webp"];
+const AVATAR_SOURCE_MAX_BYTES = 20 * 1024 * 1024;
+const AVATAR_INPUT_ACCEPT = "image/*";
 const AVATAR_OUTPUT_SIZE = 512;
 const AVATAR_OUTPUT_TYPE = "image/jpeg";
-const AVATAR_OUTPUT_QUALITY = 0.9;
+const AVATAR_OUTPUT_QUALITIES = [0.9, 0.82, 0.72, 0.62];
 const DEFAULT_AVATAR_FOCUS = { x: 50, y: 50 };
 const DEFAULT_AVATAR_ZOOM = 1;
 
@@ -44,6 +45,7 @@ function readFileAsDataUrl(file) {
 function loadImage(dataUrl) {
 	return new Promise((resolve, reject) => {
 		const image = new Image();
+		image.crossOrigin = "anonymous";
 		image.onload = () => resolve(image);
 		image.onerror = () =>
 			reject(new Error("Nao foi possivel preparar a foto."));
@@ -60,6 +62,15 @@ function makeAvatarFileName(fileName) {
 			.slice(0, 80) || "foto";
 
 	return `${baseName}-avatar.jpg`;
+}
+
+function isAcceptedAvatarFile(file) {
+	const type = String(file?.type || "").toLowerCase();
+	if (type) {
+		return type.startsWith("image/") && type !== "image/svg+xml";
+	}
+
+	return /\.(jpe?g|png|webp|heic|heif)$/iu.test(String(file?.name || ""));
 }
 
 async function createCroppedAvatarUpload({ draft, focus, zoom }) {
@@ -106,22 +117,24 @@ async function createCroppedAvatarUpload({ draft, focus, zoom }) {
 		AVATAR_OUTPUT_SIZE,
 	);
 
-	const dataUrl = canvas.toDataURL(AVATAR_OUTPUT_TYPE, AVATAR_OUTPUT_QUALITY);
-	if (!dataUrl.startsWith(`data:${AVATAR_OUTPUT_TYPE};base64,`)) {
-		throw new Error("Nao foi possivel gerar a foto ajustada.");
+	for (const quality of AVATAR_OUTPUT_QUALITIES) {
+		const dataUrl = canvas.toDataURL(AVATAR_OUTPUT_TYPE, quality);
+		if (!dataUrl.startsWith(`data:${AVATAR_OUTPUT_TYPE};base64,`)) {
+			throw new Error("Nao foi possivel gerar a foto ajustada.");
+		}
+
+		const base64 = dataUrl.split(",")[1] || "";
+		const byteCount = Math.ceil((base64.length * 3) / 4);
+		if (byteCount <= AVATAR_MAX_BYTES) {
+			return {
+				dataUrl,
+				fileName: makeAvatarFileName(draft.fileName),
+				mimeType: AVATAR_OUTPUT_TYPE,
+			};
+		}
 	}
 
-	const base64 = dataUrl.split(",")[1] || "";
-	const byteCount = Math.ceil((base64.length * 3) / 4);
-	if (byteCount > AVATAR_MAX_BYTES) {
-		throw new Error("A foto ajustada ficou acima de 2MB.");
-	}
-
-	return {
-		dataUrl,
-		fileName: makeAvatarFileName(draft.fileName),
-		mimeType: AVATAR_OUTPUT_TYPE,
-	};
+	throw new Error("A foto ajustada ficou acima de 2MB.");
 }
 
 function SettingSection({ eyebrow, title, children, action }) {
@@ -266,15 +279,15 @@ export default function SettingsPage() {
 		const file = event.target.files?.[0];
 		if (!file) return;
 
-		if (!ACCEPTED_AVATAR_TYPES.includes(file.type)) {
-			setErrorMessage("Use uma foto JPG, PNG ou WebP.");
+		if (!isAcceptedAvatarFile(file)) {
+			setErrorMessage("Use uma foto em formato de imagem.");
 			setSuccessMessage("");
 			event.target.value = "";
 			return;
 		}
 
-		if (file.size > AVATAR_MAX_BYTES) {
-			setErrorMessage("A foto precisa ter ate 2MB.");
+		if (file.size > AVATAR_SOURCE_MAX_BYTES) {
+			setErrorMessage("Use uma foto de ate 20MB. O app comprime ao salvar.");
 			setSuccessMessage("");
 			event.target.value = "";
 			return;
@@ -339,6 +352,21 @@ export default function SettingsPage() {
 	const handleResetAvatarFrame = () => {
 		setAvatarFocus(DEFAULT_AVATAR_FOCUS);
 		setAvatarZoom(DEFAULT_AVATAR_ZOOM);
+	};
+
+	const handleEditCurrentPhoto = () => {
+		if (!barberPhotoUrl || isSaving || isLoading) return;
+		setBarberPhotoDraft({
+			dataUrl: barberPhotoUrl,
+			fileName: "foto-atual.jpg",
+			mimeType: "image/jpeg",
+			isExistingPhoto: true,
+		});
+		setAvatarFocus(DEFAULT_AVATAR_FOCUS);
+		setAvatarZoom(DEFAULT_AVATAR_ZOOM);
+		setRemoveBarberPhoto(false);
+		setErrorMessage("");
+		setSuccessMessage("Ajuste a foto atual e salve.");
 	};
 
 	const handleCancelPhotoDraft = () => {
@@ -448,6 +476,10 @@ export default function SettingsPage() {
 				transformOrigin: `${avatarFocus.x}% ${avatarFocus.y}%`,
 			}
 		:	undefined;
+	const footerSaveLabel =
+		isSaving ? "Salvando..."
+		: barberPhotoDraft ? "Salvar foto e alterações"
+		: "Salvar alterações";
 
 	return (
 		<div className="app-shell flex flex-col overflow-hidden bg-background">
@@ -462,6 +494,7 @@ export default function SettingsPage() {
 			/>
 
 			<form
+				id="settingsForm"
 				onSubmit={handleSaveProfile}
 				className="min-h-0 flex-1 overflow-y-auto px-4 pt-5 safe-bottom">
 				<div className="mx-auto max-w-3xl space-y-4">
@@ -634,7 +667,7 @@ export default function SettingsPage() {
 								id="barberPhoto"
 								name="barberPhoto"
 								type="file"
-								accept="image/jpeg,image/png,image/webp"
+								accept={AVATAR_INPUT_ACCEPT}
 								aria-label="Foto da agenda"
 								onChange={handlePhotoChange}
 								className="sr-only"
@@ -657,9 +690,14 @@ export default function SettingsPage() {
 									</p>
 									<p className="mt-1 font-client text-sm leading-snug text-foreground">
 										{barberPhotoDraft ?
-											"Ajuste a foto antes de salvar."
+											"O editor de foto esta aberto."
 										:	"Aparece no topo da sua agenda e nos avatares da equipe."}
 									</p>
+									{!barberPhotoDraft && (
+										<p className="mt-1 font-client text-xs leading-snug text-foreground-faint">
+											Aceita fotos do celular. O app comprime a imagem ao salvar.
+										</p>
+									)}
 									<div
 										className={
 											barberPhotoDraft ? "hidden" : "mt-3 flex flex-wrap gap-2"
@@ -670,95 +708,26 @@ export default function SettingsPage() {
 											Trocar foto
 										</label>
 										{avatarPreviewUrl && (
-											<button
-												type="button"
-												onClick={handleRemovePhoto}
-												disabled={isSaving || isLoading}
-												className="rounded-md border border-border px-3 py-2 font-mono-ui text-[11px] text-foreground-faint transition-colors hover:text-foreground disabled:opacity-60">
-												Remover
-											</button>
+											<>
+												<button
+													type="button"
+													onClick={handleEditCurrentPhoto}
+													disabled={isSaving || isLoading}
+													className="rounded-md border border-[#4ade80]/35 bg-[#052e1b]/35 px-3 py-2 font-mono-ui text-[11px] text-[#86efac] transition-colors hover:bg-[#064e3b]/45 disabled:opacity-60">
+													Editar enquadramento
+												</button>
+												<button
+													type="button"
+													onClick={handleRemovePhoto}
+													disabled={isSaving || isLoading}
+													className="rounded-md border border-border px-3 py-2 font-mono-ui text-[11px] text-foreground-faint transition-colors hover:text-foreground disabled:opacity-60">
+													Remover
+												</button>
+											</>
 										)}
 									</div>
 								</div>
 							</div>
-
-							{barberPhotoDraft && (
-								<div className="mt-4 border-t border-border pt-4">
-									<div className="grid gap-4 md:grid-cols-[190px_1fr] md:items-center">
-										<div
-											role="img"
-											aria-label="Prévia ajustável da foto"
-											onPointerDown={handleAvatarPointerDown}
-											onPointerMove={handleAvatarPointerMove}
-											onPointerUp={handleAvatarPointerUp}
-											onPointerCancel={handleAvatarPointerUp}
-											className="mx-auto flex h-44 w-44 touch-none items-center justify-center overflow-hidden rounded-full border border-[#4ade80]/50 bg-card shadow-[0_0_0_6px_rgba(74,222,128,0.06)]">
-											<img
-												src={barberPhotoDraft.dataUrl}
-												alt=""
-												className="h-full w-full select-none object-cover"
-												style={avatarImageStyle}
-												draggable={false}
-											/>
-										</div>
-
-										<div className="min-w-0 space-y-4">
-											<div>
-												<div className="flex items-center justify-between gap-3">
-													<label
-														htmlFor="avatarZoom"
-														className="font-mono-ui text-[10px] uppercase text-foreground-faint">
-														Zoom da foto
-													</label>
-													<span className="font-value text-[11px] text-[#86efac]">
-														{Math.round(avatarZoom * 100)}%
-													</span>
-												</div>
-												<input
-													id="avatarZoom"
-													type="range"
-													min="1"
-													max="2.5"
-													step="0.05"
-													value={avatarZoom}
-													onChange={(event) =>
-														setAvatarZoom(Number(event.target.value))
-													}
-													className="mt-2 w-full accent-[#4ade80]"
-													disabled={isSaving || isLoading}
-												/>
-											</div>
-
-											<p className="font-client text-xs leading-snug text-foreground-faint">
-												Toque ou arraste na prévia para escolher o foco.
-											</p>
-										</div>
-									</div>
-									<div
-										data-testid="avatar-editor-actions"
-										className="mt-4 grid grid-cols-3 gap-2">
-										<label
-											htmlFor="barberPhoto"
-											className="flex h-10 cursor-pointer items-center justify-center rounded-md border border-border bg-secondary px-2 text-center font-mono-ui text-[10px] text-foreground transition-colors hover:bg-card">
-											Trocar foto
-										</label>
-										<button
-											type="button"
-											onClick={handleResetAvatarFrame}
-											disabled={isSaving || isLoading}
-											className="h-10 rounded-md border border-border bg-secondary px-2 font-mono-ui text-[10px] text-foreground transition-colors hover:bg-card disabled:opacity-60">
-											Centralizar
-										</button>
-										<button
-											type="button"
-											onClick={handleCancelPhotoDraft}
-											disabled={isSaving || isLoading}
-											className="h-10 rounded-md border border-border px-2 font-mono-ui text-[10px] text-foreground-faint transition-colors hover:text-foreground disabled:opacity-60">
-											Cancelar
-										</button>
-									</div>
-								</div>
-							)}
 						</div>
 
 						<Field id="barberName" label="Nome na agenda">
@@ -786,15 +755,6 @@ export default function SettingsPage() {
 							/>
 						</div>
 					</SettingSection>
-
-					<div className="sticky bottom-0 z-10 -mx-4 border-t border-border bg-background/95 px-4 py-3 backdrop-blur md:static md:mx-0 md:rounded-lg md:border">
-						<button
-							type="submit"
-							disabled={isSaving || isLoading}
-							className="w-full rounded-md bg-foreground px-4 py-3 font-mono-ui text-sm text-primary-foreground transition-opacity disabled:opacity-60">
-							{isSaving ? "Salvando..." : "Salvar alterações"}
-						</button>
-					</div>
 
 					<SettingSection eyebrow="Acesso" title="Sessão e permissões">
 						<div className="grid gap-3 md:grid-cols-3">
@@ -827,6 +787,127 @@ export default function SettingsPage() {
 					</SettingSection>
 				</div>
 			</form>
+			{barberPhotoDraft && (
+				<div className="absolute inset-0 z-40 flex flex-col bg-background">
+					<div className="shrink-0 border-b border-border bg-background/95 px-4 pb-3 pt-[calc(0.75rem+env(safe-area-inset-top))] backdrop-blur">
+						<div className="mx-auto flex max-w-3xl items-center justify-between gap-3">
+							<div className="min-w-0">
+								<p className="font-mono-ui text-[10px] uppercase text-[#86efac]">
+									Editando foto
+								</p>
+								<h2 className="mt-1 truncate font-client text-lg leading-tight text-foreground">
+									Enquadramento da agenda
+								</h2>
+							</div>
+							<button
+								type="button"
+								onClick={handleCancelPhotoDraft}
+								disabled={isSaving || isLoading}
+								className="shrink-0 rounded-md border border-border bg-secondary px-3 py-2 font-mono-ui text-[11px] text-foreground transition-colors hover:bg-card disabled:opacity-60">
+								Sair sem salvar
+							</button>
+						</div>
+					</div>
+
+					<div className="min-h-0 flex-1 overflow-y-auto px-4 py-5">
+						<div className="mx-auto max-w-3xl space-y-5">
+							<p className="font-client text-sm leading-snug text-foreground-faint">
+								Arraste na foto para escolher o foco e use o zoom para aproximar.
+								Se a foto ja estava salva, o ajuste acontece sobre o recorte atual.
+							</p>
+
+							<div
+								role="img"
+								aria-label="Prévia ajustável da foto"
+								onPointerDown={handleAvatarPointerDown}
+								onPointerMove={handleAvatarPointerMove}
+								onPointerUp={handleAvatarPointerUp}
+								onPointerCancel={handleAvatarPointerUp}
+								className="mx-auto flex h-56 w-56 touch-none items-center justify-center overflow-hidden rounded-full border border-[#4ade80]/50 bg-card shadow-[0_0_0_8px_rgba(74,222,128,0.06)]">
+								<img
+									src={barberPhotoDraft.dataUrl}
+									alt=""
+									className="h-full w-full select-none object-cover"
+									style={avatarImageStyle}
+									draggable={false}
+								/>
+							</div>
+
+							<div className="rounded-lg border border-border bg-background-deep p-4">
+								<div className="flex items-center justify-between gap-3">
+									<label
+										htmlFor="avatarZoom"
+										className="font-mono-ui text-[10px] uppercase text-foreground-faint">
+										Zoom da foto
+									</label>
+									<span className="font-value text-[11px] text-[#86efac]">
+										{Math.round(avatarZoom * 100)}%
+									</span>
+								</div>
+								<input
+									id="avatarZoom"
+									type="range"
+									min="1"
+									max="2.5"
+									step="0.05"
+									value={avatarZoom}
+									onChange={(event) => setAvatarZoom(Number(event.target.value))}
+									className="mt-3 w-full accent-[#4ade80]"
+									disabled={isSaving || isLoading}
+								/>
+								<div
+									data-testid="avatar-editor-actions"
+									className="mt-4 grid grid-cols-2 gap-2">
+									<label
+										htmlFor="barberPhoto"
+										className="flex h-11 cursor-pointer items-center justify-center rounded-md border border-border bg-secondary px-2 text-center font-mono-ui text-[11px] text-foreground transition-colors hover:bg-card">
+										Trocar foto
+									</label>
+									<button
+										type="button"
+										onClick={handleResetAvatarFrame}
+										disabled={isSaving || isLoading}
+										className="h-11 rounded-md border border-border bg-secondary px-2 font-mono-ui text-[11px] text-foreground transition-colors hover:bg-card disabled:opacity-60">
+										Centralizar
+									</button>
+								</div>
+							</div>
+						</div>
+					</div>
+
+					<div className="shrink-0 border-t border-border bg-background/95 px-4 py-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] backdrop-blur">
+						<div className="mx-auto grid max-w-3xl grid-cols-[0.8fr_1.2fr] gap-2">
+							<button
+								type="button"
+								onClick={handleCancelPhotoDraft}
+								disabled={isSaving || isLoading}
+								className="rounded-md border border-border bg-secondary px-3 py-3 font-mono-ui text-[11px] text-foreground transition-colors hover:bg-card disabled:opacity-60">
+								Cancelar
+							</button>
+							<button
+								type="submit"
+								form="settingsForm"
+								disabled={isSaving || isLoading}
+								className="rounded-md bg-foreground px-3 py-3 font-mono-ui text-sm text-primary-foreground transition-opacity disabled:opacity-60">
+								{footerSaveLabel}
+							</button>
+						</div>
+					</div>
+				</div>
+			)}
+			{!barberPhotoDraft && (
+				<div className="shrink-0 border-t border-border bg-background/95 px-4 py-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] backdrop-blur">
+					<div className="mx-auto max-w-3xl">
+						<button
+							type="submit"
+							form="settingsForm"
+							disabled={isSaving || isLoading}
+							className="w-full rounded-md bg-foreground px-4 py-3 font-mono-ui text-sm text-primary-foreground transition-opacity disabled:opacity-60">
+							{footerSaveLabel}
+						</button>
+					</div>
+				</div>
+			)}
 		</div>
 	);
 }

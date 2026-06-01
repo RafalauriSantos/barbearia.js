@@ -137,7 +137,9 @@ describe("SettingsPage", () => {
 
 		await screen.findByDisplayValue("Rafael");
 
-		const file = new File(["avatar"], "avatar.png", { type: "image/png" });
+		const file = new File([new Uint8Array(3 * 1024 * 1024)], "avatar.png", {
+			type: "image/png",
+		});
 		fireEvent.change(screen.getByLabelText("Foto da agenda"), {
 			target: { files: [file] },
 		});
@@ -155,7 +157,9 @@ describe("SettingsPage", () => {
 		fireEvent.change(screen.getByLabelText("Zoom da foto"), {
 			target: { value: "1.6" },
 		});
-		fireEvent.click(screen.getByRole("button", { name: "Salvar alterações" }));
+		fireEvent.click(
+			screen.getByRole("button", { name: "Salvar foto e alterações" }),
+		);
 
 		await waitFor(() => {
 			expect(storeMock.saveProfile).toHaveBeenCalledWith(
@@ -169,5 +173,55 @@ describe("SettingsPage", () => {
 			);
 		});
 		expect(canvasContext.drawImage).toHaveBeenCalled();
+	});
+
+	it("edits the framing of the saved profile photo without a new upload", async () => {
+		mockAvatarCanvas();
+		storeMock.loadProfile.mockResolvedValue({
+			shopName: "Gestor Barbearia",
+			phone: "(11) 99999-9999",
+			address: "Rua Central, 100",
+			openingTime: "08:00",
+			closingTime: "18:00",
+			appointmentDuration: 30,
+			scheduleInterval: 30,
+			barberName: "Rafael",
+			barberPhotoUrl: "https://cdn.example.com/current-avatar.png",
+		});
+		storeMock.saveProfile.mockResolvedValue({
+			barberPhotoUrl: "https://cdn.example.com/current-avatar-edited.png",
+		});
+
+		render(
+			<MemoryRouter initialEntries={["/settings"]}>
+				<SettingsPage />
+			</MemoryRouter>,
+		);
+
+		await screen.findByDisplayValue("Rafael");
+
+		fireEvent.click(
+			screen.getByRole("button", { name: "Editar enquadramento" }),
+		);
+
+		expect(await screen.findByText("Enquadramento da agenda")).toBeTruthy();
+		fireEvent.change(screen.getByLabelText("Zoom da foto"), {
+			target: { value: "1.4" },
+		});
+		fireEvent.click(
+			screen.getByRole("button", { name: "Salvar foto e alterações" }),
+		);
+
+		await waitFor(() => {
+			expect(storeMock.saveProfile).toHaveBeenCalledWith(
+				expect.objectContaining({
+					barberPhoto: expect.objectContaining({
+						dataUrl: "data:image/jpeg;base64,cropped-avatar",
+						fileName: "foto-atual-avatar.jpg",
+						mimeType: "image/jpeg",
+					}),
+				}),
+			);
+		});
 	});
 });
