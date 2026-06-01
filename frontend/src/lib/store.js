@@ -33,8 +33,139 @@ import {
 import { getFinancialSummary } from "@/lib/api/financial.api";
 
 const DEFAULT_TTL_MS = 60000;
+const PERSISTED_CACHE_MAX_AGE_MS = 1000 * 60 * 60 * 24 * 7;
+const CACHE_STORAGE_KEY = "gestor_barbearia_data_cache_v1";
 
 const cache = new Map();
+let activeCacheScope = "anonymous";
+let hydratedCacheScope = null;
+
+function getStorage() {
+	if (typeof window === "undefined") return null;
+	return window.localStorage;
+}
+
+function readPersistedCache() {
+	const storage = getStorage();
+	if (!storage) return { version: 1, scopes: {} };
+
+	try {
+		const parsed = JSON.parse(storage.getItem(CACHE_STORAGE_KEY) || "");
+		if (!parsed || typeof parsed !== "object") return { version: 1, scopes: {} };
+		return {
+			version: 1,
+			scopes:
+				parsed.scopes && typeof parsed.scopes === "object" ?
+					parsed.scopes
+				:	{},
+		};
+	} catch {
+		return { version: 1, scopes: {} };
+	}
+}
+
+function writePersistedCache(payload) {
+	const storage = getStorage();
+	if (!storage) return;
+
+	try {
+		storage.setItem(CACHE_STORAGE_KEY, JSON.stringify(payload));
+	} catch {
+		// Se o navegador negar quota, o cache em memoria continua funcionando.
+	}
+}
+
+function getCacheScopeFromUser(user) {
+	if (!user?.id) return "anonymous";
+	return [
+		"user",
+		user.id,
+		"shop",
+		user.barbearia_id || "none",
+		"barber",
+		user.barbeiro_id || "none",
+	].join(":");
+}
+
+function pruneScopeEntries(scopeEntries = {}) {
+	const now = Date.now();
+	return Object.fromEntries(
+		Object.entries(scopeEntries).filter(([, entry]) => {
+			return (
+				entry &&
+				entry.data !== undefined &&
+				Number.isFinite(entry.updatedAt) &&
+				now - entry.updatedAt <= PERSISTED_CACHE_MAX_AGE_MS
+			);
+		}),
+	);
+}
+
+function persistCacheEntry(key, data, updatedAt) {
+	const persisted = readPersistedCache();
+	const currentScope = pruneScopeEntries(persisted.scopes[activeCacheScope]);
+	persisted.scopes[activeCacheScope] = {
+		...currentScope,
+		[key]: {
+			data: normalizeCacheValue(data),
+			updatedAt,
+		},
+	};
+	writePersistedCache(persisted);
+}
+
+function removePersistedCacheEntry(match) {
+	const persisted = readPersistedCache();
+	const currentScope = persisted.scopes[activeCacheScope];
+	if (!currentScope) return;
+
+	for (const key of Object.keys(currentScope)) {
+		if (typeof match === "string" ? key.startsWith(match) : match(key)) {
+			delete currentScope[key];
+		}
+	}
+
+	persisted.scopes[activeCacheScope] = pruneScopeEntries(currentScope);
+	writePersistedCache(persisted);
+}
+
+function clearPersistedScope(scope = activeCacheScope) {
+	const persisted = readPersistedCache();
+	if (!persisted.scopes[scope]) return;
+	delete persisted.scopes[scope];
+	writePersistedCache(persisted);
+}
+
+function hydratePersistentCache() {
+	if (hydratedCacheScope === activeCacheScope) return;
+	hydratedCacheScope = activeCacheScope;
+
+	const persisted = readPersistedCache();
+	const currentScope = pruneScopeEntries(persisted.scopes[activeCacheScope]);
+	for (const [key, entry] of Object.entries(currentScope)) {
+		cache.set(key, {
+			data: normalizeCacheValue(entry.data),
+			updatedAt: entry.updatedAt,
+			promise: null,
+		});
+	}
+
+	if (persisted.scopes[activeCacheScope]) {
+		persisted.scopes[activeCacheScope] = currentScope;
+		writePersistedCache(persisted);
+	}
+}
+
+export function configureAppDataCache(user) {
+	const nextScope = getCacheScopeFromUser(user);
+	if (nextScope === activeCacheScope && hydratedCacheScope === activeCacheScope) {
+		return;
+	}
+
+	activeCacheScope = nextScope;
+	cache.clear();
+	hydratePersistentCache();
+}
 
 function normalizeCacheValue(value) {
 	if (Array.isArray(value)) return [...value];
@@ -54,11 +185,13 @@ function makeStableKey(prefix, params = {}) {
 }
 
 function readCache(key) {
+	hydratePersistentCache();
 	const entry = cache.get(key);
 	return entry?.data === undefined ? undefined : normalizeCacheValue(entry.data);
 }
 
 function hasFreshCache(key, ttlMs = DEFAULT_TTL_MS) {
+	hydratePersistentCache();
 	const entry = cache.get(key);
 	return Boolean(
 		entry?.data !== undefined && Date.now() - entry.updatedAt < ttlMs,
@@ -66,11 +199,13 @@ function hasFreshCache(key, ttlMs = DEFAULT_TTL_MS) {
 }
 
 function writeCache(key, data) {
+	const updatedAt = Date.now();
 	cache.set(key, {
 		data: normalizeCacheValue(data),
-		updatedAt: Date.now(),
+		updatedAt,
 		promise: null,
 	});
+	persistCacheEntry(key, data, updatedAt);
 	return readCache(key);
 }
 
@@ -80,13 +215,17 @@ function invalidateCache(match) {
 			cache.delete(key);
 		}
 	}
+	removePersistedCacheEntry(match);
 }
 
 export function clearAppDataCache() {
 	cache.clear();
+	clearPersistedScope();
+	hydratedCacheScope = null;
 }
 
 async function loadCached(key, fetcher, options = {}) {
+	hydratePersistentCache();
 	const { force = false, ttlMs = DEFAULT_TTL_MS } = options;
 	const entry = cache.get(key);
 
@@ -505,9 +644,12 @@ export function isToday(date) {
 export async function clearAllData() {
 	await resetAllData();
 	clearAppDataCache();
-	localStorage.removeItem(APPT_KEY);
-	localStorage.removeItem(SVC_KEY);
-	localStorage.removeItem(PROD_KEY);
-	localStorage.removeItem(EXP_KEY);
-	localStorage.removeItem(PROFILE_KEY);
+	const storage = getStorage();
+	if (!storage) return;
+	storage.removeItem(APPT_KEY);
+	storage.removeItem(SVC_KEY);
+	storage.removeItem(PROD_KEY);
+	storage.removeItem(EXP_KEY);
+	storage.removeItem(PROFILE_KEY);
+	storage.removeItem(CACHE_STORAGE_KEY);
 }

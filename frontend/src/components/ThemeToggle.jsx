@@ -66,9 +66,12 @@ export function ThemeToggle({ className = "" }) {
 		const handleThemeChange = (event) => {
 			if (event.detail?.theme) setTheme(event.detail.theme);
 		};
-		window.addEventListener("kash-theme-change", handleThemeChange);
+		window.addEventListener("gestor-barbearia-theme-change", handleThemeChange);
 		return () =>
-			window.removeEventListener("kash-theme-change", handleThemeChange);
+			window.removeEventListener(
+				"gestor-barbearia-theme-change",
+				handleThemeChange,
+			);
 	}, []);
 
 	const toggleTheme = () => {
@@ -81,7 +84,9 @@ export function ThemeToggle({ className = "" }) {
 		applyTheme(nextTheme);
 		setTheme(nextTheme);
 		window.dispatchEvent(
-			new CustomEvent("kash-theme-change", { detail: { theme: nextTheme } }),
+			new CustomEvent("gestor-barbearia-theme-change", {
+				detail: { theme: nextTheme },
+			}),
 		);
 	};
 

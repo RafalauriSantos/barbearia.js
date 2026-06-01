@@ -14,30 +14,82 @@ import {
 	verifyEmailCode as verifyEmailCodeRequest,
 	acceptInvite as acceptInviteRequest,
 } from "@/lib/api/auth.api";
-import { clearAppDataCache, prefetchAppData } from "@/lib/store";
+import {
+	clearAppDataCache,
+	configureAppDataCache,
+	prefetchAppData,
+} from "@/lib/store";
 
 const AuthContext = createContext(null);
+const AUTH_USER_SNAPSHOT_KEY = "gestor_barbearia_auth_user_v1";
+
+function getStorage() {
+	if (typeof window === "undefined") return null;
+	return window.localStorage;
+}
+
+function readUserSnapshot() {
+	const token = getAccessToken();
+	if (!token) return null;
+
+	try {
+		const user = JSON.parse(
+			getStorage()?.getItem(AUTH_USER_SNAPSHOT_KEY) || "null",
+		);
+		return user?.id ? user : null;
+	} catch {
+		return null;
+	}
+}
+
+function writeUserSnapshot(user) {
+	const storage = getStorage();
+	if (!storage) return;
+
+	if (!user?.id) {
+		storage.removeItem(AUTH_USER_SNAPSHOT_KEY);
+		return;
+	}
+
+	storage.setItem(AUTH_USER_SNAPSHOT_KEY, JSON.stringify(user));
+}
+
+function clearUserSnapshot() {
+	getStorage()?.removeItem(AUTH_USER_SNAPSHOT_KEY);
+}
 
 export function AuthProvider({ children }) {
-	const [user, setUser] = useState(null);
-	const [isLoading, setIsLoading] = useState(true);
+	const [user, setUser] = useState(() => {
+		const cachedUser = readUserSnapshot();
+		if (cachedUser) {
+			configureAppDataCache(cachedUser);
+		}
+		return cachedUser;
+	});
+	const [isLoading, setIsLoading] = useState(() => {
+		return Boolean(getAccessToken() && !readUserSnapshot());
+	});
 
 	const loadCurrentUser = useCallback(async () => {
 		const token = getAccessToken();
 		if (!token) {
 			setUser(null);
+			clearUserSnapshot();
 			setIsLoading(false);
 			return null;
 		}
 
 		try {
 			const currentUser = await fetchCurrentUser();
+			configureAppDataCache(currentUser);
+			writeUserSnapshot(currentUser);
 			setUser(currentUser);
 			void prefetchAppData(currentUser);
 			return currentUser;
 		} catch {
 			clearAppDataCache();
 			clearSessionTokens();
+			clearUserSnapshot();
 			setUser(null);
 			return null;
 		} finally {
@@ -52,8 +104,11 @@ export function AuthProvider({ children }) {
 	const login = useCallback(async ({ email, password }) => {
 		const session = await loginRequest({ email, password });
 		clearAppDataCache();
+		clearUserSnapshot();
 		setSessionTokens(session);
 		const currentUser = await fetchCurrentUser();
+		configureAppDataCache(currentUser);
+		writeUserSnapshot(currentUser);
 		setUser(currentUser);
 		void prefetchAppData(currentUser);
 		return currentUser;
@@ -73,8 +128,11 @@ export function AuthProvider({ children }) {
 		}
 
 		clearAppDataCache();
+		clearUserSnapshot();
 		setSessionTokens(session);
 		const currentUser = await fetchCurrentUser();
+		configureAppDataCache(currentUser);
+		writeUserSnapshot(currentUser);
 		setUser(currentUser);
 		void prefetchAppData(currentUser);
 		return { ...session, user: currentUser };
@@ -83,8 +141,11 @@ export function AuthProvider({ children }) {
 	const acceptInvite = useCallback(async ({ token, password, nome }) => {
 		const session = await acceptInviteRequest(token, { password, nome });
 		clearAppDataCache();
+		clearUserSnapshot();
 		setSessionTokens(session);
 		const currentUser = await fetchCurrentUser();
+		configureAppDataCache(currentUser);
+		writeUserSnapshot(currentUser);
 		setUser(currentUser);
 		void prefetchAppData(currentUser);
 		return currentUser;
@@ -93,6 +154,7 @@ export function AuthProvider({ children }) {
 	const logout = useCallback(() => {
 		clearAppDataCache();
 		clearSessionTokens();
+		clearUserSnapshot();
 		setUser(null);
 	}, []);
 
