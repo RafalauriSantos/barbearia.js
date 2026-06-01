@@ -9,7 +9,7 @@ Projeto full stack para gestao de barbearia: agenda diaria, servicos, produtos, 
 - Catalogo de servicos e produtos
 - Despesas e resumo financeiro diario
 - Equipe, convites e separacao de dados por barbearia
-- Foto de perfil dos barbeiros na agenda
+- Foto de perfil dos barbeiros na agenda, com editor de enquadramento
 - Cache persistente, prefetch e abertura com sessao cacheada para reduzir carregamentos visiveis
 - Backend com API REST e validacao de ambiente
 
@@ -147,5 +147,6 @@ Smoke test com backend e frontend ja rodando:
 - CORS e `APP_URL` podem ser ajustados no .env do backend.
 - O frontend aplica viewport dinamico por `visualViewport`, fallback `100svh` e safe area no iOS Safari.
 - O frontend mantem cache persistente por usuario dos dados operacionais, abre com dados salvos quando possivel e atualiza em segundo plano para reduzir loading entre abas.
+- A foto do barbeiro aceita imagens de origem ate 20MB, abre um editor de enquadramento e comprime a versao final antes de enviar para a API.
 - Em producao gratuita no Render, o envio de email deve usar Brevo API
   (`EMAIL_PROVIDER=brevo`) em vez de SMTP.

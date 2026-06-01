@@ -64,6 +64,7 @@ O projeto ja tem uma base full stack funcional:
 - envio de email preparado para Brevo API, com SMTP apenas como fallback;
 - UX ajustada para mobile/iOS Safari e cold start do Render Free.
 - cache persistente, cache em memoria e prefetch no frontend para reduzir loading perceptivel ao abrir o app e trocar entre Agenda, Catalogo, Despesas, Financeiro, Equipe e Configuracoes.
+- foto de perfil do barbeiro com upload, compressao, editor de enquadramento, botao para editar foto ja salva e painel mobile dedicado.
 
 ### Validacao mais recente
 
@@ -71,7 +72,7 @@ Rodado em 2026-06-01:
 
 - Backend `npm test`: passou.
 - Frontend `npm run lint`: passou.
-- Frontend `npm test`: passou, 8 arquivos de teste e 16 testes.
+- Frontend `npm test`: passou, 8 arquivos de teste e 17 testes.
 - Frontend `npm run build:artifact`: passou.
 
 Historico de producao validado anteriormente:
@@ -103,6 +104,10 @@ Atualizacoes de 2026-06-01:
 - Seguranca/isolamento local: cache persistente usa escopo por usuario, barbearia e barbeiro, e e limpo em logout, troca de sessao ou erro de sessao.
 - Tema: evento interno de tema alinhado ao nome `Gestor Barbearia`.
 - Commit publicado: `d43b818 Persiste cache para acelerar carregamento`.
+- Perfil/foto: editor de foto virou painel dedicado dentro de Configuracoes, com saida clara, salvar fixo no rodape, troca de foto sem quebrar o layout e botao `Editar enquadramento` para reajustar a foto ja salva.
+- Upload de foto: o frontend aceita imagens de origem ate 20MB, bloqueia SVG, comprime o recorte final para JPEG antes de enviar e mantem o limite final da API em 2MB.
+- Testes: `SettingsPage.test.jsx` cobre upload acima de 2MB e edicao de enquadramento da foto ja salva sem novo upload.
+- Commit publicado: `e21ef75 Melhora editor de foto do perfil`.
 
 ### Worktree observado
 
@@ -246,6 +251,7 @@ Ponto importante:
 - `apiClient` usa timeout configuravel por `VITE_API_TIMEOUT_MS` e faz warmup de `/health` para reduzir o impacto do cold start do Render Free.
 - apos login, verificacao de codigo, aceite de convite ou recuperacao de sessao, o frontend configura o escopo do cache e faz prefetch de perfil, agenda do dia, catalogo, despesas, financeiro e equipe.
 - as telas principais usam o dado em cache imediatamente quando existe, inclusive apos reabrir o app, e atualizam em segundo plano com `force: true`.
+- a tela de Configuracoes permite trocar foto, editar o enquadramento da foto ja salva e salvar o recorte final comprimido para a API.
 
 ## 5. Status por Area
 
@@ -498,7 +504,9 @@ Feito:
 - salva nome da barbearia e nome do barbeiro quando ha contexto;
 - salva foto de perfil do barbeiro via Supabase Storage;
 - frontend tem tela de settings;
-- teste frontend cobre configuracoes operacionais sem acoes dev-only e upload de foto;
+- foto de perfil aceita origem ate 20MB, abre editor dedicado com saida clara e salva recorte final comprimido;
+- botao `Editar enquadramento` permite reajustar a foto ja salva sem escolher outro arquivo;
+- teste frontend cobre configuracoes operacionais sem acoes dev-only, upload de foto e edicao de enquadramento da foto salva;
 - teste live por API validou persistencia de nome, horarios, duracao e intervalo.
 
 Falta:
@@ -568,6 +576,7 @@ Falta:
 - [x] Criacao de workspace/barbearia no cadastro.
 - [x] Agenda operacional como tela principal.
 - [x] Foto de perfil do barbeiro na Agenda e em Configuracoes.
+- [x] Editor de enquadramento da foto do barbeiro, incluindo foto ja salva.
 - [x] Catalogo de servicos/produtos com CRUD e validacao.
 - [x] Despesas reais com CRUD e validacao.
 - [x] Financeiro conectado a API.
@@ -591,6 +600,7 @@ Falta:
 - [x] Viewport/safe area ajustados para iOS Safari.
 - [x] Cache/prefetch no frontend para reduzir loading entre telas.
 - [x] Cache persistente por usuario e snapshot de sessao para abertura mais rapida.
+- [x] Upload de foto com compressao e painel mobile dedicado.
 
 ### Parcial
 
@@ -621,15 +631,17 @@ O proximo passo correto nao e criar tela nova.
 
 Ordem recomendada:
 
-1. aguardar/confirmar deploy automatico da Vercel do commit `d43b818`;
-2. testar no celular real uma segunda abertura do app e a troca entre Agenda, Catalogo, Custos, Caixa, Equipe e Configuracoes;
-3. configurar Brevo Free no Render com remetente verificado;
-4. fazer redeploy do backend;
-5. testar cadastro real em producao recebendo codigo por email;
-6. rodar smoke completo no app publicado;
-7. preparar roteiro de apresentacao.
+1. aguardar/confirmar deploy automatico da Vercel do commit `e21ef75`;
+2. testar no celular real o fluxo de Configuracoes > Trocar foto > ajustar enquadramento > salvar;
+3. testar no celular real o botao `Editar enquadramento` em uma foto ja salva;
+4. testar no celular real uma segunda abertura do app e a troca entre Agenda, Catalogo, Custos, Caixa, Equipe e Configuracoes;
+5. configurar Brevo Free no Render com remetente verificado;
+6. fazer redeploy do backend;
+7. testar cadastro real em producao recebendo codigo por email;
+8. rodar smoke completo no app publicado;
+9. preparar roteiro de apresentacao.
 
-Fluxo local, API, navegador, rotas internas de sistema e deploy base ja foram validados. A melhoria de performance percebida foi enviada ao GitHub e deve ser conferida no app publicado depois do deploy da Vercel. Em seguida, o foco e fechar o email gratuito de producao e ensaiar a demonstracao.
+Fluxo local, API, navegador, rotas internas de sistema e deploy base ja foram validados. As melhorias de performance percebida e editor de foto foram enviadas ao GitHub e devem ser conferidas no app publicado depois do deploy da Vercel. Em seguida, o foco e fechar o email gratuito de producao e ensaiar a demonstracao.
 
 ## 8. Roadmap por Prioridade
 
@@ -741,6 +753,7 @@ O MVP do TCC pode ser considerado pronto quando:
 - editar e excluir agenda/catalogo/despesas sao validados manualmente ou por E2E;
 - reload mantem ou recupera sessao corretamente;
 - segunda abertura do app com usuario ja autenticado mostra o shell rapidamente e atualiza dados em segundo plano;
+- foto do barbeiro pode ser enviada, ajustada, salva e reeditada em Configuracoes;
 - equipe lista barbeiros e convite funciona;
 - usuario A nao enxerga dados do usuario B;
 - fluxo principal passa no navegador;
