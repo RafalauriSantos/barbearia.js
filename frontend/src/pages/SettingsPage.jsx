@@ -139,13 +139,13 @@ async function createCroppedAvatarUpload({ draft, focus, zoom }) {
 
 function SettingSection({ eyebrow, title, children, action }) {
 	return (
-		<section className="rounded-lg border border-border bg-card p-4">
+		<section className="border-t border-border py-5 first:border-t-0 first:pt-0">
 			<div className="flex items-start justify-between gap-3">
 				<div className="min-w-0">
 					<p className="font-mono-ui text-[10px] uppercase text-foreground-faint">
 						{eyebrow}
 					</p>
-					<h2 className="mt-1 font-client text-lg leading-tight text-foreground">
+					<h2 className="mt-1 font-client text-base leading-tight text-foreground">
 						{title}
 					</h2>
 				</div>
@@ -158,15 +158,15 @@ function SettingSection({ eyebrow, title, children, action }) {
 
 function Field({ id, label, children, hint }) {
 	return (
-		<div>
+		<div className="min-w-0">
 			<label
 				htmlFor={id}
-				className="block font-mono-ui text-[10px] uppercase text-foreground-faint">
+				className="block font-mono-ui text-[10px] uppercase tracking-[0.02em] text-foreground-faint">
 				{label}
 			</label>
-			<div className="mt-1">{children}</div>
+			<div className="mt-2">{children}</div>
 			{hint && (
-				<p className="mt-1 font-client text-xs leading-snug text-foreground-faint">
+				<p className="mt-2 font-client text-xs leading-snug text-foreground-faint">
 					{hint}
 				</p>
 			)}
@@ -176,7 +176,7 @@ function Field({ id, label, children, hint }) {
 
 function ReadOnlyRow({ label, value }) {
 	return (
-		<div className="border-t border-border pt-3 first:border-t-0 first:pt-0">
+		<div className="min-w-0 rounded-md border border-border bg-background-deep px-3 py-3">
 			<p className="font-mono-ui text-[10px] uppercase text-foreground-faint">
 				{label}
 			</p>
@@ -184,6 +184,14 @@ function ReadOnlyRow({ label, value }) {
 				{value}
 			</p>
 		</div>
+	);
+}
+
+function SettingsPill({ children }) {
+	return (
+		<span className="inline-flex min-h-7 items-center rounded-full border border-border bg-background-deep px-3 font-mono-ui text-[10px] uppercase text-foreground-faint">
+			{children}
+		</span>
 	);
 }
 
@@ -465,7 +473,7 @@ export default function SettingsPage() {
 	};
 
 	const inputClass =
-		"w-full rounded-md border border-border bg-secondary px-3 py-3 text-sm text-foreground transition-colors focus-visible:border-foreground disabled:opacity-60";
+		"w-full rounded-md border border-border bg-background-deep px-3 py-3 font-client text-sm text-foreground outline-none transition-colors placeholder:text-foreground-faint focus-visible:border-[#86efac] disabled:opacity-60";
 	const avatarPreviewUrl =
 		barberPhotoDraft?.dataUrl || (!removeBarberPhoto ? barberPhotoUrl : "");
 	const avatarImageStyle =
@@ -517,6 +525,108 @@ export default function SettingsPage() {
 							</p>
 						)}
 					</div>
+
+					<input
+						id="barberPhoto"
+						name="barberPhoto"
+						type="file"
+						accept={AVATAR_INPUT_ACCEPT}
+						aria-label="Foto da agenda"
+						onChange={handlePhotoChange}
+						className="sr-only"
+						disabled={isSaving || isLoading}
+					/>
+
+					<section className="rounded-lg border border-border bg-card px-4 py-4">
+						<div className="flex items-start gap-4">
+							<div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-full border border-[#4ade80]/35 bg-background-deep text-base font-semibold text-[#86efac] shadow-[0_0_0_6px_rgba(74,222,128,0.05)]">
+								{avatarPreviewUrl ?
+									<img
+										src={avatarPreviewUrl}
+										alt={barberName || "Foto do perfil"}
+										className="h-full w-full object-cover"
+										style={avatarImageStyle}
+									/>
+								:	<span>{getInitials(barberName || user?.email)}</span>}
+							</div>
+
+							<div className="min-w-0 flex-1">
+								<p className="font-mono-ui text-[10px] uppercase text-[#86efac]">
+									Perfil da agenda
+								</p>
+								<h2 className="mt-1 truncate font-client text-xl leading-tight text-foreground">
+									{barberName || user?.email || "Seu perfil"}
+								</h2>
+								<div className="mt-3 flex flex-wrap gap-2">
+									<SettingsPill>
+										{isAdmin ? "Dono da barbearia" : "Barbeiro"}
+									</SettingsPill>
+									<SettingsPill>
+										{shopName || "Gestor Barbearia"}
+									</SettingsPill>
+								</div>
+							</div>
+						</div>
+
+						<p className="mt-4 font-client text-sm leading-snug text-foreground-faint">
+							A foto aparece no topo da sua agenda e nos avatares da equipe.
+							O app aceita fotos do celular, ajusta o enquadramento e comprime
+							antes de salvar.
+						</p>
+
+						<div className="mt-4 flex flex-wrap gap-2">
+							<label
+								htmlFor="barberPhoto"
+								className="flex min-h-11 cursor-pointer items-center justify-center rounded-md border border-[#4ade80]/35 bg-[#052e1b]/35 px-4 font-mono-ui text-[11px] text-[#86efac] transition-colors hover:bg-[#064e3b]/45">
+								Trocar foto
+							</label>
+							{avatarPreviewUrl && (
+								<button
+									type="button"
+									onClick={handleEditCurrentPhoto}
+									disabled={isSaving || isLoading}
+									className="min-h-11 rounded-md border border-border bg-background-deep px-4 font-mono-ui text-[11px] text-foreground transition-colors hover:bg-secondary disabled:opacity-60">
+									Editar enquadramento
+								</button>
+							)}
+							{avatarPreviewUrl && (
+								<button
+									type="button"
+									onClick={handleRemovePhoto}
+									disabled={isSaving || isLoading}
+									className="min-h-11 rounded-md border border-border px-4 font-mono-ui text-[11px] text-foreground-faint transition-colors hover:text-foreground disabled:opacity-60">
+									Remover
+								</button>
+							)}
+						</div>
+					</section>
+
+					<SettingSection eyebrow="Minha conta" title="Perfil de acesso">
+						<Field id="barberName" label="Nome na agenda">
+							<input
+								id="barberName"
+								name="barberName"
+								type="text"
+								autoComplete="name"
+								required
+								value={barberName}
+								onChange={(event) => setBarberName(event.target.value)}
+								className={inputClass}
+								disabled={isSaving || isLoading}
+							/>
+						</Field>
+
+						<div className="grid gap-3 md:grid-cols-2">
+							<ReadOnlyRow
+								label="Email"
+								value={user?.email || "Email nao informado"}
+							/>
+							<ReadOnlyRow
+								label="Cargo"
+								value={isAdmin ? "Dono da barbearia" : "Barbeiro"}
+							/>
+						</div>
+					</SettingSection>
 
 					{isAdmin ?
 						<SettingSection eyebrow="Barbearia" title="Dados da loja">
@@ -661,108 +771,13 @@ export default function SettingsPage() {
 						}
 					</SettingSection>
 
-					<SettingSection eyebrow="Minha conta" title="Perfil de acesso">
-						<div className="rounded-lg border border-border bg-background-deep p-3">
-							<input
-								id="barberPhoto"
-								name="barberPhoto"
-								type="file"
-								accept={AVATAR_INPUT_ACCEPT}
-								aria-label="Foto da agenda"
-								onChange={handlePhotoChange}
-								className="sr-only"
-								disabled={isSaving || isLoading}
-							/>
-							<div className="flex items-center gap-4">
-								<div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-full border border-[#4ade80]/35 bg-card text-sm font-semibold text-[#86efac]">
-									{avatarPreviewUrl ?
-										<img
-											src={avatarPreviewUrl}
-											alt={barberName || "Foto do perfil"}
-											className="h-full w-full object-cover"
-											style={avatarImageStyle}
-										/>
-									:	<span>{getInitials(barberName || user?.email)}</span>}
-								</div>
-								<div className="min-w-0 flex-1">
-									<p className="font-mono-ui text-[10px] uppercase text-foreground-faint">
-										Foto da agenda
-									</p>
-									<p className="mt-1 font-client text-sm leading-snug text-foreground">
-										{barberPhotoDraft ?
-											"O editor de foto esta aberto."
-										:	"Aparece no topo da sua agenda e nos avatares da equipe."}
-									</p>
-									{!barberPhotoDraft && (
-										<p className="mt-1 font-client text-xs leading-snug text-foreground-faint">
-											Aceita fotos do celular. O app comprime a imagem ao salvar.
-										</p>
-									)}
-									<div
-										className={
-											barberPhotoDraft ? "hidden" : "mt-3 flex flex-wrap gap-2"
-										}>
-										<label
-											htmlFor="barberPhoto"
-											className="cursor-pointer rounded-md border border-border bg-secondary px-3 py-2 font-mono-ui text-[11px] text-foreground transition-colors hover:bg-card">
-											Trocar foto
-										</label>
-										{avatarPreviewUrl && (
-											<>
-												<button
-													type="button"
-													onClick={handleEditCurrentPhoto}
-													disabled={isSaving || isLoading}
-													className="rounded-md border border-[#4ade80]/35 bg-[#052e1b]/35 px-3 py-2 font-mono-ui text-[11px] text-[#86efac] transition-colors hover:bg-[#064e3b]/45 disabled:opacity-60">
-													Editar enquadramento
-												</button>
-												<button
-													type="button"
-													onClick={handleRemovePhoto}
-													disabled={isSaving || isLoading}
-													className="rounded-md border border-border px-3 py-2 font-mono-ui text-[11px] text-foreground-faint transition-colors hover:text-foreground disabled:opacity-60">
-													Remover
-												</button>
-											</>
-										)}
-									</div>
-								</div>
-							</div>
-						</div>
-
-						<Field id="barberName" label="Nome na agenda">
-							<input
-								id="barberName"
-								name="barberName"
-								type="text"
-								autoComplete="name"
-								required
-								value={barberName}
-								onChange={(event) => setBarberName(event.target.value)}
-								className={inputClass}
-								disabled={isSaving || isLoading}
-							/>
-						</Field>
-
-						<div className="grid gap-3 md:grid-cols-2">
-							<ReadOnlyRow
-								label="Email"
-								value={user?.email || "Email nao informado"}
-							/>
-							<ReadOnlyRow
-								label="Cargo"
-								value={isAdmin ? "Dono da barbearia" : "Barbeiro"}
-							/>
-						</div>
-					</SettingSection>
-
 					<SettingSection eyebrow="Acesso" title="Sessão e permissões">
 						<div className="grid gap-3 md:grid-cols-3">
 							<button
 								type="button"
 								onClick={() => navigate("/forgot-password")}
 								disabled={isSaving}
-								className="rounded-md border border-border bg-background-deep px-4 py-3 font-mono-ui text-sm text-foreground transition-colors hover:bg-secondary disabled:opacity-60">
+								className="min-h-12 rounded-md border border-border bg-background-deep px-4 font-mono-ui text-sm text-foreground transition-colors hover:bg-secondary disabled:opacity-60">
 								Alterar senha
 							</button>
 
@@ -771,7 +786,7 @@ export default function SettingsPage() {
 									type="button"
 									onClick={() => navigate("/team")}
 									disabled={isSaving}
-									className="rounded-md border border-border bg-background-deep px-4 py-3 font-mono-ui text-sm text-foreground transition-colors hover:bg-secondary disabled:opacity-60">
+									className="min-h-12 rounded-md border border-border bg-background-deep px-4 font-mono-ui text-sm text-foreground transition-colors hover:bg-secondary disabled:opacity-60">
 									Equipe
 								</button>
 							)}
@@ -780,7 +795,7 @@ export default function SettingsPage() {
 								type="button"
 								onClick={handleLogout}
 								disabled={isSaving}
-								className="rounded-md border border-border bg-background-deep px-4 py-3 font-mono-ui text-sm text-foreground transition-colors hover:bg-secondary disabled:opacity-60">
+								className="min-h-12 rounded-md border border-overdue/30 bg-overdue/10 px-4 font-mono-ui text-sm text-overdue transition-colors hover:bg-overdue/15 disabled:opacity-60">
 								Sair da conta
 							</button>
 						</div>
