@@ -85,7 +85,7 @@ describe("SettingsPage", () => {
 		);
 
 		expect(await screen.findByDisplayValue("Gestor Barbearia")).toBeTruthy();
-		expect(screen.getByText("Padrões de atendimento")).toBeTruthy();
+		expect(screen.getByText("Horários")).toBeTruthy();
 		expect(screen.getByLabelText("Telefone")).toBeTruthy();
 		expect(screen.queryByText("Email de teste")).toBeNull();
 		expect(screen.queryByText("Resetar dados")).toBeNull();
@@ -203,9 +203,7 @@ describe("SettingsPage", () => {
 
 		await screen.findByDisplayValue("Rafael");
 
-		fireEvent.click(
-			screen.getByRole("button", { name: "Editar enquadramento" }),
-		);
+		fireEvent.click(screen.getByRole("button", { name: "Recortar" }));
 
 		expect(await screen.findByText("Enquadramento da agenda")).toBeTruthy();
 		fireEvent.change(screen.getByLabelText("Zoom da foto"), {

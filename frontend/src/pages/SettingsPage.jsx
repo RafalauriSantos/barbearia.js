@@ -1,11 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
-import {
-	IconButton,
-	Notice,
-	ScreenHeader,
-} from "@/components/ScreenPrimitives";
+import { Notice } from "@/components/ScreenPrimitives";
 import { getCachedProfile, loadProfile, saveProfile } from "@/lib/store";
 
 const DEFAULT_OPENING_TIME = "08:00";
@@ -137,59 +133,117 @@ async function createCroppedAvatarUpload({ draft, focus, zoom }) {
 	throw new Error("A foto ajustada ficou acima de 2MB.");
 }
 
-function SettingSection({ eyebrow, title, children, action }) {
+function SettingsSection({ label, children }) {
 	return (
-		<section className="border-t border-border py-5 first:border-t-0 first:pt-0">
-			<div className="flex items-start justify-between gap-3">
-				<div className="min-w-0">
-					<p className="font-mono-ui text-[10px] uppercase text-foreground-faint">
-						{eyebrow}
-					</p>
-					<h2 className="mt-1 font-client text-base leading-tight text-foreground">
-						{title}
-					</h2>
-				</div>
-				{action}
-			</div>
-			<div className="mt-4 space-y-4">{children}</div>
+		<section>
+			<p className="mb-2 mt-5 px-5 font-client text-[10px] font-semibold uppercase tracking-[1px] text-[#5F5E5A]">
+				{label}
+			</p>
+			{children}
 		</section>
 	);
 }
 
-function Field({ id, label, children, hint }) {
+function FieldGroup({ children }) {
 	return (
-		<div className="min-w-0">
-			<label
-				htmlFor={id}
-				className="block font-mono-ui text-[10px] uppercase tracking-[0.02em] text-foreground-faint">
-				{label}
-			</label>
-			<div className="mt-2">{children}</div>
-			{hint && (
-				<p className="mt-2 font-client text-xs leading-snug text-foreground-faint">
-					{hint}
-				</p>
-			)}
+		<div className="mx-5 overflow-hidden rounded-2xl border border-white/[0.07] bg-[#111110]">
+			{children}
 		</div>
 	);
 }
 
-function ReadOnlyRow({ label, value }) {
+function GroupItem({ children, className = "" }) {
 	return (
-		<div className="min-w-0 rounded-md border border-border bg-background-deep px-3 py-3">
-			<p className="font-mono-ui text-[10px] uppercase text-foreground-faint">
+		<div
+			className={`border-b border-white/[0.05] last:border-b-0 ${className}`}>
+			{children}
+		</div>
+	);
+}
+
+function GridPair({ children }) {
+	return (
+		<div className="grid grid-cols-2 divide-x divide-white/[0.05] border-b border-white/[0.05] last:border-b-0">
+			{children}
+		</div>
+	);
+}
+
+function VerticalField({ id, label, children, hint }) {
+	return (
+		<div className="flex min-w-0 flex-col gap-1 px-4 py-3.5">
+			<label
+				htmlFor={id}
+				className="font-client text-[11px] font-medium tracking-[0.2px] text-[#5F5E5A]">
+				{label}
+			</label>
+			{hint && (
+				<p className="font-client text-[11px] leading-snug text-[#3a3a38]">
+					{hint}
+				</p>
+			)}
+			{children}
+		</div>
+	);
+}
+
+function RowField({ id, label, hint, children }) {
+	return (
+		<div className="flex min-h-[58px] items-center justify-between gap-4 px-4 py-3.5">
+			<div className="min-w-0">
+				<label
+					htmlFor={id}
+					className="block font-client text-sm text-[#c8c8c2]">
+					{label}
+				</label>
+				{hint && (
+					<p className="mt-0.5 font-client text-[11px] leading-tight text-[#3a3a38]">
+						{hint}
+					</p>
+				)}
+			</div>
+			<div className="min-w-[90px] shrink-0 text-right">{children}</div>
+		</div>
+	);
+}
+
+function ReadOnlyCell({ label, value }) {
+	return (
+		<div className="flex min-w-0 flex-col gap-1 px-4 py-3.5">
+			<p className="font-client text-[11px] font-medium tracking-[0.2px] text-[#5F5E5A]">
 				{label}
 			</p>
-			<p className="mt-1 break-words font-client text-sm text-foreground">
+			<p className="break-words font-client text-[12px] text-[#e8e8e2]">
 				{value}
 			</p>
 		</div>
 	);
 }
 
-function SettingsPill({ children }) {
+function NavRow({ label, onClick, disabled }) {
 	return (
-		<span className="inline-flex min-h-7 items-center rounded-full border border-border bg-background-deep px-3 font-mono-ui text-[10px] uppercase text-foreground-faint">
+		<button
+			type="button"
+			onClick={onClick}
+			disabled={disabled}
+			className="flex min-h-[52px] w-full cursor-pointer items-center justify-between gap-4 px-4 py-3.5 text-left font-client text-sm text-[#c8c8c2] transition-colors hover:bg-white/[0.03] disabled:opacity-60">
+			<span>{label}</span>
+			<span aria-hidden="true" className="font-client text-lg leading-none text-[#3a3a38]">
+				›
+			</span>
+		</button>
+	);
+}
+
+function SettingsPill({ children, tone = "neutral" }) {
+	const tones = {
+		green: "border-[#1D9E75]/30 bg-[#1D9E75]/15 text-[#5DCAA5]",
+		neutral: "border-white/10 bg-white/[0.06] text-[#888780]",
+	};
+
+	return (
+		<span
+			className={`inline-flex items-center rounded-md border px-2 py-0.5 font-client text-[10px] font-medium uppercase tracking-wide ${tones[tone]}`}>
 			{children}
 		</span>
 	);
@@ -473,7 +527,9 @@ export default function SettingsPage() {
 	};
 
 	const inputClass =
-		"w-full rounded-md border border-border bg-background-deep px-3 py-3 font-client text-sm text-foreground outline-none transition-colors placeholder:text-foreground-faint focus-visible:border-[#86efac] disabled:opacity-60";
+		"w-full bg-transparent p-0 font-client text-sm text-[#e8e8e2] outline-none placeholder:text-[#3a3a38] disabled:text-[#5F5E5A]";
+	const rowInputClass =
+		"w-full bg-transparent p-0 text-right font-mono text-sm text-[#e8e8e2] outline-none disabled:text-[#5F5E5A]";
 	const avatarPreviewUrl =
 		barberPhotoDraft?.dataUrl || (!removeBarberPhoto ? barberPhotoUrl : "");
 	const avatarImageStyle =
@@ -490,23 +546,28 @@ export default function SettingsPage() {
 		: "Salvar alterações";
 
 	return (
-		<div className="app-shell flex flex-col overflow-hidden bg-background">
-			<ScreenHeader
-				eyebrow="Conta"
-				title="Configurações"
-				action={
-					<IconButton label="Voltar" onClick={() => navigate("/app")}>
-						‹
-					</IconButton>
-				}
-			/>
-
+		<div className="mx-auto flex h-[var(--app-height)] min-h-[100dvh] w-full max-w-[420px] flex-col overflow-hidden bg-[#0a0a0a] font-client text-[#f0f0ea]">
 			<form
 				id="settingsForm"
 				onSubmit={handleSaveProfile}
-				className="min-h-0 flex-1 overflow-y-auto px-4 pt-5 safe-bottom">
-				<div className="mx-auto max-w-3xl space-y-4">
-					<div aria-live="polite" className="space-y-3">
+				className="min-h-0 flex-1 overflow-y-auto pb-8">
+				<header className="mb-6 px-5 pt-5">
+					<div className="flex items-center gap-3">
+					<button
+						type="button"
+						onClick={() => navigate("/app")}
+						aria-label="Voltar"
+						title="Voltar"
+						className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] border border-white/10 bg-white/5 font-client text-lg leading-none text-[#a0a09a] transition-colors hover:bg-white/[0.08]">
+						‹
+					</button>
+					<h1 className="truncate font-client text-xl font-semibold leading-none tracking-tight text-[#f0f0ea]">
+						Configurações
+					</h1>
+				</div>
+				</header>
+
+				<div aria-live="polite" className="mx-5 space-y-3">
 						{errorMessage && (
 							<Notice tone="error" title="Erro">
 								{errorMessage}
@@ -520,11 +581,11 @@ export default function SettingsPage() {
 						)}
 
 						{isLoading && (
-							<p className="rounded-md border border-border bg-card px-3 py-2 font-mono-ui text-[10px] uppercase text-foreground-faint">
+							<p className="rounded-lg border border-white/[0.07] bg-[#111110] px-3 py-2 font-mono-ui text-[10px] uppercase text-[#5F5E5A]">
 								Atualizando perfil...
 							</p>
 						)}
-					</div>
+				</div>
 
 					<input
 						id="barberPhoto"
@@ -537,9 +598,8 @@ export default function SettingsPage() {
 						disabled={isSaving || isLoading}
 					/>
 
-					<section className="rounded-lg border border-border bg-card px-4 py-4">
-						<div className="flex items-start gap-4">
-							<div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-full border border-[#4ade80]/35 bg-background-deep text-base font-semibold text-[#86efac] shadow-[0_0_0_6px_rgba(74,222,128,0.05)]">
+				<section className="mx-5 flex items-center gap-4 rounded-2xl border border-white/[0.08] bg-[#111110] p-5">
+					<div className="flex h-[60px] w-[60px] shrink-0 items-center justify-center overflow-hidden rounded-full border-2 border-[#1D9E75]/30 bg-gradient-to-br from-[#1a3a2a] to-[#0f6e56] text-[22px] font-semibold text-[#5DCAA5]">
 								{avatarPreviewUrl ?
 									<img
 										src={avatarPreviewUrl}
@@ -548,36 +608,23 @@ export default function SettingsPage() {
 										style={avatarImageStyle}
 									/>
 								:	<span>{getInitials(barberName || user?.email)}</span>}
-							</div>
+					</div>
 
-							<div className="min-w-0 flex-1">
-								<p className="font-mono-ui text-[10px] uppercase text-[#86efac]">
-									Perfil da agenda
-								</p>
-								<h2 className="mt-1 truncate font-client text-xl leading-tight text-foreground">
-									{barberName || user?.email || "Seu perfil"}
-								</h2>
-								<div className="mt-3 flex flex-wrap gap-2">
-									<SettingsPill>
-										{isAdmin ? "Dono da barbearia" : "Barbeiro"}
-									</SettingsPill>
-									<SettingsPill>
-										{shopName || "Gestor Barbearia"}
-									</SettingsPill>
-								</div>
-							</div>
+					<div className="min-w-0 flex-1">
+						<h2 className="mb-1 truncate font-client text-base font-semibold leading-tight tracking-tight text-[#f0f0ea]">
+							{barberName || user?.email || "Seu perfil"}
+						</h2>
+						<div className="flex flex-wrap gap-1.5">
+							<SettingsPill tone="green">
+								{isAdmin ? "Dono da barbearia" : "Barbeiro"}
+							</SettingsPill>
+							<SettingsPill>{shopName || "Gestor Barbearia"}</SettingsPill>
 						</div>
 
-						<p className="mt-4 font-client text-sm leading-snug text-foreground-faint">
-							A foto aparece no topo da sua agenda e nos avatares da equipe.
-							O app aceita fotos do celular, ajusta o enquadramento e comprime
-							antes de salvar.
-						</p>
-
-						<div className="mt-4 flex flex-wrap gap-2">
+						<div className="mt-2 flex flex-wrap gap-1.5">
 							<label
 								htmlFor="barberPhoto"
-								className="flex min-h-11 cursor-pointer items-center justify-center rounded-md border border-[#4ade80]/35 bg-[#052e1b]/35 px-4 font-mono-ui text-[11px] text-[#86efac] transition-colors hover:bg-[#064e3b]/45">
+								className="cursor-pointer rounded-[7px] border border-white/[0.12] bg-white/5 px-2.5 py-1 font-client text-[11px] font-medium text-[#a0a09a] transition-colors hover:bg-white/[0.08] hover:text-[#f0f0ea]">
 								Trocar foto
 							</label>
 							{avatarPreviewUrl && (
@@ -585,8 +632,8 @@ export default function SettingsPage() {
 									type="button"
 									onClick={handleEditCurrentPhoto}
 									disabled={isSaving || isLoading}
-									className="min-h-11 rounded-md border border-border bg-background-deep px-4 font-mono-ui text-[11px] text-foreground transition-colors hover:bg-secondary disabled:opacity-60">
-									Editar enquadramento
+									className="rounded-[7px] border border-white/[0.12] bg-white/5 px-2.5 py-1 font-client text-[11px] font-medium text-[#a0a09a] transition-colors hover:bg-white/[0.08] hover:text-[#f0f0ea] disabled:opacity-60">
+									Recortar
 								</button>
 							)}
 							{avatarPreviewUrl && (
@@ -594,225 +641,264 @@ export default function SettingsPage() {
 									type="button"
 									onClick={handleRemovePhoto}
 									disabled={isSaving || isLoading}
-									className="min-h-11 rounded-md border border-border px-4 font-mono-ui text-[11px] text-foreground-faint transition-colors hover:text-foreground disabled:opacity-60">
+									className="rounded-[7px] border border-white/[0.12] bg-white/5 px-2.5 py-1 font-client text-[11px] font-medium text-[#a0a09a] transition-colors hover:bg-[#A32D2D]/15 hover:text-[#E24B4A] disabled:opacity-60">
 									Remover
 								</button>
 							)}
 						</div>
-					</section>
+					</div>
+				</section>
 
-					<SettingSection eyebrow="Minha conta" title="Perfil de acesso">
-						<Field id="barberName" label="Nome na agenda">
-							<input
-								id="barberName"
-								name="barberName"
-								type="text"
-								autoComplete="name"
-								required
-								value={barberName}
-								onChange={(event) => setBarberName(event.target.value)}
-								className={inputClass}
-								disabled={isSaving || isLoading}
-							/>
-						</Field>
-
-						<div className="grid gap-3 md:grid-cols-2">
-							<ReadOnlyRow
-								label="Email"
-								value={user?.email || "Email nao informado"}
-							/>
-							<ReadOnlyRow
-								label="Cargo"
-								value={isAdmin ? "Dono da barbearia" : "Barbeiro"}
-							/>
-						</div>
-					</SettingSection>
-
-					{isAdmin ?
-						<SettingSection eyebrow="Barbearia" title="Dados da loja">
-							<div className="grid gap-4 md:grid-cols-2">
-								<Field id="shopName" label="Nome da barbearia">
+					<SettingsSection label="Perfil">
+						<FieldGroup>
+							<GroupItem>
+								<VerticalField id="barberName" label="Nome na agenda">
 									<input
-										id="shopName"
-										name="shopName"
+										id="barberName"
+										name="barberName"
 										type="text"
-										autoComplete="organization"
+										autoComplete="name"
 										required
-										value={shopName}
-										onChange={(event) => setShopName(event.target.value)}
+										value={barberName}
+										onChange={(event) => setBarberName(event.target.value)}
 										className={inputClass}
 										disabled={isSaving || isLoading}
 									/>
-								</Field>
-
-								<Field id="phone" label="Telefone">
-									<input
-										id="phone"
-										name="phone"
-										type="tel"
-										inputMode="tel"
-										autoComplete="tel"
-										value={phone}
-										onChange={(event) => setPhone(event.target.value)}
-										className={inputClass}
-										disabled={isSaving || isLoading}
-									/>
-								</Field>
-							</div>
-
-							<Field id="address" label="Endereço">
-								<input
-									id="address"
-									name="address"
-									type="text"
-									autoComplete="street-address"
-									value={address}
-									onChange={(event) => setAddress(event.target.value)}
-									className={inputClass}
-									disabled={isSaving || isLoading}
+								</VerticalField>
+							</GroupItem>
+							<GridPair>
+								<ReadOnlyCell
+									label="Email"
+									value={user?.email || "Email nao informado"}
 								/>
-							</Field>
-						</SettingSection>
-					:	<SettingSection eyebrow="Barbearia" title="Dados da loja">
-							<ReadOnlyRow
-								label="Nome da barbearia"
-								value={shopName || "Gestor Barbearia"}
-							/>
-							<ReadOnlyRow
-								label="Permissão"
-								value="Somente o dono altera dados da barbearia."
-							/>
-						</SettingSection>
-					}
+								<ReadOnlyCell
+									label="Cargo"
+									value={isAdmin ? "Dono" : "Barbeiro"}
+								/>
+							</GridPair>
+						</FieldGroup>
+					</SettingsSection>
 
-					<SettingSection eyebrow="Agenda" title="Padrões de atendimento">
-						{isAdmin ?
-							<>
-								<div className="grid gap-4 md:grid-cols-2">
-									<Field id="openingTime" label="Abertura">
-										<input
+					<SettingsSection label="Barbearia">
+						<FieldGroup>
+							{isAdmin ?
+								<>
+									<GroupItem>
+										<VerticalField id="shopName" label="Nome da barbearia">
+											<input
+												id="shopName"
+												name="shopName"
+												type="text"
+												autoComplete="organization"
+												required
+												value={shopName}
+												onChange={(event) => setShopName(event.target.value)}
+												className={inputClass}
+												disabled={isSaving || isLoading}
+											/>
+										</VerticalField>
+									</GroupItem>
+									<GridPair>
+										<VerticalField id="phone" label="Telefone">
+											<input
+												id="phone"
+												name="phone"
+												type="tel"
+												inputMode="tel"
+												autoComplete="tel"
+												value={phone}
+												onChange={(event) => setPhone(event.target.value)}
+												className={inputClass}
+												disabled={isSaving || isLoading}
+											/>
+										</VerticalField>
+										<VerticalField id="address" label="Endereço">
+											<input
+												id="address"
+												name="address"
+												type="text"
+												autoComplete="street-address"
+												value={address}
+												onChange={(event) => setAddress(event.target.value)}
+												className={inputClass}
+												disabled={isSaving || isLoading}
+											/>
+										</VerticalField>
+									</GridPair>
+								</>
+							:	<>
+									<GroupItem>
+										<ReadOnlyCell
+											label="Nome da barbearia"
+											value={shopName || "Gestor Barbearia"}
+										/>
+									</GroupItem>
+									<ReadOnlyCell
+										label="Permissão"
+										value="Somente o dono altera dados da barbearia."
+									/>
+								</>
+							}
+						</FieldGroup>
+					</SettingsSection>
+
+					<SettingsSection label="Horários">
+						<FieldGroup>
+							{isAdmin ?
+								<>
+									<GroupItem>
+										<RowField
 											id="openingTime"
-											name="openingTime"
-											type="time"
-											value={openingTime}
-											onChange={(event) => setOpeningTime(event.target.value)}
-											className={inputClass}
-											disabled={isSaving || isLoading}
-										/>
-									</Field>
-
-									<Field id="closingTime" label="Fechamento">
-										<input
+											label="Abertura"
+											hint="Primeiro horário disponível.">
+											<input
+												id="openingTime"
+												name="openingTime"
+												type="time"
+												value={openingTime}
+												onChange={(event) =>
+													setOpeningTime(event.target.value)
+												}
+												className={rowInputClass}
+												disabled={isSaving || isLoading}
+											/>
+										</RowField>
+									</GroupItem>
+									<GroupItem>
+										<RowField
 											id="closingTime"
-											name="closingTime"
-											type="time"
-											value={closingTime}
-											onChange={(event) => setClosingTime(event.target.value)}
-											className={inputClass}
-											disabled={isSaving || isLoading}
-										/>
-									</Field>
-								</div>
-
-								<div className="grid gap-4 md:grid-cols-2">
-									<Field
-										id="appointmentDuration"
-										label="Duração padrão"
-										hint="Tempo médio de um atendimento em minutos.">
-										<input
+											label="Fechamento"
+											hint="Último horário de operação.">
+											<input
+												id="closingTime"
+												name="closingTime"
+												type="time"
+												value={closingTime}
+												onChange={(event) =>
+													setClosingTime(event.target.value)
+												}
+												className={rowInputClass}
+												disabled={isSaving || isLoading}
+											/>
+										</RowField>
+									</GroupItem>
+									<GridPair>
+										<VerticalField
 											id="appointmentDuration"
-											name="appointmentDuration"
-											type="number"
-											inputMode="numeric"
-											min="5"
-											max="480"
-											step="5"
-											value={appointmentDuration}
-											onChange={(event) =>
-												setAppointmentDuration(event.target.value)
-											}
-											className={inputClass}
-											disabled={isSaving || isLoading}
-										/>
-									</Field>
+											label="Duração padrão"
+											hint="Minutos">
+											<input
+												id="appointmentDuration"
+												name="appointmentDuration"
+												type="number"
+												inputMode="numeric"
+												min="5"
+												max="480"
+												step="5"
+												value={appointmentDuration}
+												onChange={(event) =>
+													setAppointmentDuration(event.target.value)
+												}
+												className={inputClass}
+												disabled={isSaving || isLoading}
+											/>
+										</VerticalField>
 
-									<Field
-										id="scheduleInterval"
-										label="Intervalo da agenda"
-										hint="Espaço usado para organizar os horários.">
-										<input
+										<VerticalField
 											id="scheduleInterval"
-											name="scheduleInterval"
-											type="number"
-											inputMode="numeric"
-											min="5"
-											max="240"
-											step="5"
-											value={scheduleInterval}
-											onChange={(event) =>
-												setScheduleInterval(event.target.value)
-											}
-											className={inputClass}
-											disabled={isSaving || isLoading}
+											label="Intervalo da agenda"
+											hint="Minutos">
+											<input
+												id="scheduleInterval"
+												name="scheduleInterval"
+												type="number"
+												inputMode="numeric"
+												min="5"
+												max="240"
+												step="5"
+												value={scheduleInterval}
+												onChange={(event) =>
+													setScheduleInterval(event.target.value)
+												}
+												className={inputClass}
+												disabled={isSaving || isLoading}
+											/>
+										</VerticalField>
+									</GridPair>
+								</>
+							:	<>
+									<GroupItem>
+										<ReadOnlyCell
+											label="Funcionamento"
+											value={`${openingTime} ate ${closingTime}`}
 										/>
-									</Field>
-								</div>
-							</>
-						:	<>
-								<ReadOnlyRow
-									label="Funcionamento"
-									value={`${openingTime} ate ${closingTime}`}
-								/>
-								<ReadOnlyRow
-									label="Atendimento"
-									value={`${appointmentDuration} min por cliente`}
-								/>
-							</>
-						}
-					</SettingSection>
+									</GroupItem>
+									<ReadOnlyCell
+										label="Atendimento"
+										value={`${appointmentDuration} min por cliente`}
+									/>
+								</>
+							}
+						</FieldGroup>
+					</SettingsSection>
 
-					<SettingSection eyebrow="Acesso" title="Sessão e permissões">
-						<div className="grid gap-3 md:grid-cols-3">
-							<button
-								type="button"
-								onClick={() => navigate("/forgot-password")}
-								disabled={isSaving}
-								className="min-h-12 rounded-md border border-border bg-background-deep px-4 font-mono-ui text-sm text-foreground transition-colors hover:bg-secondary disabled:opacity-60">
-								Alterar senha
-							</button>
-
+					<SettingsSection label="Acesso">
+						<FieldGroup>
+							<GroupItem>
+								<NavRow
+									label="Alterar senha"
+									onClick={() => navigate("/forgot-password")}
+									disabled={isSaving}
+								/>
+							</GroupItem>
 							{isAdmin && (
-								<button
-									type="button"
+								<NavRow
+									label="Gerenciar equipe"
 									onClick={() => navigate("/team")}
 									disabled={isSaving}
-									className="min-h-12 rounded-md border border-border bg-background-deep px-4 font-mono-ui text-sm text-foreground transition-colors hover:bg-secondary disabled:opacity-60">
-									Equipe
-								</button>
+								/>
 							)}
+						</FieldGroup>
+					</SettingsSection>
 
+					<SettingsSection label="Zona de perigo">
+						<div className="mx-5 rounded-2xl border border-[#A32D2D]/20 bg-[#A32D2D]/[0.08] p-4">
+							<p className="mb-3 flex items-center gap-1.5 font-client text-[11px] font-semibold uppercase tracking-[0.8px] text-[#A32D2D]">
+								<span className="flex h-3.5 w-3.5 items-center justify-center rounded-full border border-[#A32D2D]/40 text-[9px]">
+									!
+								</span>
+								Ação irreversível
+							</p>
 							<button
 								type="button"
 								onClick={handleLogout}
 								disabled={isSaving}
-								className="min-h-12 rounded-md border border-overdue/30 bg-overdue/10 px-4 font-mono-ui text-sm text-overdue transition-colors hover:bg-overdue/15 disabled:opacity-60">
+								className="w-full rounded-[10px] border border-[#A32D2D]/30 bg-[#A32D2D]/15 py-3 font-client text-sm font-medium text-[#E24B4A] transition-colors hover:bg-[#A32D2D]/25 disabled:opacity-60">
 								Sair da conta
 							</button>
 						</div>
-					</SettingSection>
-				</div>
+					</SettingsSection>
+
+					{!barberPhotoDraft && (
+						<button
+							type="submit"
+							disabled={isSaving || isLoading}
+							className="sticky bottom-0 mx-5 mt-6 flex w-[calc(100%-2.5rem)] cursor-pointer items-center justify-center rounded-2xl bg-[#1D9E75] px-4 py-3 text-center font-client text-[15px] font-semibold tracking-tight text-[#04342C] transition-opacity disabled:opacity-60">
+							{footerSaveLabel}
+						</button>
+					)}
 			</form>
 			{barberPhotoDraft && (
 				<div
 					data-testid="avatar-editor-panel"
-					className="fixed bottom-0 left-1/2 top-0 z-[100] flex w-full max-w-[480px] -translate-x-1/2 flex-col overflow-hidden bg-background shadow-[0_24px_80px_hsl(220_30%_1%/0.38)] md:max-w-[760px] min-[1180px]:max-w-[1120px]">
-					<div className="shrink-0 border-b border-border bg-background/95 px-4 pb-3 pt-[calc(0.75rem+env(safe-area-inset-top))] backdrop-blur">
-						<div className="mx-auto flex max-w-3xl items-center justify-between gap-3">
+					className="fixed bottom-0 left-1/2 top-0 z-[100] flex w-full max-w-[420px] -translate-x-1/2 flex-col overflow-hidden bg-[#0a0a0a] text-[#f0f0ea] shadow-[0_24px_80px_hsl(220_30%_1%/0.55)]">
+					<div className="shrink-0 border-b border-white/[0.07] bg-[#0a0a0a]/95 px-5 pb-3 pt-[calc(0.75rem+env(safe-area-inset-top))] backdrop-blur">
+						<div className="mx-auto flex max-w-[420px] items-center justify-between gap-3">
 							<div className="min-w-0">
-								<p className="font-mono-ui text-[10px] uppercase text-[#86efac]">
+								<p className="font-mono-ui text-[10px] uppercase tracking-[0.12em] text-[#5DCAA5]">
 									Editando foto
 								</p>
-								<h2 className="mt-1 truncate font-client text-lg leading-tight text-foreground">
+								<h2 className="mt-1 truncate font-client text-lg leading-tight text-[#f0f0ea]">
 									Enquadramento da agenda
 								</h2>
 							</div>
@@ -820,15 +906,15 @@ export default function SettingsPage() {
 								type="button"
 								onClick={handleCancelPhotoDraft}
 								disabled={isSaving || isLoading}
-								className="shrink-0 rounded-md border border-border bg-secondary px-3 py-2 font-mono-ui text-[11px] text-foreground transition-colors hover:bg-card disabled:opacity-60">
+								className="shrink-0 rounded-md border border-white/[0.07] bg-white/[0.04] px-3 py-2 font-mono-ui text-[10px] uppercase tracking-[0.08em] text-[#c8c8c2] transition-colors hover:bg-white/[0.07] disabled:opacity-60">
 								Sair sem salvar
 							</button>
 						</div>
 					</div>
 
-					<div className="min-h-0 flex-1 overflow-y-auto px-4 py-5">
-						<div className="mx-auto max-w-3xl space-y-5">
-							<p className="font-client text-sm leading-snug text-foreground-faint">
+					<div className="min-h-0 flex-1 overflow-y-auto px-5 py-5">
+						<div className="mx-auto max-w-[420px] space-y-5">
+							<p className="font-client text-sm leading-snug text-[#c8c8c2]">
 								Arraste na foto para escolher o foco e use o zoom para aproximar.
 								Se a foto ja estava salva, o ajuste acontece sobre o recorte atual.
 							</p>
@@ -840,7 +926,7 @@ export default function SettingsPage() {
 								onPointerMove={handleAvatarPointerMove}
 								onPointerUp={handleAvatarPointerUp}
 								onPointerCancel={handleAvatarPointerUp}
-								className="mx-auto flex h-56 w-56 touch-none items-center justify-center overflow-hidden rounded-full border border-[#4ade80]/50 bg-card shadow-[0_0_0_8px_rgba(74,222,128,0.06)]">
+								className="mx-auto flex h-56 w-56 touch-none items-center justify-center overflow-hidden rounded-full border border-[#5DCAA5]/40 bg-[#111110] shadow-[0_0_0_8px_rgba(29,158,117,0.08)]">
 								<img
 									src={barberPhotoDraft.dataUrl}
 									alt=""
@@ -850,14 +936,14 @@ export default function SettingsPage() {
 								/>
 							</div>
 
-							<div className="rounded-lg border border-border bg-background-deep p-4">
+							<div className="rounded-xl border border-white/[0.07] bg-[#111110] p-4">
 								<div className="flex items-center justify-between gap-3">
 									<label
 										htmlFor="avatarZoom"
-										className="font-mono-ui text-[10px] uppercase text-foreground-faint">
+										className="font-mono-ui text-[10px] uppercase tracking-[0.12em] text-[#5F5E5A]">
 										Zoom da foto
 									</label>
-									<span className="font-value text-[11px] text-[#86efac]">
+									<span className="font-value text-[11px] text-[#5DCAA5]">
 										{Math.round(avatarZoom * 100)}%
 									</span>
 								</div>
@@ -869,7 +955,7 @@ export default function SettingsPage() {
 									step="0.05"
 									value={avatarZoom}
 									onChange={(event) => setAvatarZoom(Number(event.target.value))}
-									className="mt-3 w-full accent-[#4ade80]"
+									className="mt-3 w-full accent-[#1D9E75]"
 									disabled={isSaving || isLoading}
 								/>
 								<div
@@ -877,14 +963,14 @@ export default function SettingsPage() {
 									className="mt-4 grid grid-cols-2 gap-2">
 									<label
 										htmlFor="barberPhoto"
-										className="flex h-11 cursor-pointer items-center justify-center rounded-md border border-border bg-secondary px-2 text-center font-mono-ui text-[11px] text-foreground transition-colors hover:bg-card">
+										className="flex h-11 cursor-pointer items-center justify-center rounded-md border border-white/[0.07] bg-white/[0.03] px-2 text-center font-mono-ui text-[10px] uppercase tracking-[0.08em] text-[#e8e8e2] transition-colors hover:bg-white/[0.06]">
 										Trocar foto
 									</label>
 									<button
 										type="button"
 										onClick={handleResetAvatarFrame}
 										disabled={isSaving || isLoading}
-										className="h-11 rounded-md border border-border bg-secondary px-2 font-mono-ui text-[11px] text-foreground transition-colors hover:bg-card disabled:opacity-60">
+										className="h-11 rounded-md border border-white/[0.07] bg-white/[0.03] px-2 font-mono-ui text-[10px] uppercase tracking-[0.08em] text-[#e8e8e2] transition-colors hover:bg-white/[0.06] disabled:opacity-60">
 										Centralizar
 									</button>
 								</div>
@@ -892,36 +978,23 @@ export default function SettingsPage() {
 						</div>
 					</div>
 
-					<div className="shrink-0 border-t border-border bg-background/95 px-4 py-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] backdrop-blur">
-						<div className="mx-auto grid max-w-3xl grid-cols-[0.8fr_1.2fr] gap-2">
+					<div className="shrink-0 border-t border-white/[0.07] bg-[#0a0a0a]/95 px-5 py-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] backdrop-blur">
+						<div className="mx-auto grid max-w-[420px] grid-cols-[0.8fr_1.2fr] gap-2">
 							<button
 								type="button"
 								onClick={handleCancelPhotoDraft}
 								disabled={isSaving || isLoading}
-								className="rounded-md border border-border bg-secondary px-3 py-3 font-mono-ui text-[11px] text-foreground transition-colors hover:bg-card disabled:opacity-60">
+								className="rounded-xl border border-white/[0.07] bg-white/[0.03] px-3 py-3 font-mono-ui text-[10px] uppercase tracking-[0.08em] text-[#c8c8c2] transition-colors hover:bg-white/[0.06] disabled:opacity-60">
 								Cancelar
 							</button>
 							<button
 								type="submit"
 								form="settingsForm"
 								disabled={isSaving || isLoading}
-								className="rounded-md bg-foreground px-3 py-3 font-mono-ui text-sm text-primary-foreground transition-opacity disabled:opacity-60">
+								className="rounded-xl bg-[#1D9E75] px-3 py-3 font-mono-ui text-sm text-[#04342C] transition-opacity disabled:opacity-60">
 								{footerSaveLabel}
 							</button>
 						</div>
-					</div>
-				</div>
-			)}
-			{!barberPhotoDraft && (
-				<div className="shrink-0 border-t border-border bg-background/95 px-4 py-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] backdrop-blur">
-					<div className="mx-auto max-w-3xl">
-						<button
-							type="submit"
-							form="settingsForm"
-							disabled={isSaving || isLoading}
-							className="w-full rounded-md bg-foreground px-4 py-3 font-mono-ui text-sm text-primary-foreground transition-opacity disabled:opacity-60">
-							{footerSaveLabel}
-						</button>
 					</div>
 				</div>
 			)}
