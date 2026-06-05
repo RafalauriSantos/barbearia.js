@@ -4,6 +4,7 @@ const ENV_KEYS = [
 	"EMAIL_PROVIDER",
 	"EMAIL_TIMEOUT_MS",
 	"EMAIL_FROM",
+	"EMAIL_BRAND_NAME",
 	"BREVO_API_KEY",
 	"SMTP_HOST",
 	"SMTP_PORT",
@@ -75,7 +76,7 @@ t.test("sendVerificationCodeEmail uses Brevo HTTP API", async (t) => {
 	t.same(body.to, [{ name: "Rafael", email: "rafael@example.com" }]);
 	t.match(body.subject, /Codigo de confirmacao/);
 	t.match(body.htmlContent, /123456/);
-	t.match(body.textContent, /123456/);
+	t.notOk(body.textContent);
 	t.same(result, { messageId: "message-1" });
 });
 
@@ -105,6 +106,45 @@ t.test("Brevo errors include response status", async (t) => {
 		}),
 		/Brevo email API failed with status 401/,
 	);
+});
+
+t.test("brand name does not depend on EMAIL_FROM display name", async (t) => {
+	const originalFetch = global.fetch;
+	let capturedRequest;
+
+	global.fetch = async (url, options) => {
+		capturedRequest = { url, options };
+		return {
+			ok: true,
+			status: 201,
+			text: async () => JSON.stringify({ messageId: "message-2" }),
+		};
+	};
+
+	t.teardown(() => {
+		global.fetch = originalFetch;
+	});
+
+	const emailService = loadEmailService({
+		EMAIL_PROVIDER: "brevo",
+		BREVO_API_KEY: "xkeysib-test",
+		EMAIL_FROM: "Kash Flow <rafa69lauri@gmail.com>",
+	});
+
+	await emailService.sendPasswordResetCodeEmail({
+		to: "rafael@example.com",
+		code: "654321",
+	});
+
+	const body = JSON.parse(capturedRequest.options.body);
+
+	t.same(body.sender, {
+		name: "Gestor Barbearia",
+		email: "rafa69lauri@gmail.com",
+	});
+	t.equal(body.subject, "Codigo para redefinir senha - Gestor Barbearia");
+	t.match(body.htmlContent, /Gestor Barbearia/);
+	t.notMatch(body.htmlContent, /Kash Flow/);
 });
 
 t.test("without Brevo or SMTP, email is logged with stream transport", async (t) => {

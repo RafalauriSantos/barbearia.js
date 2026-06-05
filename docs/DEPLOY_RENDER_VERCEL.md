@@ -51,6 +51,7 @@ CORS_ORIGIN=true
 APP_URL=http://localhost:5173
 AVATAR_BUCKET=barber-avatars
 EMAIL_FROM=Gestor Barbearia <seu-email-verificado@seudominio.com>
+EMAIL_BRAND_NAME=Gestor Barbearia
 EMAIL_PROVIDER=brevo
 BREVO_API_KEY=...
 EMAIL_TIMEOUT_MS=10000
@@ -65,10 +66,26 @@ Observacoes:
 - No plano Free do Render, evite SMTP. Configure `EMAIL_PROVIDER=brevo` e
   `BREVO_API_KEY` para enviar codigos por API HTTPS. O remetente de
   `EMAIL_FROM` precisa estar cadastrado e verificado na Brevo.
+- `EMAIL_BRAND_NAME` controla o nome usado no assunto e no corpo dos emails.
 - `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER` e `SMTP_PASS` podem ficar vazios em
   producao quando a Brevo API estiver ativa.
 
 Depois do deploy, copie a URL publica do Render (ex: https://seuapp.onrender.com).
+
+Para testar localmente antes do deploy, configure `EMAIL_PROVIDER=brevo`,
+`BREVO_API_KEY` e um `EMAIL_FROM` verificado na Brevo, suba o backend e chame a
+rota de desenvolvimento:
+
+```
+POST http://localhost:3000/test-email
+{
+  "to": "destinatario@example.com",
+  "subject": "Teste Brevo",
+  "text": "Email de teste enviado pela API Brevo."
+}
+```
+
+A rota `/test-email` nao e registrada em producao.
 
 Antes do primeiro teste em producao, aplique as migrations no banco de producao:
 

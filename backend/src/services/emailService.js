@@ -2,6 +2,7 @@ const nodemailer = require("nodemailer");
 const { env } = require("../config/env");
 
 const BREVO_SEND_EMAIL_URL = "https://api.brevo.com/v3/smtp/email";
+const DEFAULT_BRAND_NAME = "Gestor Barbearia";
 
 function escapeHtml(value) {
 	return String(value)
@@ -93,6 +94,50 @@ function parseRecipients(value) {
 	return values.map(parseEmailAddress).filter((recipient) => recipient.email);
 }
 
+function getBrandName(shopName) {
+	return String(shopName || env.EMAIL_BRAND_NAME || DEFAULT_BRAND_NAME).trim();
+}
+
+function getSenderAddress() {
+	const sender = parseEmailAddress(env.EMAIL_FROM);
+	const brandName = getBrandName();
+
+	if (!sender.email) {
+		return env.EMAIL_FROM;
+	}
+
+	return `${brandName} <${sender.email}>`;
+}
+
+function buildBrevoPayload(message) {
+	const sender = parseEmailAddress(message.from || env.EMAIL_FROM);
+	const recipients = parseRecipients(message.to);
+
+	if (!sender.email) {
+		throw new Error("EMAIL_FROM must include a sender email address");
+	}
+
+	if (!recipients.length) {
+		throw new Error("Email recipient is required");
+	}
+
+	const payload = {
+		sender,
+		to: recipients,
+		subject: message.subject,
+	};
+
+	if (message.html) {
+		payload.htmlContent = message.html;
+	} else if (message.text) {
+		payload.textContent = message.text;
+	} else {
+		throw new Error("Email content is required");
+	}
+
+	return payload;
+}
+
 function createTransporter() {
 	if (!hasSmtpConfig()) {
 		return nodemailer.createTransport({
@@ -144,16 +189,7 @@ async function sendViaBrevo(message) {
 		throw new Error("BREVO_API_KEY is required when EMAIL_PROVIDER=brevo");
 	}
 
-	const sender = parseEmailAddress(message.from || env.EMAIL_FROM);
-	const recipients = parseRecipients(message.to);
-
-	if (!sender.email) {
-		throw new Error("EMAIL_FROM must include a sender email address");
-	}
-
-	if (!recipients.length) {
-		throw new Error("Email recipient is required");
-	}
+	const payload = buildBrevoPayload(message);
 
 	const response = await fetchWithTimeout(BREVO_SEND_EMAIL_URL, {
 		method: "POST",
@@ -162,13 +198,7 @@ async function sendViaBrevo(message) {
 			"api-key": env.BREVO_API_KEY,
 			"content-type": "application/json",
 		},
-		body: JSON.stringify({
-			sender,
-			to: recipients,
-			subject: message.subject,
-			htmlContent: message.html,
-			textContent: message.text,
-		}),
+		body: JSON.stringify(payload),
 	});
 
 	const body = await response.text();
@@ -206,7 +236,7 @@ async function sendEmail(message, debugLog) {
 
 exports.sendCustomEmail = async function ({ to, subject, text }) {
 	const message = {
-		from: env.EMAIL_FROM,
+		from: getSenderAddress(),
 		to,
 		subject,
 		text,
@@ -220,9 +250,9 @@ exports.sendCustomEmail = async function ({ to, subject, text }) {
 };
 
 exports.sendVerificationCodeEmail = async function ({ to, code, shopName }) {
-	const brandName = shopName || "Gestor Barbearia";
+	const brandName = getBrandName(shopName);
 	const message = {
-		from: env.EMAIL_FROM,
+		from: getSenderAddress(),
 		to,
 		subject: `Codigo de confirmacao - ${brandName}`,
 		text: [
@@ -247,9 +277,9 @@ exports.sendVerificationCodeEmail = async function ({ to, code, shopName }) {
 };
 
 exports.sendPasswordResetCodeEmail = async function ({ to, code, shopName }) {
-	const brandName = shopName || "Gestor Barbearia";
+	const brandName = getBrandName(shopName);
 	const message = {
-		from: env.EMAIL_FROM,
+		from: getSenderAddress(),
 		to,
 		subject: `Codigo para redefinir senha - ${brandName}`,
 		text: [
@@ -278,9 +308,9 @@ exports.sendVerificationEmail = async function ({
 	verificationUrl,
 	shopName,
 }) {
-	const brandName = shopName || "Gestor Barbearia";
+	const brandName = getBrandName(shopName);
 	const message = {
-		from: env.EMAIL_FROM,
+		from: getSenderAddress(),
 		to,
 		subject: `Confirme seu acesso ao ${brandName}`,
 		text: [
@@ -310,10 +340,11 @@ exports.sendBarberInviteEmail = async function ({
 	shopName,
 	inviteUrl,
 }) {
+	const brandName = getBrandName(shopName);
 	const message = {
-		from: env.EMAIL_FROM,
+		from: getSenderAddress(),
 		to,
-		subject: `Convite para acessar ${shopName || "Gestor Barbearia"}`,
+		subject: `Convite para acessar ${brandName}`,
 		text: [
 			"Ola.",
 			"",
@@ -334,6 +365,9 @@ exports.sendBarberInviteEmail = async function ({
 };
 
 exports._private = {
+	buildBrevoPayload,
+	getBrandName,
+	getSenderAddress,
 	parseEmailAddress,
 	parseRecipients,
 };

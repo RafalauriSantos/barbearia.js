@@ -129,6 +129,16 @@ t.test("core CRUD routes respond through layered modules", async (t) => {
 		},
 	};
 
+	let sentTestEmail;
+	require.cache[require.resolve("../src/services/emailService")] = {
+		exports: {
+			sendCustomEmail: async (payload) => {
+				sentTestEmail = payload;
+				return { messageId: "test-message" };
+			},
+		},
+	};
+
 	clearAppCache();
 	const { env } = require("../src/config/env");
 	const { buildApp } = require("../src/index");
@@ -203,6 +213,31 @@ t.test("core CRUD routes respond through layered modules", async (t) => {
 
 	const reset = await app.inject({ method: "DELETE", url: "/reset" });
 	t.equal(reset.statusCode, 204);
+
+	const missingRecipient = await app.inject({
+		method: "POST",
+		url: "/test-email",
+		payload: {},
+	});
+	t.equal(missingRecipient.statusCode, 400);
+	t.equal(JSON.parse(missingRecipient.payload).code, "EMAIL_TO_REQUIRED");
+
+	const testEmail = await app.inject({
+		method: "POST",
+		url: "/test-email",
+		payload: {
+			to: "rafael@example.com",
+			subject: "Teste Brevo",
+			text: "Mensagem de teste",
+		},
+	});
+	t.equal(testEmail.statusCode, 200);
+	t.equal(JSON.parse(testEmail.payload).ok, true);
+	t.same(sentTestEmail, {
+		to: "rafael@example.com",
+		subject: "Teste Brevo",
+		text: "Mensagem de teste",
+	});
 
 	await app.close();
 });

@@ -51,8 +51,6 @@ exports.register = async function ({ email, password }) {
 	await EmailService.sendVerificationCodeEmail({
 		to: user.email,
 		code,
-		shopName:
-			env.EMAIL_FROM?.split("<")?.[0]?.trim() || "Gestor Barbearia",
 	});
 
 	return {
@@ -168,8 +166,6 @@ exports.resendEmailCode = async function ({ email }) {
 	await EmailService.sendVerificationCodeEmail({
 		to: user.email,
 		code,
-		shopName:
-			env.EMAIL_FROM?.split("<")?.[0]?.trim() || "Gestor Barbearia",
 	});
 
 	return { ok: true };
@@ -192,8 +188,6 @@ exports.requestPasswordReset = async function ({ email }) {
 	await EmailService.sendPasswordResetCodeEmail({
 		to: user.email,
 		code,
-		shopName:
-			env.EMAIL_FROM?.split("<")?.[0]?.trim() || "Gestor Barbearia",
 	});
 
 	return {
