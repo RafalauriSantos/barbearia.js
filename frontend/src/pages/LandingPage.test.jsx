@@ -15,9 +15,17 @@ describe("LandingPage", () => {
 			screen.getByRole("heading", { name: "Gestor Barbearia", level: 1 }),
 		).toBeTruthy();
 		expect(screen.getByText(/Agenda, caixa e equipe/i)).toBeTruthy();
-		expect(screen.getByRole("link", { name: "Entrar" })).toBeTruthy();
+		expect(screen.getByRole("link", { name: "Entrar" }).getAttribute("href")).toBe(
+			"/login",
+		);
 		expect(screen.getByRole("link", { name: "Criar acesso" }).getAttribute("href")).toBe(
 			"/login?mode=signup",
 		);
+		expect(
+			screen.getByRole("link", { name: "Entrar na conta" }).getAttribute("href"),
+		).toBe("/login");
+		expect(
+			screen.getByRole("link", { name: "Começar agora" }).getAttribute("href"),
+		).toBe("/login?mode=signup");
 	});
 });
