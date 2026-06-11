@@ -1,15 +1,13 @@
 import {
 	BrowserRouter,
-	Navigate,
 	Route,
 	Routes,
 	useLocation,
 } from "react-router-dom";
 import { lazy, Suspense, useEffect } from "react";
-import { AuthProvider, useAuth } from "@/context/AuthContext";
-import { LoadingCard } from "@/components/ScreenPrimitives";
 import LandingPage from "./pages/LandingPage";
 
+const AuthGate = lazy(() => import("./components/AuthGate"));
 const AppPage = lazy(() => import("./pages/AppPage"));
 const SettingsPage = lazy(() => import("./pages/SettingsPage"));
 const ServicesPage = lazy(() => import("./pages/ServicesPage"));
@@ -92,36 +90,18 @@ function RouteSeo() {
 	return null;
 }
 
-function SessionLoading() {
-	return (
-		<div className="app-shell flex items-center justify-center bg-background px-4">
-			<div className="w-full max-w-md">
-				<LoadingCard label="Validando sessão" rows={2} />
-			</div>
-		</div>
-	);
-}
-
 function RouteLoading() {
 	return (
 		<div className="app-shell flex items-center justify-center bg-background px-4">
-			<div className="w-full max-w-md">
-				<LoadingCard label="Carregando tela" rows={2} />
+			<div className="w-full max-w-md rounded-lg border border-border bg-card p-4">
+				<p className="font-mono-ui text-[10px] uppercase text-foreground-faint">
+					Carregando tela
+				</p>
+				<div className="mt-3 h-3 rounded bg-muted" />
+				<div className="mt-2 h-3 w-2/3 rounded bg-muted" />
 			</div>
 		</div>
 	);
-}
-
-function RequireAuth({ children }) {
-	const { isAuthenticated, isLoading } = useAuth();
-	const location = useLocation();
-
-	if (isLoading) return <SessionLoading />;
-	if (!isAuthenticated) {
-		return <Navigate to="/login" state={{ from: location }} replace />;
-	}
-
-	return children;
 }
 
 function AppRoutes() {
@@ -129,60 +109,22 @@ function AppRoutes() {
 		<Suspense fallback={<RouteLoading />}>
 			<Routes>
 				<Route path="/" element={<LandingPage />} />
-				<Route path="/login" element={<LoginPage />} />
-				<Route path="/verify-email" element={<VerifyEmailPage />} />
-				<Route path="/verify-code" element={<VerifyCodePage />} />
-				<Route path="/forgot-password" element={<ForgotPasswordPage />} />
-				<Route path="/accept-invite" element={<AcceptInvitePage />} />
 				<Route path="/welcome" element={<LandingPage />} />
-				<Route
-					path="/app"
-					element={
-						<RequireAuth>
-							<AppPage />
-						</RequireAuth>
-					}
-				/>
-				<Route
-					path="/services"
-					element={
-						<RequireAuth>
-							<ServicesPage />
-						</RequireAuth>
-					}
-				/>
-				<Route
-					path="/team"
-					element={
-						<RequireAuth>
-							<TeamPage />
-						</RequireAuth>
-					}
-				/>
-				<Route
-					path="/financial"
-					element={
-						<RequireAuth>
-							<FinancialPage />
-						</RequireAuth>
-					}
-				/>
-				<Route
-					path="/expenses"
-					element={
-						<RequireAuth>
-							<ExpensesPage />
-						</RequireAuth>
-					}
-				/>
-				<Route
-					path="/settings"
-					element={
-						<RequireAuth>
-							<SettingsPage />
-						</RequireAuth>
-					}
-				/>
+				<Route element={<AuthGate />}>
+					<Route path="/login" element={<LoginPage />} />
+					<Route path="/verify-email" element={<VerifyEmailPage />} />
+					<Route path="/verify-code" element={<VerifyCodePage />} />
+					<Route path="/forgot-password" element={<ForgotPasswordPage />} />
+					<Route path="/accept-invite" element={<AcceptInvitePage />} />
+				</Route>
+				<Route element={<AuthGate requireAuth />}>
+					<Route path="/app" element={<AppPage />} />
+					<Route path="/services" element={<ServicesPage />} />
+					<Route path="/team" element={<TeamPage />} />
+					<Route path="/financial" element={<FinancialPage />} />
+					<Route path="/expenses" element={<ExpensesPage />} />
+					<Route path="/settings" element={<SettingsPage />} />
+				</Route>
 				<Route path="*" element={<NotFound />} />
 			</Routes>
 		</Suspense>
@@ -193,10 +135,8 @@ function AppRoutes() {
 // Junta todas as telas e decide qual abrir por rota.
 const App = () => (
 	<BrowserRouter>
-		<AuthProvider>
-			<RouteSeo />
-			<AppRoutes />
-		</AuthProvider>
+		<RouteSeo />
+		<AppRoutes />
 	</BrowserRouter>
 );
 export default App;

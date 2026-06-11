@@ -4,6 +4,24 @@
 	"outputDirectory": ".output",
 	"headers": [
 		{
+			"source": "/images/(.*)",
+			"headers": [
+				{
+					"key": "Cache-Control",
+					"value": "public, max-age=31536000, immutable"
+				}
+			]
+		},
+		{
+			"source": "/favicon.svg",
+			"headers": [
+				{
+					"key": "Cache-Control",
+					"value": "public, max-age=31536000, immutable"
+				}
+			]
+		},
+		{
 			"source": "/(welcome|login|verify-email|verify-code|forgot-password|accept-invite|app|services|team|financial|expenses|settings)",
 			"headers": [
 				{

@@ -1,6 +1,4 @@
-import { useEffect } from "react";
 import { Link } from "react-router-dom";
-import { warmUpApi } from "@/lib/api/client";
 
 const focusClass =
 	"focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#6ee7b7]";
@@ -49,10 +47,6 @@ function PrimaryLink({ to, children, className = "" }) {
 }
 
 export default function LandingPage() {
-	useEffect(() => {
-		warmUpApi();
-	}, []);
-
 	return (
 		<main className="h-[var(--app-height)] overflow-y-auto overflow-x-hidden bg-[#060d0b] text-white">
 			<section className="relative min-h-[88svh] overflow-hidden">
