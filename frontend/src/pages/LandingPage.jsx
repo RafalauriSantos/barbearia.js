@@ -56,14 +56,20 @@ export default function LandingPage() {
 	return (
 		<main className="h-[var(--app-height)] overflow-y-auto overflow-x-hidden bg-[#060d0b] text-white">
 			<section className="relative min-h-[88svh] overflow-hidden">
-				<img
-					src="/images/landing-hero-barbershop.png"
-					alt="Balcão de barbearia com tablet exibindo agenda e indicadores financeiros"
-					width="1600"
-					height="900"
-					fetchpriority="high"
-					className="absolute inset-0 h-full w-full object-cover object-[61%_center] sm:object-center"
-				/>
+				<picture className="absolute inset-0 block h-full w-full">
+					<source
+						srcSet="/images/landing-hero-barbershop.webp"
+						type="image/webp"
+					/>
+					<img
+						src="/images/landing-hero-barbershop.png"
+						alt="Balcão de barbearia com tablet exibindo agenda e indicadores financeiros"
+						width="1400"
+						height="788"
+						fetchpriority="high"
+						className="h-full w-full object-cover object-[61%_center] sm:object-center"
+					/>
+				</picture>
 				<div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(3,8,7,0.98)_0%,rgba(3,8,7,0.88)_38%,rgba(3,8,7,0.48)_68%,rgba(3,8,7,0.18)_100%)]" />
 				<div className="absolute inset-0 bg-[radial-gradient(circle_at_75%_36%,rgba(246,190,116,0.16),transparent_32%),linear-gradient(180deg,rgba(6,13,11,0)_68%,rgba(6,13,11,0.94)_100%)]" />
 
@@ -76,8 +82,9 @@ export default function LandingPage() {
 							className={`flex min-w-0 items-center gap-3 rounded-md ${focusClass}`}>
 							<span
 								aria-hidden="true"
-								className="flex h-10 w-10 items-center justify-center rounded-md border border-[#6ee7b7]/35 bg-[#6ee7b7]/10 font-value text-lg text-[#98f5cf]">
-								GB
+								className="relative flex h-10 w-10 items-center justify-center rounded-md border border-[#6ee7b7]/35 bg-[#6ee7b7]/10">
+								<span className="absolute h-[3px] w-5 rotate-[-34deg] rounded-full bg-[#6ee7b7]" />
+								<span className="absolute mt-1 h-[3px] w-4 rounded-full bg-[#f0c987]" />
 							</span>
 							<span className="min-w-0">
 								<span className="block truncate font-logo text-lg leading-none">

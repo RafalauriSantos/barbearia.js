@@ -121,8 +121,11 @@ export default function LoginPage() {
 						</p>
 					</div>
 					<div className="flex shrink-0 items-center gap-2">
-						<span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md border border-paid/40 bg-paid/10 font-value text-xl text-paid">
-							GB
+						<span
+							aria-hidden="true"
+							className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-md border border-paid/40 bg-paid/10">
+							<span className="absolute h-[3px] w-5 rotate-[-34deg] rounded-full bg-paid" />
+							<span className="absolute mt-1 h-[3px] w-4 rounded-full bg-pending" />
 						</span>
 					</div>
 				</div>
