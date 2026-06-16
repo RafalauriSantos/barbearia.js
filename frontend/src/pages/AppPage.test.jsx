@@ -62,6 +62,15 @@ function makeSummary(list) {
 
 beforeEach(() => {
 	vi.clearAllMocks();
+	if (!HTMLElement.prototype.setPointerCapture) {
+		HTMLElement.prototype.setPointerCapture = vi.fn();
+	}
+	if (!HTMLElement.prototype.releasePointerCapture) {
+		HTMLElement.prototype.releasePointerCapture = vi.fn();
+	}
+	if (!HTMLElement.prototype.hasPointerCapture) {
+		HTMLElement.prototype.hasPointerCapture = vi.fn(() => true);
+	}
 	storeMock.formatCurrency.mockImplementation(
 		(value) => `R$ ${Number(value || 0).toFixed(2)}`,
 	);
@@ -75,6 +84,7 @@ beforeEach(() => {
 	});
 	storeMock.loadServices.mockResolvedValue([]);
 	storeMock.loadProducts.mockResolvedValue([]);
+	storeMock.updateAppointment.mockResolvedValue({});
 	storeMock.loadBarbers.mockResolvedValue([
 		{
 			id: "barber-owner",
@@ -203,5 +213,123 @@ describe("AppPage barber avatar row", () => {
 		expect(screen.queryByText("Todos")).toBeNull();
 		expect(screen.queryByText("Rafael Owner")).toBeNull();
 		expect(screen.queryByRole("button", { name: /minha agenda/i })).toBeNull();
+	});
+
+	it("marks a pending appointment as paid when swiped right", async () => {
+		let status = "normal";
+		storeMock.getAppointmentsForDayWithFilters.mockImplementation(
+			async (_dayKey, filters = {}) => {
+				if (filters.barbeiro_id !== "barber-owner") return [];
+				return [
+					{
+						id: "appt-owner",
+						client_name: "Cliente Owner",
+						time_slot: "09:00",
+						value: 100,
+						status,
+					},
+				];
+			},
+		);
+		storeMock.updateAppointment.mockImplementation(async (_id, updates) => {
+			status = updates.status;
+			return {
+				id: "appt-owner",
+				client_name: "Cliente Owner",
+				time_slot: "09:00",
+				value: 100,
+				status,
+			};
+		});
+
+		render(
+			<MemoryRouter initialEntries={["/app"]}>
+				<AppPage />
+			</MemoryRouter>,
+		);
+
+		const row = await screen.findByRole("button", { name: /Cliente Owner/i });
+		fireEvent.mouseDown(row, {
+			clientX: 120,
+			clientY: 30,
+			button: 0,
+			buttons: 1,
+		});
+		fireEvent.mouseMove(row, {
+			clientX: 220,
+			clientY: 34,
+			buttons: 1,
+		});
+		fireEvent.mouseUp(row, {
+			clientX: 220,
+			clientY: 34,
+			buttons: 0,
+		});
+
+		await waitFor(() => {
+			expect(storeMock.updateAppointment).toHaveBeenCalledWith("appt-owner", {
+				status: "paid",
+				prazo_date: null,
+			});
+		});
+	});
+
+	it("marks a pending appointment as fiado when swiped left", async () => {
+		let status = "normal";
+		storeMock.getAppointmentsForDayWithFilters.mockImplementation(
+			async (_dayKey, filters = {}) => {
+				if (filters.barbeiro_id !== "barber-owner") return [];
+				return [
+					{
+						id: "appt-owner",
+						client_name: "Cliente Owner",
+						time_slot: "09:00",
+						value: 100,
+						status,
+					},
+				];
+			},
+		);
+		storeMock.updateAppointment.mockImplementation(async (_id, updates) => {
+			status = updates.status;
+			return {
+				id: "appt-owner",
+				client_name: "Cliente Owner",
+				time_slot: "09:00",
+				value: 100,
+				status,
+			};
+		});
+
+		render(
+			<MemoryRouter initialEntries={["/app"]}>
+				<AppPage />
+			</MemoryRouter>,
+		);
+
+		const row = await screen.findByRole("button", { name: /Cliente Owner/i });
+		fireEvent.mouseDown(row, {
+			clientX: 220,
+			clientY: 30,
+			button: 0,
+			buttons: 1,
+		});
+		fireEvent.mouseMove(row, {
+			clientX: 120,
+			clientY: 34,
+			buttons: 1,
+		});
+		fireEvent.mouseUp(row, {
+			clientX: 120,
+			clientY: 34,
+			buttons: 0,
+		});
+
+		await waitFor(() => {
+			expect(storeMock.updateAppointment).toHaveBeenCalledWith("appt-owner", {
+				status: "fiado",
+				prazo_date: null,
+			});
+		});
 	});
 });
