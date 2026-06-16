@@ -111,7 +111,8 @@ describe("SettingsPage", () => {
 		);
 
 		expect(await screen.findByDisplayValue("Gestor Barbearia")).toBeTruthy();
-		expect(screen.getByText("Horários")).toBeTruthy();
+		expect(screen.queryByText("Horários")).toBeNull();
+		expect(screen.queryByLabelText("Duração padrão")).toBeNull();
 		expect(await screen.findByText("Recebimento")).toBeTruthy();
 		expect(screen.getByLabelText("Telefone")).toBeTruthy();
 		expect(screen.queryByText("Email de teste")).toBeNull();
@@ -148,9 +149,6 @@ describe("SettingsPage", () => {
 		fireEvent.change(await screen.findByLabelText("Nome da barbearia"), {
 			target: { value: "Gestor Barbearia Prime" },
 		});
-		fireEvent.change(screen.getByLabelText("Duração padrão"), {
-			target: { value: "45" },
-		});
 		fireEvent.click(screen.getByRole("button", { name: "Salvar alterações" }));
 
 		await waitFor(() => {
@@ -162,7 +160,7 @@ describe("SettingsPage", () => {
 					address: "Rua Central, 100",
 					openingTime: "08:00",
 					closingTime: "18:00",
-					appointmentDuration: 45,
+					appointmentDuration: 30,
 					scheduleInterval: 30,
 				}),
 			);
