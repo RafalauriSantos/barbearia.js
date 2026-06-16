@@ -568,7 +568,6 @@ export default function AppPage() {
 			`agenda de ${activeExternalBarber.name || activeExternalBarber.nome}`
 		:	"sua agenda";
 	const todaySelected = isToday(currentDate);
-	const canGoBack = !todaySelected;
 	const sortedAppointments = useMemo(() => {
 		return [...appointments].sort((first, second) =>
 			String(first.time_slot || "").localeCompare(
@@ -691,10 +690,8 @@ export default function AppPage() {
 	}, [initialCache.paymentMethods]);
 
 	const prevDay = () => {
-		if (!canGoBack) return;
 		const next = new Date(currentDate);
 		next.setDate(next.getDate() - 1);
-		if (isBeforeToday(next)) return;
 		setCurrentDate(next);
 	};
 
@@ -865,23 +862,50 @@ export default function AppPage() {
 
 	const confirmAppointmentPayment = async (method) => {
 		if (!paymentAppointment || savingStatusId) return;
-		setSavingStatusId(paymentAppointment.id);
+		const appointment = paymentAppointment;
+		const previousAppointments = appointments;
+		const grossValue = Number(appointment.value || 0);
+		const feePercent = Number(method.fee_percent || 0);
+		const feeValue =
+			Math.round(((grossValue * feePercent) / 100 + Number.EPSILON) * 100) /
+			100;
+		const optimisticAppointment = {
+			...appointment,
+			status: "paid",
+			payment_method_id: method.id,
+			payment_method_code: method.code,
+			payment_method_name: method.name,
+			forma_pagamento_id: method.id,
+			forma_pagamento: method.code,
+			payment_fee_percent: feePercent,
+			payment_fee_value: feeValue,
+			net_value: Math.max(grossValue - feeValue, 0),
+			prazo_date: null,
+		};
+
+		setSavingStatusId(appointment.id);
+		setPaymentAppointment(null);
 		setFeedbackMessage("");
 		setErrorMessage("");
+		setAppointments((current) =>
+			current.map((item) =>
+				item.id === appointment.id ? optimisticAppointment : item,
+			),
+		);
 		try {
-			const updated = await updateAppointment(paymentAppointment.id, {
+			const updated = await updateAppointment(appointment.id, {
 				status: "paid",
 				payment_method_id: method.id,
 				prazo_date: null,
 			});
-			setPaymentAppointment(null);
 			setAppointments((current) =>
 				current.map((item) =>
 					item.id === updated.id ? updated : item,
 				),
 			);
-			await reload();
+			reload();
 		} catch (error) {
+			setAppointments(previousAppointments);
 			setErrorMessage(error.message || "Nao foi possivel receber pagamento.");
 		} finally {
 			setSavingStatusId("");
@@ -1014,9 +1038,8 @@ export default function AppPage() {
 					<IconButton
 						label="Dia anterior"
 						onClick={prevDay}
-						disabled={!canGoBack}
 						tone="quiet"
-						className={`h-7 w-7 ${!canGoBack ? "opacity-40" : ""}`}>
+						className="h-7 w-7">
 						‹
 					</IconButton>
 					<div className="flex min-w-0 items-center justify-center gap-2 rounded-md border border-border bg-background-deep px-2 py-1">

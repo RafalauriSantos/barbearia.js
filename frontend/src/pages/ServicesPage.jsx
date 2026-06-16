@@ -52,6 +52,10 @@ export default function ServicesPage() {
 	const [editingId, setEditingId] = useState(null);
 	const [name, setName] = useState("");
 	const [price, setPrice] = useState("");
+	const [purchaseType, setPurchaseType] = useState("avista");
+	const [costPrice, setCostPrice] = useState("");
+	const [supplierName, setSupplierName] = useState("");
+	const [sellerCommissionPercent, setSellerCommissionPercent] = useState("");
 	const [showForm, setShowForm] = useState(false);
 
 	const reloadData = useCallback(async () => {
@@ -88,17 +92,47 @@ export default function ServicesPage() {
 		setEditingId(null);
 		setName("");
 		setPrice("");
+		setPurchaseType("avista");
+		setCostPrice("");
+		setSupplierName("");
+		setSellerCommissionPercent("");
 		setFormError("");
 		setShowForm(false);
 	};
 	const validateForm = () => {
 		const itemLabel =
 			tab === "services" ? "Nome do servico" : "Nome do produto";
+		const productValidation =
+			tab === "products" ?
+				validateMoney(costPrice || "0", "Custo", {
+					min: 0,
+					max: 9999.99,
+				}) ||
+				validateMoney(sellerCommissionPercent || "0", "Comissao", {
+					min: 0,
+					max: 100,
+				})
+			:	"";
 		return (
 			validateRequiredText(name, itemLabel, { minLength: 3, maxLength: 60 }) ||
-			validateMoney(price, "Preco", { max: 9999.99 })
+			validateMoney(price, "Preco", { max: 9999.99 }) ||
+			productValidation
 		);
 	};
+
+	const buildPayload = () => {
+		const data = { name: name.trim(), price: parseMoneyInput(price) };
+		if (tab === "products") {
+			data.purchase_type = purchaseType;
+			data.cost_price = parseMoneyInput(costPrice || "0");
+			data.supplier_name = supplierName.trim();
+			data.seller_commission_percent = parseMoneyInput(
+				sellerCommissionPercent || "0",
+			);
+		}
+		return data;
+	};
+
 	const handleAdd = async (e) => {
 		e.preventDefault();
 		if (isSubmitting) return;
@@ -114,7 +148,7 @@ export default function ServicesPage() {
 		setFormError("");
 
 		// Cria novo servico ou produto.
-		const data = { name: name.trim(), price: parseMoneyInput(price) };
+		const data = buildPayload();
 		try {
 			if (tab === "services") {
 				await addService(data);
@@ -124,6 +158,10 @@ export default function ServicesPage() {
 			await reloadData();
 			setName("");
 			setPrice("");
+			setPurchaseType("avista");
+			setCostPrice("");
+			setSupplierName("");
+			setSellerCommissionPercent("");
 			setFormError("");
 			setShowForm(false);
 		} catch (error) {
@@ -137,6 +175,12 @@ export default function ServicesPage() {
 		setEditingId(item.id);
 		setName(item.name);
 		setPrice(item.price.toString());
+		setPurchaseType(item.purchase_type || "avista");
+		setCostPrice(Number(item.cost_price || 0).toString());
+		setSupplierName(item.supplier_name || "");
+		setSellerCommissionPercent(
+			Number(item.seller_commission_percent || 0).toString(),
+		);
 		setFormError("");
 		setShowForm(true);
 	};
@@ -155,7 +199,7 @@ export default function ServicesPage() {
 		setFormError("");
 
 		// Salva alteracoes do item em edicao.
-		const data = { name: name.trim(), price: parseMoneyInput(price) };
+		const data = buildPayload();
 		try {
 			if (tab === "services") {
 				await updateService(editingId, data);
@@ -166,6 +210,10 @@ export default function ServicesPage() {
 			setEditingId(null);
 			setName("");
 			setPrice("");
+			setPurchaseType("avista");
+			setCostPrice("");
+			setSupplierName("");
+			setSellerCommissionPercent("");
 			setFormError("");
 			setShowForm(false);
 		} catch (error) {
@@ -215,6 +263,7 @@ export default function ServicesPage() {
 	const formLabel = tab === "services" ? "NOME DO SERVIÇO" : "NOME DO PRODUTO";
 	const formPlaceholder =
 		tab === "services" ? "Ex: Corte + Barba" : "Ex: Pomada, Shampoo";
+	const isProductsTab = tab === "products";
 	return (
 		<div className="app-shell flex flex-col overflow-hidden bg-background">
 			<ScreenHeader
@@ -316,6 +365,89 @@ export default function ServicesPage() {
 									disabled={isSubmitting}
 								/>
 							</div>
+							{isProductsTab && (
+								<div className="space-y-3 rounded-lg border border-border bg-card p-4">
+									<div>
+										<label className="block mb-2 font-mono-ui text-[10px] text-foreground-faint">
+											Compra
+										</label>
+										<div className="grid grid-cols-2 gap-1 rounded-lg border border-border bg-background-deep p-1">
+											<button
+												type="button"
+												onClick={() => setPurchaseType("avista")}
+												className={`rounded-md py-2.5 font-mono-ui text-xs ${
+													purchaseType === "avista" ?
+														"bg-secondary text-foreground"
+													:	"text-foreground-faint"
+												}`}>
+												À vista
+											</button>
+											<button
+												type="button"
+												onClick={() => setPurchaseType("consignado")}
+												className={`rounded-md py-2.5 font-mono-ui text-xs ${
+													purchaseType === "consignado" ?
+														"bg-secondary text-foreground"
+													:	"text-foreground-faint"
+												}`}>
+												Consignado
+											</button>
+										</div>
+									</div>
+									<div className="grid grid-cols-2 gap-3">
+										<label className="block">
+											<span className="block mb-1 font-mono-ui text-[10px] text-foreground-faint">
+												Custo (R$)
+											</span>
+											<input
+												type="text"
+												value={costPrice}
+												onChange={(e) => {
+													setCostPrice(e.target.value);
+													setFormError("");
+												}}
+												className="w-full rounded-md border border-border bg-secondary px-3 py-3 text-sm text-foreground"
+												placeholder="20,00"
+												inputMode="decimal"
+												disabled={isSubmitting}
+											/>
+										</label>
+										<label className="block">
+											<span className="block mb-1 font-mono-ui text-[10px] text-foreground-faint">
+												Comissão lucro (%)
+											</span>
+											<input
+												type="text"
+												value={sellerCommissionPercent}
+												onChange={(e) => {
+													setSellerCommissionPercent(e.target.value);
+													setFormError("");
+												}}
+												className="w-full rounded-md border border-border bg-secondary px-3 py-3 text-sm text-foreground"
+												placeholder="50"
+												inputMode="decimal"
+												disabled={isSubmitting}
+											/>
+										</label>
+									</div>
+									<label className="block">
+										<span className="block mb-1 font-mono-ui text-[10px] text-foreground-faint">
+											Fornecedor
+										</span>
+										<input
+											type="text"
+											value={supplierName}
+											onChange={(e) => {
+												setSupplierName(e.target.value);
+												setFormError("");
+											}}
+											className="w-full rounded-md border border-border bg-secondary px-3 py-3 text-sm text-foreground"
+											placeholder="Fornecedor principal"
+											disabled={isSubmitting}
+										/>
+									</label>
+								</div>
+							)}
 							<div className="flex gap-2">
 								<button
 									type="submit"
@@ -372,6 +504,26 @@ export default function ServicesPage() {
 										<p className="mt-1 font-value text-lg text-paid">
 											{formatCurrency(item.price)}
 										</p>
+										{tab === "products" && (
+											<div className="mt-3 flex flex-wrap gap-2">
+												<span className="rounded-md border border-border bg-background-deep px-2 py-1 font-mono-ui text-[10px] text-foreground-faint">
+													{item.purchase_type === "consignado" ?
+														"Consignado"
+													:	"À vista"}
+												</span>
+												<span className="rounded-md border border-border bg-background-deep px-2 py-1 font-mono-ui text-[10px] text-foreground-faint">
+													Custo {formatCurrency(item.cost_price || 0)}
+												</span>
+												<span className="rounded-md border border-border bg-background-deep px-2 py-1 font-mono-ui text-[10px] text-foreground-faint">
+													Lucro {formatCurrency(item.estimated_profit || 0)}
+												</span>
+												{item.supplier_name && (
+													<span className="rounded-md border border-border bg-background-deep px-2 py-1 font-mono-ui text-[10px] text-foreground-faint">
+														{item.supplier_name}
+													</span>
+												)}
+											</div>
+										)}
 									</div>
 									<div className="flex shrink-0 gap-2">
 										<button

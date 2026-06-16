@@ -65,6 +65,13 @@ function getBarberRow(row) {
 	return row.barbeiros || null;
 }
 
+function getPaymentMethodRow(row) {
+	if (Array.isArray(row.formas_pagamento)) {
+		return row.formas_pagamento[0] || null;
+	}
+	return row.formas_pagamento || null;
+}
+
 function createBucket({ barbeiroId, nome, comissaoPercent }) {
 	return {
 		barbeiro_id: barbeiroId,
@@ -79,6 +86,18 @@ function createBucket({ barbeiroId, nome, comissaoPercent }) {
 	};
 }
 
+function createPaymentMethodBucket({ methodId, codigo, nome }) {
+	return {
+		forma_pagamento_id: methodId,
+		codigo: codigo || "sem_forma",
+		nome: nome || "Sem forma",
+		total_pago: 0,
+		total_taxas: 0,
+		total_liquido: 0,
+		quantidade_atendimentos: 0,
+	};
+}
+
 function finalizeBucket(bucket) {
 	return {
 		...bucket,
@@ -88,6 +107,15 @@ function finalizeBucket(bucket) {
 		comissao_percent: roundMoney(bucket.comissao_percent),
 		parte_barbeiro: roundMoney(bucket.parte_barbeiro),
 		parte_barbearia: roundMoney(bucket.parte_barbearia),
+	};
+}
+
+function finalizePaymentMethodBucket(bucket) {
+	return {
+		...bucket,
+		total_pago: roundMoney(bucket.total_pago),
+		total_taxas: roundMoney(bucket.total_taxas),
+		total_liquido: roundMoney(bucket.total_liquido),
 	};
 }
 
@@ -128,8 +156,38 @@ function buildSummaryByBarber(rows) {
 	return Array.from(buckets.values()).map(finalizeBucket);
 }
 
+function buildSummaryByPaymentMethod(rows) {
+	const buckets = new Map();
+
+	for (const row of rows) {
+		const method = getPaymentMethodRow(row);
+		const methodId = row.forma_pagamento_id || method?.id || null;
+		const key = methodId || method?.codigo || "sem-forma";
+
+		if (!buckets.has(key)) {
+			buckets.set(
+				key,
+				createPaymentMethodBucket({
+					methodId,
+					codigo: method?.codigo,
+					nome: method?.nome,
+				}),
+			);
+		}
+
+		const bucket = buckets.get(key);
+		bucket.total_pago += getAppointmentTotal(row);
+		bucket.total_taxas += getPaymentFeeValue(row);
+		bucket.total_liquido += getAppointmentNetValue(row);
+		bucket.quantidade_atendimentos += 1;
+	}
+
+	return Array.from(buckets.values()).map(finalizePaymentMethodBucket);
+}
+
 function buildAdminSummary(rows) {
 	const resumoPorBarbeiro = buildSummaryByBarber(rows);
+	const resumoPorFormaPagamento = buildSummaryByPaymentMethod(rows);
 	const totalPagoGeral = rows.reduce((sum, row) => sum + getAppointmentTotal(row), 0);
 	const totalTaxas = rows.reduce((sum, row) => sum + getPaymentFeeValue(row), 0);
 	const totalLiquido = rows.reduce(
@@ -153,18 +211,27 @@ function buildAdminSummary(rows) {
 		total_barbeiros: roundMoney(totalBarbeiros),
 		quantidade_atendimentos_pagos: rows.length,
 		resumo_por_barbeiro: resumoPorBarbeiro,
+		resumo_por_forma_pagamento: resumoPorFormaPagamento,
 	};
 }
 
 function buildBarberSummary(rows, fallbackBarber) {
 	const [summary] = buildSummaryByBarber(rows);
-	if (summary) return summary;
+	if (summary) {
+		return {
+			...summary,
+			resumo_por_forma_pagamento: buildSummaryByPaymentMethod(rows),
+		};
+	}
 
-	return createBucket({
-		barbeiroId: fallbackBarber.id,
-		nome: fallbackBarber.name || fallbackBarber.nome,
-		comissaoPercent: fallbackBarber.comissao_percent,
-	});
+	return {
+		...createBucket({
+			barbeiroId: fallbackBarber.id,
+			nome: fallbackBarber.name || fallbackBarber.nome,
+			comissaoPercent: fallbackBarber.comissao_percent,
+		}),
+		resumo_por_forma_pagamento: [],
+	};
 }
 
 exports.getSummary = async function (query, user) {

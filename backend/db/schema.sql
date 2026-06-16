@@ -75,6 +75,13 @@ CREATE TABLE IF NOT EXISTS public.servicos (
     barbearia_id uuid NOT NULL REFERENCES public.barbearias (id) ON DELETE CASCADE,
     nome varchar NOT NULL,
     preco numeric(10, 2) NOT NULL DEFAULT 0 CHECK (preco >= 0),
+    tipo_compra varchar NOT NULL DEFAULT 'avista' CHECK (tipo_compra IN ('avista', 'consignado')),
+    custo numeric(10, 2) NOT NULL DEFAULT 0 CHECK (custo >= 0),
+    fornecedor varchar,
+    comissao_venda_percentual numeric(7, 4) NOT NULL DEFAULT 0 CHECK (
+        comissao_venda_percentual >= 0
+        AND comissao_venda_percentual <= 100
+    ),
     ativo boolean NOT NULL DEFAULT true,
     criado_em timestamptz NOT NULL DEFAULT now(),
     atualizado_em timestamptz NOT NULL DEFAULT now()

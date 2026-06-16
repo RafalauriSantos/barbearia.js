@@ -51,20 +51,32 @@ t.test("admin financial summary splits paid appointments by commission", async (
 					id: "appt-1",
 					total: 100,
 					barbeiro_id: "barber-1",
+					forma_pagamento_id: "pay-pix",
 					barbeiros: {
 						id: "barber-1",
 						nome: "Renan",
 						comissao_percent: 50,
+					},
+					formas_pagamento: {
+						id: "pay-pix",
+						codigo: "pix",
+						nome: "Pix",
 					},
 				},
 				{
 					id: "appt-2",
 					total: 200,
 					barbeiro_id: "barber-2",
+					forma_pagamento_id: "pay-credit",
 					barbeiros: {
 						id: "barber-2",
 						nome: "Joao",
 						comissao_percent: 60,
+					},
+					formas_pagamento: {
+						id: "pay-credit",
+						codigo: "cartao_credito",
+						nome: "Credito a vista",
 					},
 				},
 			],
@@ -83,6 +95,16 @@ t.test("admin financial summary splits paid appointments by commission", async (
 	t.equal(summary.resumo_por_barbeiro.length, 2);
 	t.equal(summary.resumo_por_barbeiro[0].parte_barbeiro, 50);
 	t.equal(summary.resumo_por_barbeiro[1].parte_barbearia, 80);
+	t.equal(summary.resumo_por_forma_pagamento.length, 2);
+	t.same(summary.resumo_por_forma_pagamento[0], {
+		forma_pagamento_id: "pay-pix",
+		codigo: "pix",
+		nome: "Pix",
+		total_pago: 100,
+		total_taxas: 0,
+		total_liquido: 100,
+		quantidade_atendimentos: 1,
+	});
 });
 
 t.test("barber financial summary only uses own barber", async (t) => {
@@ -133,10 +155,16 @@ t.test("financial summary discounts card fees before commission split", async (t
 					taxa_pagamento_valor: 1.71,
 					valor_liquido: 98.29,
 					barbeiro_id: "barber-1",
+					forma_pagamento_id: "pay-credit",
 					barbeiros: {
 						id: "barber-1",
 						nome: "Renan",
 						comissao_percent: 50,
+					},
+					formas_pagamento: {
+						id: "pay-credit",
+						codigo: "cartao_credito",
+						nome: "Credito a vista",
 					},
 				},
 			],
@@ -154,6 +182,8 @@ t.test("financial summary discounts card fees before commission split", async (t
 	t.equal(summary.total_barbeiros, 49.15);
 	t.equal(summary.total_barbearia, 49.15);
 	t.equal(summary.resumo_por_barbeiro[0].total_liquido, 98.29);
+	t.equal(summary.resumo_por_forma_pagamento[0].total_taxas, 1.71);
+	t.equal(summary.resumo_por_forma_pagamento[0].total_liquido, 98.29);
 });
 
 t.test("barber cannot request another barber financial summary", async (t) => {

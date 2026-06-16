@@ -1,17 +1,81 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { BottomNav } from "@/components/BottomNav";
 import { FinancialSummaryCompact } from "@/components/FinancialSummaryCompact";
+import { Notice, ScreenHeader } from "@/components/ScreenPrimitives";
 import {
-	DateStepper,
-	Notice,
-	ScreenHeader,
-} from "@/components/ScreenPrimitives";
-import {
-	formatDateDisplay,
 	formatDayKey,
+	formatCurrency,
 	getCachedFinancialSummary,
 	loadFinancialSummary,
 } from "@/lib/store";
+
+function addDays(date, amount) {
+	const next = new Date(date);
+	next.setDate(next.getDate() + amount);
+	return next;
+}
+
+function getMonthStart(date) {
+	return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-01`;
+}
+
+function formatPeriodLabel(startDate, endDate) {
+	if (startDate === endDate) return startDate.split("-").reverse().join("/");
+	return `${startDate.split("-").reverse().join("/")} a ${endDate.split("-").reverse().join("/")}`;
+}
+
+function PaymentMethodBreakdown({ rows = [] }) {
+	if (!rows.length) {
+		return (
+			<div className="rounded-lg border border-border bg-background-deep p-4">
+				<p className="font-mono-ui text-[10px] uppercase text-foreground-faint">
+					Por recebimento
+				</p>
+				<p className="mt-2 font-client text-sm text-foreground-faint">
+					Nenhum pagamento encontrado no período.
+				</p>
+			</div>
+		);
+	}
+
+	return (
+		<div className="rounded-lg border border-border bg-background-deep p-4">
+			<div className="flex items-center justify-between gap-3">
+				<p className="font-mono-ui text-[10px] uppercase text-foreground-faint">
+					Por recebimento
+				</p>
+				<p className="font-mono-ui text-[10px] text-foreground-faint">
+					{rows.length} formas
+				</p>
+			</div>
+			<div className="mt-3 space-y-2">
+				{rows.map((row) => (
+					<div
+						key={row.forma_pagamento_id || row.codigo}
+						className="grid grid-cols-[1fr_auto] gap-3 rounded-md border border-border bg-card px-3 py-2">
+						<div className="min-w-0">
+							<p className="truncate font-client text-sm text-foreground">
+								{row.nome}
+							</p>
+							<p className="mt-0.5 font-mono-ui text-[10px] text-foreground-faint">
+								{row.quantidade_atendimentos} atendimentos · taxas{" "}
+								{formatCurrency(row.total_taxas)}
+							</p>
+						</div>
+						<div className="text-right">
+							<p className="font-value text-base text-paid">
+								{formatCurrency(row.total_pago)}
+							</p>
+							<p className="font-mono-ui text-[10px] text-foreground-faint">
+								liq. {formatCurrency(row.total_liquido)}
+							</p>
+						</div>
+					</div>
+				))}
+			</div>
+		</div>
+	);
+}
 
 export default function FinancialPage() {
 	const initialDate = new Date();
@@ -21,26 +85,28 @@ export default function FinancialPage() {
 		end_date: initialDayKey,
 	};
 	const initialSummary = getCachedFinancialSummary(initialSummaryParams);
-	const [currentDate, setCurrentDate] = useState(initialDate);
+	const [startDate, setStartDate] = useState(initialDayKey);
+	const [endDate, setEndDate] = useState(initialDayKey);
 	const [summary, setSummary] = useState(initialSummary || null);
 	const [isLoading, setIsLoading] = useState(!initialSummary);
 	const hasLoadedRef = useRef(Boolean(initialSummary));
 	const [errorMessage, setErrorMessage] = useState("");
 
-	const dayKey = formatDayKey(currentDate);
+	const summaryParams = useMemo(() => {
+		if (startDate <= endDate) {
+			return { start_date: startDate, end_date: endDate };
+		}
+		return { start_date: endDate, end_date: startDate };
+	}, [endDate, startDate]);
 
 	const reload = useCallback(async () => {
 		const hasLoaded = hasLoadedRef.current;
 		setIsLoading(!hasLoaded);
 		setErrorMessage("");
 		try {
-			const nextSummary = await loadFinancialSummary(
-				{
-					start_date: dayKey,
-					end_date: dayKey,
-				},
-				{ force: true },
-			);
+			const nextSummary = await loadFinancialSummary(summaryParams, {
+				force: true,
+			});
 			setSummary(nextSummary);
 		} catch (error) {
 			if (!hasLoaded) {
@@ -51,22 +117,28 @@ export default function FinancialPage() {
 			setIsLoading(false);
 			hasLoadedRef.current = true;
 		}
-	}, [dayKey]);
+	}, [summaryParams]);
 
 	useEffect(() => {
 		reload();
 	}, [reload]);
 
-	const prevDay = () => {
-		const d = new Date(currentDate);
-		d.setDate(d.getDate() - 1);
-		setCurrentDate(d);
+	const setSingleDay = (date) => {
+		const key = formatDayKey(date);
+		setStartDate(key);
+		setEndDate(key);
 	};
 
-	const nextDay = () => {
-		const d = new Date(currentDate);
-		d.setDate(d.getDate() + 1);
-		setCurrentDate(d);
+	const setLastSevenDays = () => {
+		const today = new Date();
+		setStartDate(formatDayKey(addDays(today, -6)));
+		setEndDate(formatDayKey(today));
+	};
+
+	const setCurrentMonth = () => {
+		const today = new Date();
+		setStartDate(getMonthStart(today));
+		setEndDate(formatDayKey(today));
 	};
 
 	const isAdminSummary = summary?.type === "admin";
@@ -78,11 +150,52 @@ export default function FinancialPage() {
 	return (
 		<div className="app-shell flex flex-col overflow-hidden bg-background">
 			<ScreenHeader eyebrow="Caixa" title="Financeiro">
-				<DateStepper
-					label={formatDateDisplay(currentDate)}
-					onPrev={prevDay}
-					onNext={nextDay}
-				/>
+				<div className="mt-4 space-y-3 rounded-lg border border-border bg-background-deep p-3">
+					<div className="grid grid-cols-2 gap-2">
+						<label className="block">
+							<span className="mb-1 block font-mono-ui text-[10px] uppercase text-foreground-faint">
+								De
+							</span>
+							<input
+								type="date"
+								value={startDate}
+								onChange={(event) => setStartDate(event.target.value)}
+								className="h-10 w-full rounded-md border border-border bg-secondary px-2 font-mono-ui text-xs text-foreground"
+							/>
+						</label>
+						<label className="block">
+							<span className="mb-1 block font-mono-ui text-[10px] uppercase text-foreground-faint">
+								Ate
+							</span>
+							<input
+								type="date"
+								value={endDate}
+								onChange={(event) => setEndDate(event.target.value)}
+								className="h-10 w-full rounded-md border border-border bg-secondary px-2 font-mono-ui text-xs text-foreground"
+							/>
+						</label>
+					</div>
+					<div className="grid grid-cols-3 gap-2">
+						<button
+							type="button"
+							onClick={() => setSingleDay(new Date())}
+							className="rounded-md border border-border px-3 py-2 font-mono-ui text-[10px] text-foreground-faint">
+							Hoje
+						</button>
+						<button
+							type="button"
+							onClick={setLastSevenDays}
+							className="rounded-md border border-border px-3 py-2 font-mono-ui text-[10px] text-foreground-faint">
+							7 dias
+						</button>
+						<button
+							type="button"
+							onClick={setCurrentMonth}
+							className="rounded-md border border-border px-3 py-2 font-mono-ui text-[10px] text-foreground-faint">
+							Mês
+						</button>
+					</div>
+				</div>
 			</ScreenHeader>
 
 			<div className="min-h-0 flex-1 overflow-y-auto safe-bottom">
@@ -102,12 +215,20 @@ export default function FinancialPage() {
 
 				{!isLoading && summary && (
 					<div className="space-y-3 px-4 pb-6">
+						<PaymentMethodBreakdown
+							rows={summary.resumo_por_forma_pagamento || []}
+						/>
 						<div className="rounded-lg border border-border bg-background-deep p-4">
 							<p className="font-mono-ui text-[10px] uppercase text-foreground-faint">
 								Base do resumo
 							</p>
 							<p className="mt-2 font-client text-sm text-foreground-faint">
-								{quantidade} atendimentos pagos entram no financeiro deste dia.
+								{quantidade} atendimentos pagos entram no período de{" "}
+								{formatPeriodLabel(
+									summaryParams.start_date,
+									summaryParams.end_date,
+								)}
+								.
 							</p>
 						</div>
 					</div>

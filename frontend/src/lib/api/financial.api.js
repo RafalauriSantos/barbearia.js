@@ -18,7 +18,23 @@ function normalizeBarberSummary(raw) {
 	};
 }
 
+function normalizePaymentMethodSummary(raw) {
+	return {
+		forma_pagamento_id: raw.forma_pagamento_id || null,
+		codigo: raw.codigo || "sem_forma",
+		nome: raw.nome || "Sem forma",
+		total_pago: normalizeNumber(raw.total_pago),
+		total_taxas: normalizeNumber(raw.total_taxas),
+		total_liquido: normalizeNumber(raw.total_liquido || raw.total_pago),
+		quantidade_atendimentos: Number(raw.quantidade_atendimentos || 0),
+	};
+}
+
 export function normalizeFinancialSummary(raw) {
+	const paymentMethods = Array.isArray(raw.resumo_por_forma_pagamento) ?
+		raw.resumo_por_forma_pagamento.map(normalizePaymentMethodSummary)
+	:	[];
+
 	if (Array.isArray(raw.resumo_por_barbeiro)) {
 		return {
 			type: "admin",
@@ -33,12 +49,14 @@ export function normalizeFinancialSummary(raw) {
 				raw.quantidade_atendimentos_pagos || 0,
 			),
 			resumo_por_barbeiro: raw.resumo_por_barbeiro.map(normalizeBarberSummary),
+			resumo_por_forma_pagamento: paymentMethods,
 		};
 	}
 
 	return {
 		type: "barbeiro",
 		...normalizeBarberSummary(raw),
+		resumo_por_forma_pagamento: paymentMethods,
 	};
 }
 
