@@ -49,6 +49,17 @@ function getAppointmentTotal(row) {
 	return Number(row.total ?? row.valor_manual ?? 0);
 }
 
+function getPaymentFeeValue(row) {
+	return Number(row.taxa_pagamento_valor || 0);
+}
+
+function getAppointmentNetValue(row) {
+	const gross = getAppointmentTotal(row);
+	const explicitNet = Number(row.valor_liquido || 0);
+	if (explicitNet > 0 || gross === 0) return explicitNet;
+	return Math.max(gross - getPaymentFeeValue(row), 0);
+}
+
 function getBarberRow(row) {
 	if (Array.isArray(row.barbeiros)) return row.barbeiros[0] || null;
 	return row.barbeiros || null;
@@ -59,6 +70,8 @@ function createBucket({ barbeiroId, nome, comissaoPercent }) {
 		barbeiro_id: barbeiroId,
 		nome: nome || "Sem barbeiro",
 		total_pago: 0,
+		total_taxas: 0,
+		total_liquido: 0,
 		comissao_percent: Number(comissaoPercent || 0),
 		parte_barbeiro: 0,
 		parte_barbearia: 0,
@@ -70,6 +83,8 @@ function finalizeBucket(bucket) {
 	return {
 		...bucket,
 		total_pago: roundMoney(bucket.total_pago),
+		total_taxas: roundMoney(bucket.total_taxas),
+		total_liquido: roundMoney(bucket.total_liquido),
 		comissao_percent: roundMoney(bucket.comissao_percent),
 		parte_barbeiro: roundMoney(bucket.parte_barbeiro),
 		parte_barbearia: roundMoney(bucket.parte_barbearia),
@@ -84,9 +99,11 @@ function buildSummaryByBarber(rows) {
 		const barbeiroId = row.barbeiro_id || barber?.id || null;
 		const key = barbeiroId || "sem-barbeiro";
 		const total = getAppointmentTotal(row);
+		const taxa = getPaymentFeeValue(row);
+		const liquido = getAppointmentNetValue(row);
 		const comissaoPercent = Number(barber?.comissao_percent || 0);
-		const parteBarbeiro = (total * comissaoPercent) / 100;
-		const parteBarbearia = total - parteBarbeiro;
+		const parteBarbeiro = (liquido * comissaoPercent) / 100;
+		const parteBarbearia = liquido - parteBarbeiro;
 
 		if (!buckets.has(key)) {
 			buckets.set(
@@ -101,6 +118,8 @@ function buildSummaryByBarber(rows) {
 
 		const bucket = buckets.get(key);
 		bucket.total_pago += total;
+		bucket.total_taxas += taxa;
+		bucket.total_liquido += liquido;
 		bucket.parte_barbeiro += parteBarbeiro;
 		bucket.parte_barbearia += parteBarbearia;
 		bucket.quantidade_atendimentos += 1;
@@ -112,6 +131,11 @@ function buildSummaryByBarber(rows) {
 function buildAdminSummary(rows) {
 	const resumoPorBarbeiro = buildSummaryByBarber(rows);
 	const totalPagoGeral = rows.reduce((sum, row) => sum + getAppointmentTotal(row), 0);
+	const totalTaxas = rows.reduce((sum, row) => sum + getPaymentFeeValue(row), 0);
+	const totalLiquido = rows.reduce(
+		(sum, row) => sum + getAppointmentNetValue(row),
+		0,
+	);
 	const totalBarbeiros = resumoPorBarbeiro.reduce(
 		(sum, row) => sum + row.parte_barbeiro,
 		0,
@@ -123,6 +147,8 @@ function buildAdminSummary(rows) {
 
 	return {
 		total_pago_geral: roundMoney(totalPagoGeral),
+		total_taxas: roundMoney(totalTaxas),
+		total_liquido: roundMoney(totalLiquido),
 		total_barbearia: roundMoney(totalBarbearia),
 		total_barbeiros: roundMoney(totalBarbeiros),
 		quantidade_atendimentos_pagos: rows.length,

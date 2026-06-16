@@ -2,7 +2,14 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import { Notice } from "@/components/ScreenPrimitives";
-import { getCachedProfile, loadProfile, saveProfile } from "@/lib/store";
+import {
+	getCachedPaymentMethods,
+	getCachedProfile,
+	loadPaymentMethods,
+	loadProfile,
+	savePaymentMethod,
+	saveProfile,
+} from "@/lib/store";
 
 const DEFAULT_OPENING_TIME = "08:00";
 const DEFAULT_CLOSING_TIME = "18:00";
@@ -249,6 +256,20 @@ function SettingsPill({ children, tone = "neutral" }) {
 	);
 }
 
+function formatPercentInput(value) {
+	const number = Number(value || 0);
+	if (!Number.isFinite(number)) return "0";
+	return String(Math.round(number * 10000) / 10000).replace(".", ",");
+}
+
+function parsePercentInput(value) {
+	const normalized = String(value || "")
+		.replace(",", ".")
+		.trim();
+	const number = Number(normalized);
+	return Number.isFinite(number) ? number : NaN;
+}
+
 export default function SettingsPage() {
 	const navigate = useNavigate();
 	const { logout, user } = useAuth();
@@ -257,7 +278,12 @@ export default function SettingsPage() {
 	if (initialProfileRef.current === null) {
 		initialProfileRef.current = getCachedProfile() || false;
 	}
+	const initialPaymentMethodsRef = useRef(null);
+	if (initialPaymentMethodsRef.current === null) {
+		initialPaymentMethodsRef.current = getCachedPaymentMethods() || false;
+	}
 	const initialProfile = initialProfileRef.current || null;
+	const initialPaymentMethods = initialPaymentMethodsRef.current || [];
 	const [shopName, setShopName] = useState(initialProfile?.shopName || "");
 	const [phone, setPhone] = useState(initialProfile?.phone || "");
 	const [address, setAddress] = useState(initialProfile?.address || "");
@@ -284,6 +310,19 @@ export default function SettingsPage() {
 	const [avatarZoom, setAvatarZoom] = useState(DEFAULT_AVATAR_ZOOM);
 	const [removeBarberPhoto, setRemoveBarberPhoto] = useState(false);
 	const [isLoading, setIsLoading] = useState(!initialProfile);
+	const [paymentMethods, setPaymentMethods] = useState(initialPaymentMethods);
+	const [paymentDrafts, setPaymentDrafts] = useState(() =>
+		Object.fromEntries(
+			initialPaymentMethods.map((method) => [
+				method.id,
+				formatPercentInput(method.fee_percent),
+			]),
+		),
+	);
+	const [isLoadingPayments, setIsLoadingPayments] = useState(
+		!initialPaymentMethodsRef.current,
+	);
+	const [isSavingPayments, setIsSavingPayments] = useState(false);
 	const [isSaving, setIsSaving] = useState(false);
 	const [errorMessage, setErrorMessage] = useState("");
 	const [successMessage, setSuccessMessage] = useState("");
@@ -336,6 +375,43 @@ export default function SettingsPage() {
 			mounted = false;
 		};
 	}, [initialProfile]);
+
+	useEffect(() => {
+		if (!isAdmin) {
+			setIsLoadingPayments(false);
+			return;
+		}
+
+		let mounted = true;
+		loadPaymentMethods({ force: Boolean(initialPaymentMethodsRef.current) })
+			.then((methods) => {
+				if (!mounted) return;
+				setPaymentMethods(methods);
+				setPaymentDrafts(
+					Object.fromEntries(
+						methods.map((method) => [
+							method.id,
+							formatPercentInput(method.fee_percent),
+						]),
+					),
+				);
+			})
+			.catch((error) => {
+				if (mounted) {
+					setErrorMessage(
+						error.message || "Falha ao carregar formas de pagamento.",
+					);
+					setSuccessMessage("");
+				}
+			})
+			.finally(() => {
+				if (mounted) setIsLoadingPayments(false);
+			});
+
+		return () => {
+			mounted = false;
+		};
+	}, [isAdmin]);
 
 	const handlePhotoChange = async (event) => {
 		const file = event.target.files?.[0];
@@ -524,6 +600,60 @@ export default function SettingsPage() {
 	const handleLogout = () => {
 		logout();
 		navigate("/login", { replace: true });
+	};
+
+	const handleSavePaymentMethods = async () => {
+		if (isSavingPayments || isLoadingPayments) return;
+
+		const updates = [];
+		for (const method of paymentMethods) {
+			const feePercent = parsePercentInput(paymentDrafts[method.id]);
+			if (!Number.isFinite(feePercent) || feePercent < 0 || feePercent > 100) {
+				setErrorMessage("Informe taxas entre 0 e 100%.");
+				setSuccessMessage("");
+				return;
+			}
+			if (Math.abs(feePercent - Number(method.fee_percent || 0)) >= 0.0001) {
+				updates.push({ method, feePercent });
+			}
+		}
+
+		if (updates.length === 0) {
+			setSuccessMessage("Taxas ja estao atualizadas.");
+			setErrorMessage("");
+			return;
+		}
+
+		setIsSavingPayments(true);
+		setErrorMessage("");
+		setSuccessMessage("");
+		try {
+			const saved = await Promise.all(
+				updates.map(({ method, feePercent }) =>
+					savePaymentMethod(method.id, { fee_percent: feePercent }),
+				),
+			);
+			setPaymentMethods((current) =>
+				current.map((method) => {
+					const updated = saved.find((item) => item.id === method.id);
+					return updated || method;
+				}),
+			);
+			setPaymentDrafts((current) => ({
+				...current,
+				...Object.fromEntries(
+					saved.map((method) => [
+						method.id,
+						formatPercentInput(method.fee_percent),
+					]),
+				),
+			}));
+			setSuccessMessage("Taxas de pagamento salvas.");
+		} catch (error) {
+			setErrorMessage(error.message || "Falha ao salvar taxas.");
+		} finally {
+			setIsSavingPayments(false);
+		}
 	};
 
 	const inputClass =
@@ -841,6 +971,70 @@ export default function SettingsPage() {
 							}
 						</FieldGroup>
 					</SettingsSection>
+
+					{isAdmin && (
+						<SettingsSection label="Recebimento">
+							<FieldGroup>
+								{paymentMethods
+									.filter((method) => method.code !== "fiado")
+									.map((method) => (
+										<GroupItem key={method.id}>
+											<RowField
+												id={`payment-${method.id}`}
+												label={method.name}
+												hint={
+													Number(method.fee_percent || 0) > 0 ?
+														`Atual: ${formatPercentInput(method.fee_percent)}%`
+													:	"Sem taxa"
+												}>
+												<div className="flex items-center justify-end gap-1">
+													<input
+														id={`payment-${method.id}`}
+														type="text"
+														inputMode="decimal"
+														value={paymentDrafts[method.id] ?? "0"}
+														onChange={(event) =>
+															setPaymentDrafts((current) => ({
+																...current,
+																[method.id]: event.target.value,
+															}))
+														}
+														className="w-16 bg-transparent p-0 text-right font-mono text-sm text-[#e8e8e2] outline-none disabled:text-[#5F5E5A]"
+														disabled={
+															isSaving ||
+															isLoading ||
+															isSavingPayments ||
+															isLoadingPayments
+														}
+													/>
+													<span className="font-mono text-sm text-[#5F5E5A]">
+														%
+													</span>
+												</div>
+											</RowField>
+										</GroupItem>
+									))}
+								<GroupItem>
+									<div className="px-4 py-3.5">
+										<button
+											type="button"
+											onClick={handleSavePaymentMethods}
+											disabled={
+												isSaving ||
+												isLoading ||
+												isSavingPayments ||
+												isLoadingPayments
+											}
+											className="w-full rounded-[10px] border border-[#1D9E75]/30 bg-[#1D9E75]/15 py-3 font-client text-sm font-medium text-[#5DCAA5] transition-colors hover:bg-[#1D9E75]/25 disabled:opacity-60">
+											{isSavingPayments ?
+												"Salvando taxas..."
+											:	"Salvar taxas de cartão"}
+										</button>
+									</div>
+								</GroupItem>
+							</FieldGroup>
+						</SettingsSection>
+					)}
 
 					<SettingsSection label="Acesso">
 						<FieldGroup>

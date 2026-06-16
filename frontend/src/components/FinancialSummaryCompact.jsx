@@ -14,6 +14,8 @@ export function FinancialSummaryCompact({
 
 	const isAdmin = summary?.type === "admin";
 	const total = isAdmin ? summary?.total_pago_geral : summary?.total_pago;
+	const totalTaxas = summary?.total_taxas || 0;
+	const totalLiquido = summary?.total_liquido ?? total;
 	const barbearia = summary?.total_barbearia ?? summary?.parte_barbearia;
 	const barbeiros = summary?.total_barbeiros ?? summary?.parte_barbeiro;
 	const count =
@@ -33,7 +35,7 @@ export function FinancialSummaryCompact({
 				<div className="grid grid-cols-[1fr_auto] gap-3 md:grid-cols-[1fr_180px]">
 					<div className="min-w-0 rounded-md bg-background-deep px-3 py-2">
 						<p className="font-mono-ui text-[10px] uppercase text-foreground-faint">
-							Total pago
+							Bruto pago
 						</p>
 						<p className="mt-1 font-value text-2xl leading-none text-paid">
 							{formatCurrency(total)}
@@ -51,6 +53,22 @@ export function FinancialSummaryCompact({
 
 				{showBreakdown && (
 					<div className="mt-2 grid grid-cols-2 gap-2">
+						<div className="rounded-md bg-background-deep px-3 py-2">
+							<p className="font-mono-ui text-[10px] text-foreground-faint">
+								Taxas
+							</p>
+							<p className="font-value text-base text-fiado">
+								{formatCurrency(totalTaxas)}
+							</p>
+						</div>
+						<div className="rounded-md bg-background-deep px-3 py-2">
+							<p className="font-mono-ui text-[10px] text-foreground-faint">
+								Liquido
+							</p>
+							<p className="font-value text-base text-paid">
+								{formatCurrency(totalLiquido)}
+							</p>
+						</div>
 						<div className="rounded-md bg-background-deep px-3 py-2">
 							<p className="font-mono-ui text-[10px] text-foreground-faint">
 								Barbearia
@@ -94,7 +112,7 @@ export function FinancialSummaryCompact({
 											</p>
 										</div>
 										<div className="mt-2 grid grid-cols-3 gap-2 text-[11px] text-foreground-faint">
-											<span>Total {formatCurrency(row.total_pago)}</span>
+											<span>Liq. {formatCurrency(row.total_liquido)}</span>
 											<span>Barbeiro {formatCurrency(row.parte_barbeiro)}</span>
 											<span>Loja {formatCurrency(row.parte_barbearia)}</span>
 										</div>

@@ -1,14 +1,22 @@
 const t = require("tap");
 
-function loadService({ appointmentsRepository, barbersRepository }) {
+function loadService({
+	appointmentsRepository,
+	barbersRepository,
+	paymentMethodsRepository = { findById: async () => null },
+}) {
 	const appointmentsPath = require.resolve(
 		"../src/repositories/appointmentsRepository",
 	);
 	const barbersPath = require.resolve("../src/repositories/barbersRepository");
+	const paymentMethodsPath = require.resolve(
+		"../src/repositories/paymentMethodsRepository",
+	);
 	const servicePath = require.resolve("../src/services/appointmentsService");
 
 	require.cache[appointmentsPath] = { exports: appointmentsRepository };
 	require.cache[barbersPath] = { exports: barbersRepository };
+	require.cache[paymentMethodsPath] = { exports: paymentMethodsRepository };
 	delete require.cache[servicePath];
 
 	return require("../src/services/appointmentsService");
@@ -132,4 +140,44 @@ t.test("barber cannot update another barber appointment", async (t) => {
 		service.updateAppointment("appt-1", { value: 50 }, barberUser),
 		{ status: 403, code: "APPOINTMENT_FORBIDDEN" },
 	);
+});
+
+t.test("paid appointment stores payment fee snapshot from method", async (t) => {
+	let capturedPayload;
+	const service = loadService({
+		appointmentsRepository: {
+			findById: async () => ({
+				id: "appt-1",
+				barbearia_id: "shop-1",
+				barbeiro_id: "barber-1",
+				value: 100,
+				status: "normal",
+			}),
+			update: async (_id, payload) => {
+				capturedPayload = payload;
+				return { id: "appt-1", ...payload };
+			},
+		},
+		barbersRepository: {
+			findByIdInBarbearia: async () => null,
+		},
+		paymentMethodsRepository: {
+			findById: async (id) => ({
+				id,
+				active: true,
+				fee_percent: 1.71,
+			}),
+		},
+	});
+
+	await service.updateAppointment(
+		"appt-1",
+		{ status: "paid", payment_method_id: "method-credit" },
+		barberUser,
+	);
+
+	t.equal(capturedPayload.payment_method_id, "method-credit");
+	t.equal(capturedPayload.payment_fee_percent, 1.71);
+	t.equal(capturedPayload.payment_fee_value, 1.71);
+	t.equal(capturedPayload.net_value, 98.29);
 });

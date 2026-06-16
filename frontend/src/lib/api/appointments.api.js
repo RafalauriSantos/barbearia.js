@@ -25,6 +25,13 @@ function normalizeAppointment(raw) {
 		barber_name: raw.barber_name,
 		barbearia_id: raw.barbearia_id,
 		barbeiro_id: raw.barbeiro_id,
+		forma_pagamento_id: raw.forma_pagamento_id || raw.payment_method_id,
+		payment_method_id: raw.payment_method_id || raw.forma_pagamento_id,
+		payment_method_code: raw.payment_method_code || raw.forma_pagamento,
+		payment_method_name: raw.payment_method_name || "",
+		payment_fee_percent: Number(raw.payment_fee_percent || 0),
+		payment_fee_value: Number(raw.payment_fee_value || 0),
+		net_value: Number(raw.net_value ?? raw.value ?? 0),
 		services,
 		products,
 	};
@@ -48,6 +55,8 @@ function toApiPayload(appt) {
 	addIfDefined(payload, "prazo_date", appt.prazo_date);
 	addIfDefined(payload, "barber_name", appt.barber_name);
 	addIfDefined(payload, "barbeiro_id", appt.barbeiro_id);
+	addIfDefined(payload, "forma_pagamento_id", appt.forma_pagamento_id);
+	addIfDefined(payload, "payment_method_id", appt.payment_method_id);
 
 	return payload;
 }

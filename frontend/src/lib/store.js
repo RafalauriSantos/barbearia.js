@@ -31,6 +31,10 @@ import {
 	updateBarber,
 } from "@/lib/api/barbers.api";
 import { getFinancialSummary } from "@/lib/api/financial.api";
+import {
+	listPaymentMethods,
+	updatePaymentMethodById,
+} from "@/lib/api/paymentMethods.api";
 
 const DEFAULT_TTL_MS = 60000;
 const PERSISTED_CACHE_MAX_AGE_MS = 1000 * 60 * 60 * 24 * 7;
@@ -259,6 +263,7 @@ const cacheKeys = {
 	services: "services",
 	products: "products",
 	barbers: "barbers",
+	paymentMethods: "paymentMethods",
 	expenses: (dayKey) => (dayKey ? `expenses:day:${dayKey}` : "expenses:all"),
 	appointments: (dayKey, filters = {}) =>
 		makeStableKey(`appointments:${dayKey}`, filters),
@@ -361,6 +366,30 @@ export async function saveBarber(id, payload) {
 
 export async function sendBarberInvite(id, payload) {
 	return inviteBarber(id, payload);
+}
+
+export function getCachedPaymentMethods() {
+	return readCache(cacheKeys.paymentMethods);
+}
+
+export async function loadPaymentMethods(options = {}) {
+	return loadCached(cacheKeys.paymentMethods, listPaymentMethods, options);
+}
+
+export async function savePaymentMethod(id, updates) {
+	const method = await updatePaymentMethodById(id, updates);
+	const cached = readCache(cacheKeys.paymentMethods);
+	if (Array.isArray(cached)) {
+		writeCache(
+			cacheKeys.paymentMethods,
+			cached.map((item) => (item.id === id ? method : item)),
+		);
+	} else {
+		invalidateCache(cacheKeys.paymentMethods);
+	}
+	invalidateCache("appointments:");
+	invalidateCache("financial:");
+	return method;
 }
 
 export function getCachedFinancialSummary(params = {}) {

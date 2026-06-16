@@ -25,7 +25,11 @@ const appointmentSchema = z.object({
 	prazo_date: z.string().nullable().optional(),
 	barber_name: z.string().optional(),
 	forma_pagamento_id: z.string().uuid().nullable().optional(),
+	payment_method_id: z.string().uuid().nullable().optional(),
 	forma_pagamento: z.string().optional(),
+	payment_fee_percent: z.coerce.number().min(0).max(100).optional(),
+	payment_fee_value: z.coerce.number().nonnegative().optional(),
+	net_value: z.coerce.number().nonnegative().optional(),
 });
 
 const listQuerySchema = z.object({

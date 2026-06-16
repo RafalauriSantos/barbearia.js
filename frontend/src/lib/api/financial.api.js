@@ -9,6 +9,8 @@ function normalizeBarberSummary(raw) {
 		barbeiro_id: raw.barbeiro_id,
 		nome: raw.nome || raw.name || "",
 		total_pago: normalizeNumber(raw.total_pago),
+		total_taxas: normalizeNumber(raw.total_taxas),
+		total_liquido: normalizeNumber(raw.total_liquido || raw.total_pago),
 		comissao_percent: normalizeNumber(raw.comissao_percent),
 		parte_barbeiro: normalizeNumber(raw.parte_barbeiro),
 		parte_barbearia: normalizeNumber(raw.parte_barbearia),
@@ -21,6 +23,10 @@ export function normalizeFinancialSummary(raw) {
 		return {
 			type: "admin",
 			total_pago_geral: normalizeNumber(raw.total_pago_geral),
+			total_taxas: normalizeNumber(raw.total_taxas),
+			total_liquido: normalizeNumber(
+				raw.total_liquido || raw.total_pago_geral,
+			),
 			total_barbearia: normalizeNumber(raw.total_barbearia),
 			total_barbeiros: normalizeNumber(raw.total_barbeiros),
 			quantidade_atendimentos_pagos: Number(

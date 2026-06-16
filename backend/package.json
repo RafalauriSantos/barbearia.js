@@ -4,7 +4,7 @@
 	"main": "src/index.js",
 	"scripts": {
 		"dev": "node --watch src/server.js",
-		"start": "node src/server.js",
+		"start": "node scripts/migrate-if-configured.js && node src/server.js",
 		"seed": "node scripts/seed.js",
 		"migrate": "knex migrate:latest",
 		"migrate:rollback": "knex migrate:rollback",

@@ -11,6 +11,7 @@ import {
 	getCachedAppointmentsForDay,
 	getCachedBarbers,
 	getCachedDaySummaryFromAppointments,
+	getCachedPaymentMethods,
 	getCachedProducts,
 	getCachedProfile,
 	getCachedServices,
@@ -20,6 +21,7 @@ import {
 	loadProducts,
 	loadServices,
 	loadBarbers,
+	loadPaymentMethods,
 	loadProfile,
 	updateAppointment,
 } from "@/lib/store";
@@ -341,6 +343,136 @@ function AppointmentSwipeRow({
 	);
 }
 
+function PaymentQuickSheet({
+	appointment,
+	methods,
+	isLoading,
+	isSaving,
+	onClose,
+	onConfirm,
+}) {
+	const availableMethods = methods.filter((method) => method.code !== "fiado");
+	const initialMethod =
+		availableMethods.find((method) => method.id === appointment.payment_method_id) ||
+		availableMethods.find((method) => method.code === "pix") ||
+		availableMethods[0] ||
+		null;
+	const [selectedMethodId, setSelectedMethodId] = useState(
+		initialMethod?.id || "",
+	);
+	const selectedMethod =
+		availableMethods.find((method) => method.id === selectedMethodId) ||
+		initialMethod;
+	const gross = Number(appointment.value || 0);
+	const feePercent = Number(selectedMethod?.fee_percent || 0);
+	const feeValue =
+		Math.round(((gross * feePercent) / 100 + Number.EPSILON) * 100) / 100;
+	const netValue =
+		Math.round((Math.max(gross - feeValue, 0) + Number.EPSILON) * 100) / 100;
+
+	useEffect(() => {
+		setSelectedMethodId(initialMethod?.id || "");
+	}, [appointment.id, initialMethod?.id]);
+
+	return (
+		<div
+			className="fixed inset-0 z-[110] flex items-end justify-center bg-black/70 backdrop-blur-sm"
+			onClick={onClose}>
+			<div
+				className="w-full max-w-[480px] rounded-t-lg border-x border-t border-border bg-background p-4 shadow-[0_-20px_80px_rgba(0,0,0,0.45)]"
+				onClick={(event) => event.stopPropagation()}>
+				<div className="flex items-start justify-between gap-3">
+					<div className="min-w-0">
+						<p className="font-mono-ui text-[10px] uppercase text-paid">
+							Receber atendimento
+						</p>
+						<h2 className="mt-1 truncate font-logo text-lg text-foreground">
+							{appointment.client_name}
+						</h2>
+						<p className="mt-1 font-client text-sm text-foreground-faint">
+							{formatCurrency(gross)} · {appointment.time_slot}
+						</p>
+					</div>
+					<button
+						type="button"
+						onClick={onClose}
+						disabled={isSaving}
+						className="h-9 w-9 shrink-0 rounded-md border border-border bg-card text-foreground-faint">
+						×
+					</button>
+				</div>
+
+				{isLoading && availableMethods.length === 0 ?
+					<p className="mt-4 rounded-md border border-border bg-card px-3 py-3 font-mono-ui text-[10px] uppercase text-foreground-faint">
+						Carregando formas...
+					</p>
+				:	<>
+						<div className="mt-4 grid grid-cols-2 gap-2">
+							{availableMethods.map((method) => {
+								const isActive = method.id === selectedMethod?.id;
+								return (
+									<button
+										key={method.id}
+										type="button"
+										onClick={() => setSelectedMethodId(method.id)}
+										disabled={isSaving}
+										className={`min-h-[58px] rounded-lg border px-3 py-2 text-left transition-colors ${
+											isActive ?
+												"border-paid/50 bg-paid/15 text-foreground"
+											:	"border-border bg-card text-foreground-faint hover:border-paid/30"
+										}`}>
+										<span className="block truncate font-client text-sm font-semibold">
+											{method.name}
+										</span>
+										<span className="mt-1 block font-mono-ui text-[10px]">
+											{Number(method.fee_percent || 0).toFixed(2)}% taxa
+										</span>
+									</button>
+								);
+							})}
+						</div>
+
+						<div className="mt-4 grid grid-cols-3 gap-2">
+							<div className="rounded-md bg-background-deep px-3 py-2">
+								<p className="font-mono-ui text-[9px] uppercase text-foreground-faint">
+									Bruto
+								</p>
+								<p className="mt-1 font-value text-base text-foreground">
+									{formatCurrency(gross)}
+								</p>
+							</div>
+							<div className="rounded-md bg-background-deep px-3 py-2">
+								<p className="font-mono-ui text-[9px] uppercase text-foreground-faint">
+									Taxa
+								</p>
+								<p className="mt-1 font-value text-base text-fiado">
+									{formatCurrency(feeValue)}
+								</p>
+							</div>
+							<div className="rounded-md bg-background-deep px-3 py-2">
+								<p className="font-mono-ui text-[9px] uppercase text-foreground-faint">
+									Liquido
+								</p>
+								<p className="mt-1 font-value text-base text-paid">
+									{formatCurrency(netValue)}
+								</p>
+							</div>
+						</div>
+
+						<button
+							type="button"
+							onClick={() => selectedMethod && onConfirm(selectedMethod)}
+							disabled={isSaving || !selectedMethod}
+							className="mt-4 w-full rounded-lg bg-paid px-4 py-3 font-mono-ui text-xs uppercase text-primary-foreground transition-transform active:scale-[0.99] disabled:opacity-60">
+							{isSaving ? "Salvando..." : "Confirmar pagamento"}
+						</button>
+					</>
+				}
+			</div>
+		</div>
+	);
+}
+
 export default function AppPage() {
 	const navigate = useNavigate();
 	const { user } = useAuth();
@@ -362,6 +494,7 @@ export default function AppPage() {
 			barbers: getCachedBarbers(),
 			services: getCachedServices(),
 			products: getCachedProducts(),
+			paymentMethods: getCachedPaymentMethods(),
 		};
 	}
 	const initialCache = initialCacheRef.current;
@@ -385,8 +518,14 @@ export default function AppPage() {
 	const [selectedAppointment, setSelectedAppointment] = useState(null);
 	const [services, setServices] = useState(initialCache.services || []);
 	const [products, setProducts] = useState(initialCache.products || []);
+	const [paymentMethods, setPaymentMethods] = useState(
+		initialCache.paymentMethods || [],
+	);
 	const [isLoadingCatalog, setIsLoadingCatalog] = useState(
 		!(initialCache.services && initialCache.products),
+	);
+	const [isLoadingPaymentMethods, setIsLoadingPaymentMethods] = useState(
+		!initialCache.paymentMethods,
 	);
 	const [itemDraft, setItemDraft] = useState({ services: [], products: [] });
 	const [autoValueForDraft, setAutoValueForDraft] = useState(true);
@@ -396,6 +535,7 @@ export default function AppPage() {
 	const [profile, setProfile] = useState(initialCache.profile || null);
 	const [activeBarberId, setActiveBarberId] = useState("");
 	const [savingStatusId, setSavingStatusId] = useState("");
+	const [paymentAppointment, setPaymentAppointment] = useState(null);
 	const dayKey = formatDayKey(currentDate);
 	const ownBarberId = user?.barbeiro_id || "";
 	const selectedBarberId = activeBarberId || ownBarberId || "";
@@ -531,6 +671,24 @@ export default function AppPage() {
 			mounted = false;
 		};
 	}, [initialCache.products, initialCache.services]);
+
+	useEffect(() => {
+		let mounted = true;
+		loadPaymentMethods({ force: Boolean(initialCache.paymentMethods) })
+			.then((list) => {
+				if (mounted) setPaymentMethods(list);
+			})
+			.catch(() => {
+				if (mounted && !initialCache.paymentMethods) setPaymentMethods([]);
+			})
+			.finally(() => {
+				if (mounted) setIsLoadingPaymentMethods(false);
+			});
+
+		return () => {
+			mounted = false;
+		};
+	}, [initialCache.paymentMethods]);
 
 	const prevDay = () => {
 		if (!canGoBack) return;
@@ -670,6 +828,11 @@ export default function AppPage() {
 	};
 
 	const changeAppointmentStatusBySwipe = async (appointment, status) => {
+		if (status === "paid") {
+			setPaymentAppointment(appointment);
+			setFeedbackMessage("");
+			return;
+		}
 		if (savingStatusId || appointment.status === status) return;
 		setSavingStatusId(appointment.id);
 		setFeedbackMessage("");
@@ -695,6 +858,31 @@ export default function AppPage() {
 		} catch (error) {
 			setAppointments(previousAppointments);
 			setErrorMessage(error.message || "Nao foi possivel atualizar o status.");
+		} finally {
+			setSavingStatusId("");
+		}
+	};
+
+	const confirmAppointmentPayment = async (method) => {
+		if (!paymentAppointment || savingStatusId) return;
+		setSavingStatusId(paymentAppointment.id);
+		setFeedbackMessage("");
+		setErrorMessage("");
+		try {
+			const updated = await updateAppointment(paymentAppointment.id, {
+				status: "paid",
+				payment_method_id: method.id,
+				prazo_date: null,
+			});
+			setPaymentAppointment(null);
+			setAppointments((current) =>
+				current.map((item) =>
+					item.id === updated.id ? updated : item,
+				),
+			);
+			await reload();
+		} catch (error) {
+			setErrorMessage(error.message || "Nao foi possivel receber pagamento.");
 		} finally {
 			setSavingStatusId("");
 		}
@@ -1117,6 +1305,19 @@ export default function AppPage() {
 						</div>
 					</div>
 				</div>
+			)}
+
+			{paymentAppointment && (
+				<PaymentQuickSheet
+					appointment={paymentAppointment}
+					methods={paymentMethods}
+					isLoading={isLoadingPaymentMethods}
+					isSaving={savingStatusId === paymentAppointment.id}
+					onClose={() => {
+						if (!savingStatusId) setPaymentAppointment(null);
+					}}
+					onConfirm={confirmAppointmentPayment}
+				/>
 			)}
 
 			{dialogOpen && (

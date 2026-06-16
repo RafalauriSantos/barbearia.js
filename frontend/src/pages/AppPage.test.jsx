@@ -11,6 +11,7 @@ const storeMock = vi.hoisted(() => ({
 	getCachedAppointmentsForDay: vi.fn(),
 	getCachedBarbers: vi.fn(),
 	getCachedDaySummaryFromAppointments: vi.fn(),
+	getCachedPaymentMethods: vi.fn(),
 	getCachedProducts: vi.fn(),
 	getCachedProfile: vi.fn(),
 	getCachedServices: vi.fn(),
@@ -20,6 +21,7 @@ const storeMock = vi.hoisted(() => ({
 	loadProducts: vi.fn(),
 	loadServices: vi.fn(),
 	loadBarbers: vi.fn(),
+	loadPaymentMethods: vi.fn(),
 	loadProfile: vi.fn(),
 	updateAppointment: vi.fn(),
 }));
@@ -84,6 +86,20 @@ beforeEach(() => {
 	});
 	storeMock.loadServices.mockResolvedValue([]);
 	storeMock.loadProducts.mockResolvedValue([]);
+	storeMock.loadPaymentMethods.mockResolvedValue([
+		{
+			id: "method-pix",
+			code: "pix",
+			name: "Pix",
+			fee_percent: 0,
+		},
+		{
+			id: "method-credit",
+			code: "cartao_credito",
+			name: "Cartao de credito",
+			fee_percent: 1.71,
+		},
+	]);
 	storeMock.updateAppointment.mockResolvedValue({});
 	storeMock.loadBarbers.mockResolvedValue([
 		{
@@ -215,7 +231,7 @@ describe("AppPage barber avatar row", () => {
 		expect(screen.queryByRole("button", { name: /minha agenda/i })).toBeNull();
 	});
 
-	it("marks a pending appointment as paid when swiped right", async () => {
+	it("opens payment confirmation and marks appointment as paid after right swipe", async () => {
 		let status = "normal";
 		storeMock.getAppointmentsForDayWithFilters.mockImplementation(
 			async (_dayKey, filters = {}) => {
@@ -266,9 +282,14 @@ describe("AppPage barber avatar row", () => {
 			buttons: 0,
 		});
 
+		expect(await screen.findByText("Receber atendimento")).toBeTruthy();
+		expect(screen.getByText("Pix")).toBeTruthy();
+		fireEvent.click(screen.getByRole("button", { name: /confirmar pagamento/i }));
+
 		await waitFor(() => {
 			expect(storeMock.updateAppointment).toHaveBeenCalledWith("appt-owner", {
 				status: "paid",
+				payment_method_id: "method-pix",
 				prazo_date: null,
 			});
 		});

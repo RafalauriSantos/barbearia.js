@@ -123,6 +123,39 @@ t.test("barber financial summary only uses own barber", async (t) => {
 	t.equal(summary.parte_barbearia, 40);
 });
 
+t.test("financial summary discounts card fees before commission split", async (t) => {
+	const service = loadFinancialService({
+		financialRepository: {
+			findPaidAppointments: async () => [
+				{
+					id: "appt-card-1",
+					total: 100,
+					taxa_pagamento_valor: 1.71,
+					valor_liquido: 98.29,
+					barbeiro_id: "barber-1",
+					barbeiros: {
+						id: "barber-1",
+						nome: "Renan",
+						comissao_percent: 50,
+					},
+				},
+			],
+		},
+		barbersRepository: {
+			findByIdInBarbearia: async () => ({ id: "barber-1" }),
+		},
+	});
+
+	const summary = await service.getSummary({}, adminUser);
+
+	t.equal(summary.total_pago_geral, 100);
+	t.equal(summary.total_taxas, 1.71);
+	t.equal(summary.total_liquido, 98.29);
+	t.equal(summary.total_barbeiros, 49.15);
+	t.equal(summary.total_barbearia, 49.15);
+	t.equal(summary.resumo_por_barbeiro[0].total_liquido, 98.29);
+});
+
 t.test("barber cannot request another barber financial summary", async (t) => {
 	const service = loadFinancialService({
 		financialRepository: {

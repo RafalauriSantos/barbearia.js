@@ -1,5 +1,16 @@
 const supabase = require("../lib/supabase");
 
+function isMissingPaymentSnapshotColumn(error) {
+	const text = `${error?.code || ""} ${error?.message || ""} ${
+		error?.details || ""
+	}`;
+	return [
+		"taxa_pagamento_percentual",
+		"taxa_pagamento_valor",
+		"valor_liquido",
+	].some((column) => text.includes(column));
+}
+
 exports.findPaidAppointments = async function ({
 	barbeariaId,
 	barbeiroId,
@@ -9,7 +20,7 @@ exports.findPaidAppointments = async function ({
 	let query = supabase
 		.from("agendamentos")
 		.select(
-			"id,total,valor_manual,data,barbearia_id,barbeiro_id,status_pagamento,barbeiros(id,nome,comissao_percent)",
+			"id,total,valor_manual,valor_liquido,taxa_pagamento_valor,taxa_pagamento_percentual,data,barbearia_id,barbeiro_id,status_pagamento,forma_pagamento_id,barbeiros(id,nome,comissao_percent),formas_pagamento(id,codigo,nome)",
 		)
 		.eq("barbearia_id", barbeariaId)
 		.eq("status_pagamento", "pago");
@@ -25,6 +36,29 @@ exports.findPaidAppointments = async function ({
 	}
 
 	const { data, error } = await query.order("data", { ascending: true });
+	if (error && isMissingPaymentSnapshotColumn(error)) {
+		let legacyQuery = supabase
+			.from("agendamentos")
+			.select(
+				"id,total,valor_manual,data,barbearia_id,barbeiro_id,status_pagamento,forma_pagamento_id,barbeiros(id,nome,comissao_percent),formas_pagamento(id,codigo,nome)",
+			)
+			.eq("barbearia_id", barbeariaId)
+			.eq("status_pagamento", "pago");
+
+		if (barbeiroId) {
+			legacyQuery = legacyQuery.eq("barbeiro_id", barbeiroId);
+		}
+		if (startDate) {
+			legacyQuery = legacyQuery.gte("data", startDate);
+		}
+		if (endDate) {
+			legacyQuery = legacyQuery.lte("data", endDate);
+		}
+
+		const legacyResult = await legacyQuery.order("data", { ascending: true });
+		if (legacyResult.error) throw legacyResult.error;
+		return legacyResult.data || [];
+	}
 	if (error) throw error;
 	return data || [];
 };

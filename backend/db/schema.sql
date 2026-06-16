@@ -105,7 +105,12 @@ CREATE TABLE IF NOT EXISTS public.formas_pagamento (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid (),
     codigo varchar NOT NULL UNIQUE,
     nome varchar NOT NULL,
+    taxa_percentual numeric(7, 4) NOT NULL DEFAULT 0 CHECK (
+        taxa_percentual >= 0
+        AND taxa_percentual <= 100
+    ),
     ativo boolean NOT NULL DEFAULT true,
+    ordem integer NOT NULL DEFAULT 100,
     criado_em timestamptz NOT NULL DEFAULT now()
 );
 
@@ -129,6 +134,12 @@ CREATE TABLE IF NOT EXISTS public.agendamentos (
         status_pagamento IN ('pendente', 'pago', 'fiado')
     ),
     forma_pagamento_id uuid REFERENCES public.formas_pagamento (id) ON DELETE SET NULL,
+    taxa_pagamento_percentual numeric(7, 4) NOT NULL DEFAULT 0 CHECK (
+        taxa_pagamento_percentual >= 0
+        AND taxa_pagamento_percentual <= 100
+    ),
+    taxa_pagamento_valor numeric(10, 2) NOT NULL DEFAULT 0 CHECK (taxa_pagamento_valor >= 0),
+    valor_liquido numeric(10, 2) NOT NULL DEFAULT 0 CHECK (valor_liquido >= 0),
     prazo_fiado_data date,
     observacoes text,
     criado_em timestamptz NOT NULL DEFAULT now(),
@@ -184,19 +195,29 @@ CREATE TABLE IF NOT EXISTS public.pagamentos (
 );
 
 INSERT INTO
-    public.formas_pagamento (codigo, nome)
-VALUES ('dinheiro', 'Dinheiro'),
-    ('pix', 'Pix'),
+    public.formas_pagamento (codigo, nome, taxa_percentual, ordem)
+VALUES ('dinheiro', 'Dinheiro', 0, 20),
+    ('pix', 'Pix', 0, 10),
     (
         'cartao_debito',
-        'Cartao de debito'
+        'Debito',
+        0,
+        30
     ),
     (
         'cartao_credito',
-        'Cartao de credito'
+        'Credito a vista',
+        0,
+        40
     ),
-    ('fiado', 'Fiado'),
-    ('outro', 'Outro') ON CONFLICT (codigo) DO
+    (
+        'credito_parcelado',
+        'Credito parcelado',
+        0,
+        50
+    ),
+    ('fiado', 'Fiado', 0, 60),
+    ('outro', 'Outro', 0, 100) ON CONFLICT (codigo) DO
 UPDATE
 SET
     nome = EXCLUDED.nome;

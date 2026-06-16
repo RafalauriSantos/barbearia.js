@@ -4,8 +4,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import SettingsPage from "./SettingsPage";
 
 const storeMock = vi.hoisted(() => ({
+	getCachedPaymentMethods: vi.fn(),
 	getCachedProfile: vi.fn(),
+	loadPaymentMethods: vi.fn(),
 	loadProfile: vi.fn(),
+	savePaymentMethod: vi.fn(),
 	saveProfile: vi.fn(),
 }));
 
@@ -17,8 +20,11 @@ vi.mock("@/context/AuthContext", () => ({
 }));
 
 vi.mock("@/lib/store", () => ({
+	getCachedPaymentMethods: storeMock.getCachedPaymentMethods,
 	getCachedProfile: storeMock.getCachedProfile,
+	loadPaymentMethods: storeMock.loadPaymentMethods,
 	loadProfile: storeMock.loadProfile,
+	savePaymentMethod: storeMock.savePaymentMethod,
 	saveProfile: storeMock.saveProfile,
 }));
 
@@ -34,6 +40,26 @@ beforeEach(() => {
 		scheduleInterval: 30,
 		barberName: "Rafael",
 		barberPhotoUrl: "",
+	});
+	storeMock.loadPaymentMethods.mockResolvedValue([
+		{
+			id: "method-debit",
+			code: "cartao_debito",
+			name: "Debito",
+			fee_percent: 0.69,
+		},
+		{
+			id: "method-credit",
+			code: "cartao_credito",
+			name: "Credito a vista",
+			fee_percent: 1.71,
+		},
+	]);
+	storeMock.savePaymentMethod.mockResolvedValue({
+		id: "method-debit",
+		code: "cartao_debito",
+		name: "Debito",
+		fee_percent: 0.8,
 	});
 	storeMock.saveProfile.mockResolvedValue({ barberPhotoUrl: "" });
 });
@@ -86,10 +112,30 @@ describe("SettingsPage", () => {
 
 		expect(await screen.findByDisplayValue("Gestor Barbearia")).toBeTruthy();
 		expect(screen.getByText("Horários")).toBeTruthy();
+		expect(await screen.findByText("Recebimento")).toBeTruthy();
 		expect(screen.getByLabelText("Telefone")).toBeTruthy();
 		expect(screen.queryByText("Email de teste")).toBeNull();
 		expect(screen.queryByText("Resetar dados")).toBeNull();
 		expect(screen.queryByText(/orafaellauri/i)).toBeNull();
+	});
+
+	it("saves payment method fees", async () => {
+		render(
+			<MemoryRouter initialEntries={["/settings"]}>
+				<SettingsPage />
+			</MemoryRouter>,
+		);
+
+		const debitInput = await screen.findByLabelText("Debito");
+		fireEvent.change(debitInput, { target: { value: "0,8" } });
+		fireEvent.click(screen.getByRole("button", { name: /salvar taxas/i }));
+
+		await waitFor(() => {
+			expect(storeMock.savePaymentMethod).toHaveBeenCalledWith(
+				"method-debit",
+				{ fee_percent: 0.8 },
+			);
+		});
 	});
 
 	it("saves shop, agenda and account settings through profile", async () => {

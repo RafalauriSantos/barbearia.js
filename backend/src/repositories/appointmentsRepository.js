@@ -96,7 +96,13 @@ function toApi(row) {
 		barbearia_id: row.barbearia_id,
 		barbeiro_id: row.barbeiro_id,
 		forma_pagamento_id: row.forma_pagamento_id,
+		payment_method_id: row.forma_pagamento_id,
 		forma_pagamento: row.formas_pagamento?.codigo,
+		payment_method_code: row.formas_pagamento?.codigo,
+		payment_method_name: row.formas_pagamento?.nome,
+		payment_fee_percent: Number(row.taxa_pagamento_percentual || 0),
+		payment_fee_value: Number(row.taxa_pagamento_valor || 0),
+		net_value: Number(row.valor_liquido || row.total || row.valor_manual || 0),
 		observacoes: row.observacoes,
 	};
 }
@@ -124,10 +130,43 @@ function toAppointmentDatabase(payload) {
 		...(payload.forma_pagamento_id !== undefined ?
 			{ forma_pagamento_id: payload.forma_pagamento_id || null }
 		:	{}),
+		...(payload.payment_method_id !== undefined ?
+			{ forma_pagamento_id: payload.payment_method_id || null }
+		:	{}),
+		...(payload.payment_fee_percent !== undefined ?
+			{ taxa_pagamento_percentual: Number(payload.payment_fee_percent || 0) }
+		:	{}),
+		...(payload.payment_fee_value !== undefined ?
+			{ taxa_pagamento_valor: Number(payload.payment_fee_value || 0) }
+		:	{}),
+		...(payload.net_value !== undefined ?
+			{ valor_liquido: Number(payload.net_value || 0) }
+		:	{}),
 		...(payload.barbeiro_id !== undefined ?
 			{ barbeiro_id: payload.barbeiro_id || null }
 		:	{}),
 	};
+}
+
+function stripPaymentSnapshotPayload(payload = {}) {
+	const {
+		payment_fee_percent,
+		payment_fee_value,
+		net_value,
+		...legacyPayload
+	} = payload;
+	return legacyPayload;
+}
+
+function isMissingPaymentSnapshotColumn(error) {
+	const text = `${error?.code || ""} ${error?.message || ""} ${
+		error?.details || ""
+	}`;
+	return [
+		"taxa_pagamento_percentual",
+		"taxa_pagamento_valor",
+		"valor_liquido",
+	].some((column) => text.includes(column));
 }
 
 async function upsertAppointmentService(appointmentId, payload) {
@@ -236,6 +275,22 @@ exports.create = async function (payload, { barbeariaId, barbeiroId }) {
 		.insert(row)
 		.select()
 		.single();
+	if (error && isMissingPaymentSnapshotColumn(error)) {
+		const legacyRow = {
+			...toAppointmentDatabase(stripPaymentSnapshotPayload(payload)),
+			barbearia_id: barbeariaId,
+			barbeiro_id: barbeiroId,
+		};
+		const legacyResult = await supabase
+			.from("agendamentos")
+			.insert(legacyRow)
+			.select()
+			.single();
+		if (legacyResult.error) throw legacyResult.error;
+		await upsertAppointmentService(legacyResult.data.id, payload);
+		await upsertAppointmentProducts(legacyResult.data.id, payload);
+		return exports.findById(legacyResult.data.id, { barbeariaId });
+	}
 	if (error) throw error;
 
 	await upsertAppointmentService(data.id, payload);
@@ -262,6 +317,21 @@ exports.update = async function (id, updates, { barbeariaId }) {
 		.eq("barbearia_id", barbeariaId)
 		.select()
 		.single();
+	if (error && isMissingPaymentSnapshotColumn(error)) {
+		const legacyPayload = stripPaymentSnapshotPayload(payloadWithValue);
+		const legacyResult = await supabase
+			.from("agendamentos")
+			.update(toAppointmentDatabase(legacyPayload))
+			.eq("id", id)
+			.eq("barbearia_id", barbeariaId)
+			.select()
+			.single();
+		if (legacyResult.error) throw legacyResult.error;
+
+		await upsertAppointmentService(id, updates);
+		await upsertAppointmentProducts(id, updates);
+		return exports.findById(legacyResult.data.id, { barbeariaId });
+	}
 	if (error) throw error;
 
 	await upsertAppointmentService(id, updates);
