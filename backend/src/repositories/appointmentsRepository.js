@@ -26,6 +26,14 @@ function normalizeItemList(items = []) {
 			name: item.name || item.nome_servico || item.nome_produto,
 			price: Number(item.price ?? item.preco_unitario ?? 0),
 			quantity: Number(item.quantity ?? item.quantidade ?? 1) || 1,
+			purchase_type: item.purchase_type || item.tipo_compra || "avista",
+			cost_price: Number(item.cost_price ?? item.custo_unitario ?? 0),
+			supplier_name: item.supplier_name || item.fornecedor || "",
+			seller_commission_percent: Number(
+				item.seller_commission_percent ??
+					item.comissao_venda_percentual ??
+					0,
+			),
 		}))
 		.filter((item) => item.id);
 }
@@ -169,6 +177,30 @@ function isMissingPaymentSnapshotColumn(error) {
 	].some((column) => text.includes(column));
 }
 
+function isMissingProductSnapshotColumn(error) {
+	const text = `${error?.code || ""} ${error?.message || ""} ${
+		error?.details || ""
+	}`;
+	return [
+		"tipo_compra",
+		"custo_unitario",
+		"fornecedor",
+		"comissao_venda_percentual",
+	].some((column) => text.includes(column));
+}
+
+function stripProductSnapshotRows(rows) {
+	return rows.map(
+		({
+			tipo_compra,
+			custo_unitario,
+			fornecedor,
+			comissao_venda_percentual,
+			...legacyRow
+		}) => legacyRow,
+	);
+}
+
 async function upsertAppointmentService(appointmentId, payload) {
 	const { provided, items } = normalizeServices(payload);
 	if (!provided) return;
@@ -209,6 +241,7 @@ async function upsertAppointmentProducts(appointmentId, payload) {
 	const rows = items.map((item) => {
 		const quantity = Number(item.quantity || 1) || 1;
 		const price = Number(item.price || 0);
+		const cost = Number(item.cost_price || 0);
 		return {
 			agendamento_id: appointmentId,
 			produto_id: item.id,
@@ -216,10 +249,23 @@ async function upsertAppointmentProducts(appointmentId, payload) {
 			preco_unitario: price,
 			quantidade: quantity,
 			subtotal: price * quantity,
+			tipo_compra: item.purchase_type || "avista",
+			custo_unitario: cost,
+			fornecedor: item.supplier_name || null,
+			comissao_venda_percentual: Number(
+				item.seller_commission_percent || 0,
+			),
 		};
 	});
 
 	const { error } = await supabase.from("agendamento_produtos").insert(rows);
+	if (error && isMissingProductSnapshotColumn(error)) {
+		const legacyResult = await supabase
+			.from("agendamento_produtos")
+			.insert(stripProductSnapshotRows(rows));
+		if (legacyResult.error) throw legacyResult.error;
+		return;
+	}
 	if (error) throw error;
 }
 

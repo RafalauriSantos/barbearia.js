@@ -77,6 +77,150 @@ function PaymentMethodBreakdown({ rows = [] }) {
 	);
 }
 
+function ProductSalesBreakdown({ summary }) {
+	const productSummary = summary || {};
+	const productRows = productSummary.resumo_por_produto || [];
+	const supplierRows = productSummary.resumo_por_fornecedor || [];
+
+	if (!productSummary.quantidade) {
+		return (
+			<div className="rounded-lg border border-border bg-background-deep p-4">
+				<p className="font-mono-ui text-[10px] uppercase text-foreground-faint">
+					Produtos
+				</p>
+				<p className="mt-2 font-client text-sm text-foreground-faint">
+					Nenhum produto vendido no período.
+				</p>
+			</div>
+		);
+	}
+
+	return (
+		<div className="rounded-lg border border-border bg-background-deep p-4">
+			<div className="flex items-center justify-between gap-3">
+				<p className="font-mono-ui text-[10px] uppercase text-foreground-faint">
+					Produtos
+				</p>
+				<p className="font-mono-ui text-[10px] text-foreground-faint">
+					{productSummary.quantidade} itens
+				</p>
+			</div>
+
+			<div className="mt-3 grid grid-cols-2 gap-2">
+				<div className="rounded-md bg-card px-3 py-2">
+					<p className="font-mono-ui text-[10px] text-foreground-faint">
+						Vendido
+					</p>
+					<p className="font-value text-base text-paid">
+						{formatCurrency(productSummary.total_vendido)}
+					</p>
+				</div>
+				<div className="rounded-md bg-card px-3 py-2">
+					<p className="font-mono-ui text-[10px] text-foreground-faint">
+						Custo
+					</p>
+					<p className="font-value text-base text-foreground">
+						{formatCurrency(productSummary.total_custo)}
+					</p>
+				</div>
+				<div className="rounded-md bg-card px-3 py-2">
+					<p className="font-mono-ui text-[10px] text-foreground-faint">
+						Lucro
+					</p>
+					<p className="font-value text-base text-paid">
+						{formatCurrency(productSummary.total_lucro)}
+					</p>
+				</div>
+				<div className="rounded-md bg-card px-3 py-2">
+					<p className="font-mono-ui text-[10px] text-foreground-faint">
+						Fornecedor
+					</p>
+					<p className="font-value text-base text-fiado">
+						{formatCurrency(productSummary.total_fornecedor_pagar)}
+					</p>
+				</div>
+			</div>
+
+			<div className="mt-2 grid grid-cols-2 gap-2">
+				<div className="rounded-md bg-card px-3 py-2">
+					<p className="font-mono-ui text-[10px] text-foreground-faint">
+						Comissão produto
+					</p>
+					<p className="font-value text-base text-foreground">
+						{formatCurrency(productSummary.total_comissao_barbeiros)}
+					</p>
+				</div>
+				<div className="rounded-md bg-card px-3 py-2">
+					<p className="font-mono-ui text-[10px] text-foreground-faint">
+						Lucro loja
+					</p>
+					<p className="font-value text-base text-foreground">
+						{formatCurrency(productSummary.total_lucro_barbearia)}
+					</p>
+				</div>
+			</div>
+
+			{supplierRows.length > 0 && (
+				<div className="mt-3 space-y-2">
+					<p className="font-mono-ui text-[10px] uppercase text-foreground-faint">
+						Fornecedores a pagar
+					</p>
+					{supplierRows.map((row) => (
+						<div
+							key={row.fornecedor}
+							className="flex items-center justify-between gap-3 rounded-md border border-border bg-card px-3 py-2">
+							<div className="min-w-0">
+								<p className="truncate font-client text-sm text-foreground">
+									{row.fornecedor}
+								</p>
+								<p className="font-mono-ui text-[10px] text-foreground-faint">
+									{row.quantidade} itens · lucro {formatCurrency(row.total_lucro)}
+								</p>
+							</div>
+							<p className="font-value text-base text-fiado">
+								{formatCurrency(row.fornecedor_pagar)}
+							</p>
+						</div>
+					))}
+				</div>
+			)}
+
+			{productRows.length > 0 && (
+				<div className="mt-3 space-y-2">
+					<p className="font-mono-ui text-[10px] uppercase text-foreground-faint">
+						Produtos vendidos
+					</p>
+					{productRows.slice(0, 5).map((row) => (
+						<div
+							key={row.produto_id || row.nome}
+							className="grid grid-cols-[1fr_auto] gap-3 rounded-md border border-border bg-card px-3 py-2">
+							<div className="min-w-0">
+								<p className="truncate font-client text-sm text-foreground">
+									{row.nome}
+								</p>
+								<p className="font-mono-ui text-[10px] text-foreground-faint">
+									{row.quantidade} un. ·{" "}
+									{row.tipo_compra === "consignado" ?
+										"consignado"
+									:	"à vista"}
+								</p>
+							</div>
+							<div className="text-right">
+								<p className="font-value text-base text-paid">
+									{formatCurrency(row.total_lucro)}
+								</p>
+								<p className="font-mono-ui text-[10px] text-foreground-faint">
+									venda {formatCurrency(row.total_vendido)}
+								</p>
+							</div>
+						</div>
+					))}
+				</div>
+			)}
+		</div>
+	);
+}
+
 export default function FinancialPage() {
 	const initialDate = new Date();
 	const initialDayKey = formatDayKey(initialDate);
@@ -218,6 +362,7 @@ export default function FinancialPage() {
 						<PaymentMethodBreakdown
 							rows={summary.resumo_por_forma_pagamento || []}
 						/>
+						<ProductSalesBreakdown summary={summary.resumo_produtos} />
 						<div className="rounded-lg border border-border bg-background-deep p-4">
 							<p className="font-mono-ui text-[10px] uppercase text-foreground-faint">
 								Base do resumo

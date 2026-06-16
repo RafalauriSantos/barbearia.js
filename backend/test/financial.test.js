@@ -186,6 +186,61 @@ t.test("financial summary discounts card fees before commission split", async (t
 	t.equal(summary.resumo_por_forma_pagamento[0].total_liquido, 98.29);
 });
 
+t.test("financial summary calculates consigned product payable and profit", async (t) => {
+	const service = loadFinancialService({
+		financialRepository: {
+			findPaidAppointments: async () => [
+				{
+					id: "appt-product-1",
+					total: 100,
+					barbeiro_id: "barber-1",
+					barbeiros: {
+						id: "barber-1",
+						nome: "Samuel",
+						comissao_percent: 50,
+					},
+					agendamento_produtos: [
+						{
+							produto_id: "prod-1",
+							nome_produto: "Pomada",
+							preco_unitario: 50,
+							quantidade: 2,
+							subtotal: 100,
+							tipo_compra: "consignado",
+							custo_unitario: 30,
+							fornecedor: "Fornecedor A",
+							comissao_venda_percentual: 50,
+						},
+					],
+				},
+			],
+		},
+		barbersRepository: {
+			findByIdInBarbearia: async () => ({ id: "barber-1" }),
+		},
+	});
+
+	const summary = await service.getSummary({}, adminUser);
+	const productSummary = summary.resumo_produtos;
+
+	t.equal(productSummary.quantidade, 2);
+	t.equal(productSummary.total_vendido, 100);
+	t.equal(productSummary.total_custo, 60);
+	t.equal(productSummary.total_lucro, 40);
+	t.equal(productSummary.total_fornecedor_pagar, 60);
+	t.equal(productSummary.total_comissao_barbeiros, 20);
+	t.equal(productSummary.total_lucro_barbearia, 20);
+	t.same(productSummary.resumo_por_fornecedor[0], {
+		fornecedor: "Fornecedor A",
+		quantidade: 2,
+		total_vendido: 100,
+		total_custo: 60,
+		total_lucro: 40,
+		fornecedor_pagar: 60,
+	});
+	t.equal(productSummary.resumo_por_produto[0].nome, "Pomada");
+});
+
 t.test("barber cannot request another barber financial summary", async (t) => {
 	const service = loadFinancialService({
 		financialRepository: {

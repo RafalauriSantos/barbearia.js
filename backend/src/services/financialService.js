@@ -72,6 +72,40 @@ function getPaymentMethodRow(row) {
 	return row.formas_pagamento || null;
 }
 
+function getProductRows(row) {
+	return Array.isArray(row.agendamento_produtos) ?
+			row.agendamento_produtos
+		:	[];
+}
+
+function getProductSale(item) {
+	const quantity = Number(item.quantidade || item.quantity || 1) || 1;
+	const unitPrice = Number(item.preco_unitario ?? item.price ?? 0);
+	const gross = Number(item.subtotal ?? unitPrice * quantity);
+	const unitCost = Number(item.custo_unitario ?? item.cost_price ?? 0);
+	const cost = unitCost * quantity;
+	const profit = Math.max(gross - cost, 0);
+	const commissionPercent = Number(item.comissao_venda_percentual || 0);
+	const barberCommission = (profit * commissionPercent) / 100;
+	const supplierPayable =
+		item.tipo_compra === "consignado" ? cost : 0;
+
+	return {
+		produto_id: item.produto_id || item.id || null,
+		nome: item.nome_produto || item.name || "Produto",
+		tipo_compra: item.tipo_compra || "avista",
+		fornecedor: item.fornecedor || "Sem fornecedor",
+		quantidade: quantity,
+		total_vendido: gross,
+		total_custo: cost,
+		total_lucro: profit,
+		fornecedor_pagar: supplierPayable,
+		comissao_percentual: commissionPercent,
+		comissao_barbeiro: barberCommission,
+		lucro_barbearia: profit - barberCommission,
+	};
+}
+
 function createBucket({ barbeiroId, nome, comissaoPercent }) {
 	return {
 		barbeiro_id: barbeiroId,
@@ -83,6 +117,33 @@ function createBucket({ barbeiroId, nome, comissaoPercent }) {
 		parte_barbeiro: 0,
 		parte_barbearia: 0,
 		quantidade_atendimentos: 0,
+	};
+}
+
+function createProductBucket({ produtoId, nome, tipoCompra, fornecedor }) {
+	return {
+		produto_id: produtoId,
+		nome: nome || "Produto",
+		tipo_compra: tipoCompra || "avista",
+		fornecedor: fornecedor || "Sem fornecedor",
+		quantidade: 0,
+		total_vendido: 0,
+		total_custo: 0,
+		total_lucro: 0,
+		fornecedor_pagar: 0,
+		comissao_barbeiro: 0,
+		lucro_barbearia: 0,
+	};
+}
+
+function createSupplierBucket(fornecedor) {
+	return {
+		fornecedor: fornecedor || "Sem fornecedor",
+		quantidade: 0,
+		total_vendido: 0,
+		total_custo: 0,
+		total_lucro: 0,
+		fornecedor_pagar: 0,
 	};
 }
 
@@ -116,6 +177,30 @@ function finalizePaymentMethodBucket(bucket) {
 		total_pago: roundMoney(bucket.total_pago),
 		total_taxas: roundMoney(bucket.total_taxas),
 		total_liquido: roundMoney(bucket.total_liquido),
+	};
+}
+
+function finalizeProductBucket(bucket) {
+	return {
+		...bucket,
+		quantidade: Number(bucket.quantidade || 0),
+		total_vendido: roundMoney(bucket.total_vendido),
+		total_custo: roundMoney(bucket.total_custo),
+		total_lucro: roundMoney(bucket.total_lucro),
+		fornecedor_pagar: roundMoney(bucket.fornecedor_pagar),
+		comissao_barbeiro: roundMoney(bucket.comissao_barbeiro),
+		lucro_barbearia: roundMoney(bucket.lucro_barbearia),
+	};
+}
+
+function finalizeSupplierBucket(bucket) {
+	return {
+		...bucket,
+		quantidade: Number(bucket.quantidade || 0),
+		total_vendido: roundMoney(bucket.total_vendido),
+		total_custo: roundMoney(bucket.total_custo),
+		total_lucro: roundMoney(bucket.total_lucro),
+		fornecedor_pagar: roundMoney(bucket.fornecedor_pagar),
 	};
 }
 
@@ -185,9 +270,88 @@ function buildSummaryByPaymentMethod(rows) {
 	return Array.from(buckets.values()).map(finalizePaymentMethodBucket);
 }
 
+function buildProductSummary(rows) {
+	const productBuckets = new Map();
+	const supplierBuckets = new Map();
+	const totals = {
+		total_vendido: 0,
+		total_custo: 0,
+		total_lucro: 0,
+		total_fornecedor_pagar: 0,
+		total_comissao_barbeiros: 0,
+		total_lucro_barbearia: 0,
+		quantidade: 0,
+	};
+
+	for (const row of rows) {
+		for (const productRow of getProductRows(row)) {
+			const sale = getProductSale(productRow);
+			const productKey = sale.produto_id || sale.nome;
+			const supplierKey = sale.fornecedor || "Sem fornecedor";
+
+			if (!productBuckets.has(productKey)) {
+				productBuckets.set(
+					productKey,
+					createProductBucket({
+						produtoId: sale.produto_id,
+						nome: sale.nome,
+						tipoCompra: sale.tipo_compra,
+						fornecedor: sale.fornecedor,
+					}),
+				);
+			}
+			if (!supplierBuckets.has(supplierKey)) {
+				supplierBuckets.set(supplierKey, createSupplierBucket(supplierKey));
+			}
+
+			const productBucket = productBuckets.get(productKey);
+			productBucket.quantidade += sale.quantidade;
+			productBucket.total_vendido += sale.total_vendido;
+			productBucket.total_custo += sale.total_custo;
+			productBucket.total_lucro += sale.total_lucro;
+			productBucket.fornecedor_pagar += sale.fornecedor_pagar;
+			productBucket.comissao_barbeiro += sale.comissao_barbeiro;
+			productBucket.lucro_barbearia += sale.lucro_barbearia;
+
+			const supplierBucket = supplierBuckets.get(supplierKey);
+			supplierBucket.quantidade += sale.quantidade;
+			supplierBucket.total_vendido += sale.total_vendido;
+			supplierBucket.total_custo += sale.total_custo;
+			supplierBucket.total_lucro += sale.total_lucro;
+			supplierBucket.fornecedor_pagar += sale.fornecedor_pagar;
+
+			totals.quantidade += sale.quantidade;
+			totals.total_vendido += sale.total_vendido;
+			totals.total_custo += sale.total_custo;
+			totals.total_lucro += sale.total_lucro;
+			totals.total_fornecedor_pagar += sale.fornecedor_pagar;
+			totals.total_comissao_barbeiros += sale.comissao_barbeiro;
+			totals.total_lucro_barbearia += sale.lucro_barbearia;
+		}
+	}
+
+	return {
+		quantidade: Number(totals.quantidade || 0),
+		total_vendido: roundMoney(totals.total_vendido),
+		total_custo: roundMoney(totals.total_custo),
+		total_lucro: roundMoney(totals.total_lucro),
+		total_fornecedor_pagar: roundMoney(totals.total_fornecedor_pagar),
+		total_comissao_barbeiros: roundMoney(totals.total_comissao_barbeiros),
+		total_lucro_barbearia: roundMoney(totals.total_lucro_barbearia),
+		resumo_por_produto: Array.from(productBuckets.values())
+			.map(finalizeProductBucket)
+			.sort((a, b) => b.total_vendido - a.total_vendido),
+		resumo_por_fornecedor: Array.from(supplierBuckets.values())
+			.map(finalizeSupplierBucket)
+			.filter((row) => row.fornecedor_pagar > 0)
+			.sort((a, b) => b.fornecedor_pagar - a.fornecedor_pagar),
+	};
+}
+
 function buildAdminSummary(rows) {
 	const resumoPorBarbeiro = buildSummaryByBarber(rows);
 	const resumoPorFormaPagamento = buildSummaryByPaymentMethod(rows);
+	const resumoProdutos = buildProductSummary(rows);
 	const totalPagoGeral = rows.reduce((sum, row) => sum + getAppointmentTotal(row), 0);
 	const totalTaxas = rows.reduce((sum, row) => sum + getPaymentFeeValue(row), 0);
 	const totalLiquido = rows.reduce(
@@ -212,6 +376,7 @@ function buildAdminSummary(rows) {
 		quantidade_atendimentos_pagos: rows.length,
 		resumo_por_barbeiro: resumoPorBarbeiro,
 		resumo_por_forma_pagamento: resumoPorFormaPagamento,
+		resumo_produtos: resumoProdutos,
 	};
 }
 
@@ -221,6 +386,7 @@ function buildBarberSummary(rows, fallbackBarber) {
 		return {
 			...summary,
 			resumo_por_forma_pagamento: buildSummaryByPaymentMethod(rows),
+			resumo_produtos: buildProductSummary(rows),
 		};
 	}
 
@@ -231,6 +397,7 @@ function buildBarberSummary(rows, fallbackBarber) {
 			comissaoPercent: fallbackBarber.comissao_percent,
 		}),
 		resumo_por_forma_pagamento: [],
+		resumo_produtos: buildProductSummary(rows),
 	};
 }
 

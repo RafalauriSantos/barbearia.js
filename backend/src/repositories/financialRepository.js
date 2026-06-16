@@ -20,7 +20,7 @@ exports.findPaidAppointments = async function ({
 	let query = supabase
 		.from("agendamentos")
 		.select(
-			"id,total,valor_manual,valor_liquido,taxa_pagamento_valor,taxa_pagamento_percentual,data,barbearia_id,barbeiro_id,status_pagamento,forma_pagamento_id,barbeiros(id,nome,comissao_percent),formas_pagamento(id,codigo,nome)",
+			"id,total,valor_manual,valor_liquido,taxa_pagamento_valor,taxa_pagamento_percentual,data,barbearia_id,barbeiro_id,status_pagamento,forma_pagamento_id,barbeiros(id,nome,comissao_percent),formas_pagamento(id,codigo,nome),agendamento_produtos(*)",
 		)
 		.eq("barbearia_id", barbeariaId)
 		.eq("status_pagamento", "pago");
@@ -40,7 +40,7 @@ exports.findPaidAppointments = async function ({
 		let legacyQuery = supabase
 			.from("agendamentos")
 			.select(
-				"id,total,valor_manual,data,barbearia_id,barbeiro_id,status_pagamento,forma_pagamento_id,barbeiros(id,nome,comissao_percent),formas_pagamento(id,codigo,nome)",
+				"id,total,valor_manual,data,barbearia_id,barbeiro_id,status_pagamento,forma_pagamento_id,barbeiros(id,nome,comissao_percent),formas_pagamento(id,codigo,nome),agendamento_produtos(*)",
 			)
 			.eq("barbearia_id", barbeariaId)
 			.eq("status_pagamento", "pago");

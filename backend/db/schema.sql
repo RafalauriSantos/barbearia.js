@@ -173,6 +173,13 @@ CREATE TABLE IF NOT EXISTS public.agendamento_produtos (
     preco_unitario numeric(10, 2) NOT NULL DEFAULT 0 CHECK (preco_unitario >= 0),
     quantidade integer NOT NULL DEFAULT 1 CHECK (quantidade > 0),
     subtotal numeric(10, 2) NOT NULL DEFAULT 0 CHECK (subtotal >= 0),
+    tipo_compra varchar NOT NULL DEFAULT 'avista' CHECK (tipo_compra IN ('avista', 'consignado')),
+    custo_unitario numeric(10, 2) NOT NULL DEFAULT 0 CHECK (custo_unitario >= 0),
+    fornecedor varchar,
+    comissao_venda_percentual numeric(7, 4) NOT NULL DEFAULT 0 CHECK (
+        comissao_venda_percentual >= 0
+        AND comissao_venda_percentual <= 100
+    ),
     UNIQUE (agendamento_id, produto_id)
 );
 

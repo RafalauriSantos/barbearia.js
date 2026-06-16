@@ -144,7 +144,18 @@ export function AppointmentDialog({
 			if (!existing) {
 				return [
 					...prev,
-					{ id: prod.id, name: prod.name, price: prod.price, quantity: 1 },
+					{
+						id: prod.id,
+						name: prod.name,
+						price: prod.price,
+						quantity: 1,
+						purchase_type: prod.purchase_type || "avista",
+						cost_price: Number(prod.cost_price || 0),
+						supplier_name: prod.supplier_name || "",
+						seller_commission_percent: Number(
+							prod.seller_commission_percent || 0,
+						),
+					},
 				];
 			}
 			return prev.map((item) =>

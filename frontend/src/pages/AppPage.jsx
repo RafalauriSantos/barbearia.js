@@ -760,12 +760,25 @@ export default function AppPage() {
 			const list = prev[type];
 			const existing = list.find((entry) => entry.id === item.id);
 			if (!existing) {
+				const nextItem = {
+					id: item.id,
+					name: item.name,
+					price: item.price,
+					quantity: 1,
+					...(type === "products" ?
+						{
+							purchase_type: item.purchase_type || "avista",
+							cost_price: Number(item.cost_price || 0),
+							supplier_name: item.supplier_name || "",
+							seller_commission_percent: Number(
+								item.seller_commission_percent || 0,
+							),
+						}
+					:	{}),
+				};
 				return {
 					...prev,
-					[type]: [
-						...list,
-						{ id: item.id, name: item.name, price: item.price, quantity: 1 },
-					],
+					[type]: [...list, nextItem],
 				};
 			}
 			return {
