@@ -19,6 +19,7 @@ module.exports = async function (fastify, opts) {
 	// Domain routes
 	fastify.register(require("./services"), { prefix: "/services" });
 	fastify.register(require("./products"), { prefix: "/products" });
+	fastify.register(require("./clients"), { prefix: "/clients" });
 	fastify.register(require("./expenses"), { prefix: "/expenses" });
 	fastify.register(require("./appointments"), { prefix: "/agendamentos" });
 	fastify.register(require("./barbers"), { prefix: "/barbers" });

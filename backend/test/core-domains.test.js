@@ -10,18 +10,21 @@ function clearAppCache() {
 		"../src/app",
 		"../src/config/env",
 		"../src/routes/index",
+		"../src/routes/clients",
 		"../src/routes/products",
 		"../src/routes/expenses",
 		"../src/routes/appointments",
 		"../src/routes/barbers",
 		"../src/routes/profile",
 		"../src/routes/system",
+		"../src/controllers/clientsController",
 		"../src/controllers/productsController",
 		"../src/controllers/expensesController",
 		"../src/controllers/appointmentsController",
 		"../src/controllers/barbersController",
 		"../src/controllers/profileController",
 		"../src/controllers/systemController",
+		"../src/services/clientsService",
 		"../src/services/productsService",
 		"../src/services/expensesService",
 		"../src/services/appointmentsService",
@@ -42,6 +45,29 @@ t.test("core CRUD routes respond through layered modules", async (t) => {
 			create: async (payload) => ({ id: "p2", ...payload }),
 			update: async (id, payload) => ({ id, ...payload }),
 			remove: async () => true,
+		},
+	};
+
+	require.cache[require.resolve("../src/repositories/clientsRepository")] = {
+		exports: {
+			findFixedClients: async () => [
+				{ id: "c1", name: "Cliente fixo", package_total_cuts: 4 },
+			],
+			findFixedClientById: async () => ({
+				id: "c1",
+				name: "Cliente fixo",
+				package_total_cuts: 4,
+			}),
+			createFixedClient: async (payload) => ({ id: "c2", ...payload }),
+			updateFixedClient: async (id, payload) => ({ id, ...payload }),
+			removeFixedClient: async () => true,
+			createClientCut: async () => true,
+			updateClientCut: async () => true,
+			removeClientCut: async () => true,
+			findWaitlist: async () => [{ id: "w1", name: "Aguardando" }],
+			createWaitlistEntry: async (payload) => ({ id: "w2", ...payload }),
+			updateWaitlistEntry: async (id, payload) => ({ id, ...payload }),
+			removeWaitlistEntry: async () => true,
 		},
 	};
 
@@ -161,6 +187,49 @@ t.test("core CRUD routes respond through layered modules", async (t) => {
 	});
 	t.equal(expenses.statusCode, 200);
 	t.equal(JSON.parse(expenses.payload)[0].date, "2026-04-29");
+
+	const fixedClients = await app.inject({
+		method: "GET",
+		url: "/clients/fixed",
+		headers: authHeaders,
+	});
+	t.equal(fixedClients.statusCode, 200);
+	t.equal(JSON.parse(fixedClients.payload)[0].name, "Cliente fixo");
+
+	const createdFixedClient = await app.inject({
+		method: "POST",
+		url: "/clients/fixed",
+		headers: authHeaders,
+		payload: {
+			name: "Mensalista",
+			phone: "(11) 99999-0000",
+			interval_days: 15,
+			package_total_cuts: 4,
+		},
+	});
+	t.equal(createdFixedClient.statusCode, 201);
+	t.equal(JSON.parse(createdFixedClient.payload).name, "Mensalista");
+
+	const createdCut = await app.inject({
+		method: "POST",
+		url: "/clients/fixed/c1/cuts",
+		headers: authHeaders,
+		payload: {
+			date: "2026-04-29",
+			value: 45,
+			paid: true,
+		},
+	});
+	t.equal(createdCut.statusCode, 201);
+	t.equal(JSON.parse(createdCut.payload).id, "c1");
+
+	const waitlist = await app.inject({
+		method: "GET",
+		url: "/clients/waitlist",
+		headers: authHeaders,
+	});
+	t.equal(waitlist.statusCode, 200);
+	t.equal(JSON.parse(waitlist.payload)[0].name, "Aguardando");
 
 	const appointment = await app.inject({
 		method: "POST",

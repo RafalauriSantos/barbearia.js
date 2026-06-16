@@ -24,6 +24,13 @@ function NavIcon({ name }) {
 				<path d="M7 11a2 2 0 1 1 0-4M17 11a2 2 0 1 0 0-4" {...common} />
 			</svg>
 		),
+		clients: (
+			<svg viewBox="0 0 24 24" aria-hidden="true" className="h-4 w-4">
+				<path d="M16 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2" {...common} />
+				<circle cx="9.5" cy="7" r="4" {...common} />
+				<path d="M19 8v6M22 11h-6" {...common} />
+			</svg>
+		),
 		services: (
 			<svg viewBox="0 0 24 24" aria-hidden="true" className="h-4 w-4">
 				<path d="M12 5v14M5 12h14" {...common} />
@@ -48,6 +55,7 @@ function NavIcon({ name }) {
 // Abas fixas para navegar entre as telas principais.
 const baseTabs = [
 	{ path: "/app", label: "Agenda", icon: "agenda" },
+	{ path: "/clients", label: "Clientes", icon: "clients" },
 	{ path: "/services", label: "Serviços", icon: "services" },
 	{ path: "/financial", label: "Caixa", icon: "cash" },
 	{ path: "/expenses", label: "Custos", icon: "costs" },
@@ -67,11 +75,14 @@ export function BottomNav() {
 				...baseTabs.slice(1),
 			]
 		:	baseTabs;
-	const gridClass = tabs.length === 5 ? "grid-cols-5" : "grid-cols-4";
+	const gridClass =
+		tabs.length === 6 ? "grid-cols-6"
+		: tabs.length === 5 ? "grid-cols-5"
+		: "grid-cols-4";
 	return (
 		<nav className="sticky bottom-0 z-50 shrink-0 border-t border-border bg-background/95 px-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] pt-2 backdrop-blur">
 			<div
-				className={`mx-auto grid ${gridClass} max-w-[760px] gap-1 rounded-lg border border-border bg-background-deep p-1`}>
+				className={`mx-auto grid ${gridClass} max-w-[860px] gap-1 rounded-lg border border-border bg-background-deep p-1`}>
 				{tabs.map((tab) => {
 					// Marca visualmente a aba ativa.
 					const isActive = location.pathname === tab.path;
@@ -93,7 +104,7 @@ export function BottomNav() {
 								}`}>
 								<NavIcon name={tab.icon} />
 							</span>
-							<span className="font-mono-ui text-[10px] leading-none">
+							<span className="font-mono-ui text-[9px] leading-none sm:text-[10px]">
 								{tab.label}
 							</span>
 						</button>

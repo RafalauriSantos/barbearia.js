@@ -17,6 +17,19 @@ import {
 	deleteProductById,
 } from "@/lib/api/products.api";
 import {
+	listFixedClients,
+	createFixedClient,
+	updateFixedClientById,
+	deleteFixedClientById,
+	createClientCut,
+	updateClientCutById,
+	deleteClientCutById,
+	listWaitlist,
+	createWaitlistEntry,
+	updateWaitlistEntryById,
+	deleteWaitlistEntryById,
+} from "@/lib/api/clients.api";
+import {
 	listExpenses,
 	listExpensesByDay,
 	createExpense,
@@ -262,6 +275,8 @@ const cacheKeys = {
 	profile: "profile",
 	services: "services",
 	products: "products",
+	fixedClients: "clients:fixed",
+	waitlist: "clients:waitlist",
 	barbers: "barbers",
 	paymentMethods: "paymentMethods",
 	expenses: (dayKey) => (dayKey ? `expenses:day:${dayKey}` : "expenses:all"),
@@ -505,6 +520,142 @@ export async function deleteProduct(id) {
 		invalidateCache(cacheKeys.products);
 	}
 }
+// ── Clients ──
+
+export function getCachedFixedClients() {
+	return readCache(cacheKeys.fixedClients);
+}
+
+export async function loadFixedClients(options = {}) {
+	return loadCached(cacheKeys.fixedClients, listFixedClients, options);
+}
+
+export async function addFixedClient(payload) {
+	const client = await createFixedClient(payload);
+	const cached = readCache(cacheKeys.fixedClients);
+	if (Array.isArray(cached)) {
+		writeCache(cacheKeys.fixedClients, [...cached, client]);
+	} else {
+		invalidateCache(cacheKeys.fixedClients);
+	}
+	return client;
+}
+
+export async function saveFixedClient(id, payload) {
+	const client = await updateFixedClientById(id, payload);
+	const cached = readCache(cacheKeys.fixedClients);
+	if (Array.isArray(cached)) {
+		writeCache(
+			cacheKeys.fixedClients,
+			cached.map((item) => (item.id === id ? client : item)),
+		);
+	} else {
+		invalidateCache(cacheKeys.fixedClients);
+	}
+	return client;
+}
+
+export async function deleteFixedClient(id) {
+	await deleteFixedClientById(id);
+	const cached = readCache(cacheKeys.fixedClients);
+	if (Array.isArray(cached)) {
+		writeCache(
+			cacheKeys.fixedClients,
+			cached.filter((item) => item.id !== id),
+		);
+	} else {
+		invalidateCache(cacheKeys.fixedClients);
+	}
+}
+
+export async function addFixedClientCut(clientId, payload) {
+	const client = await createClientCut(clientId, payload);
+	const cached = readCache(cacheKeys.fixedClients);
+	if (Array.isArray(cached)) {
+		writeCache(
+			cacheKeys.fixedClients,
+			cached.map((item) => (item.id === clientId ? client : item)),
+		);
+	} else {
+		invalidateCache(cacheKeys.fixedClients);
+	}
+	return client;
+}
+
+export async function saveFixedClientCut(clientId, cutId, payload) {
+	const client = await updateClientCutById(clientId, cutId, payload);
+	const cached = readCache(cacheKeys.fixedClients);
+	if (Array.isArray(cached)) {
+		writeCache(
+			cacheKeys.fixedClients,
+			cached.map((item) => (item.id === clientId ? client : item)),
+		);
+	} else {
+		invalidateCache(cacheKeys.fixedClients);
+	}
+	return client;
+}
+
+export async function deleteFixedClientCut(clientId, cutId) {
+	const client = await deleteClientCutById(clientId, cutId);
+	const cached = readCache(cacheKeys.fixedClients);
+	if (Array.isArray(cached)) {
+		writeCache(
+			cacheKeys.fixedClients,
+			cached.map((item) => (item.id === clientId ? client : item)),
+		);
+	} else {
+		invalidateCache(cacheKeys.fixedClients);
+	}
+	return client;
+}
+
+export function getCachedWaitlist() {
+	return readCache(cacheKeys.waitlist);
+}
+
+export async function loadWaitlist(options = {}) {
+	return loadCached(cacheKeys.waitlist, listWaitlist, options);
+}
+
+export async function addWaitlistEntry(payload) {
+	const entry = await createWaitlistEntry(payload);
+	const cached = readCache(cacheKeys.waitlist);
+	if (Array.isArray(cached)) {
+		writeCache(cacheKeys.waitlist, [...cached, entry]);
+	} else {
+		invalidateCache(cacheKeys.waitlist);
+	}
+	return entry;
+}
+
+export async function saveWaitlistEntry(id, payload) {
+	const entry = await updateWaitlistEntryById(id, payload);
+	const cached = readCache(cacheKeys.waitlist);
+	if (Array.isArray(cached)) {
+		const next =
+			entry.status === "aguardando" ?
+				cached.map((item) => (item.id === id ? entry : item))
+			:	cached.filter((item) => item.id !== id);
+		writeCache(cacheKeys.waitlist, next);
+	} else {
+		invalidateCache(cacheKeys.waitlist);
+	}
+	return entry;
+}
+
+export async function deleteWaitlistEntry(id) {
+	await deleteWaitlistEntryById(id);
+	const cached = readCache(cacheKeys.waitlist);
+	if (Array.isArray(cached)) {
+		writeCache(
+			cacheKeys.waitlist,
+			cached.filter((item) => item.id !== id),
+		);
+	} else {
+		invalidateCache(cacheKeys.waitlist);
+	}
+}
 // ── Expenses ──
 
 // Carrega as despesas cadastradas.
@@ -616,6 +767,8 @@ export function prefetchAppData(user, options = {}) {
 		loadProfile(),
 		loadServices(),
 		loadProducts(),
+		loadFixedClients(),
+		loadWaitlist(),
 		loadExpenses(dayKey),
 		loadFinancialSummary({ start_date: dayKey, end_date: dayKey }),
 		getAppointmentsForDayWithFilters(dayKey, appointmentFilters),

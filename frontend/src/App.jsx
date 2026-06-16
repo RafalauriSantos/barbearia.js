@@ -11,6 +11,7 @@ const AuthGate = lazy(() => import("./components/AuthGate"));
 const AppPage = lazy(() => import("./pages/AppPage"));
 const SettingsPage = lazy(() => import("./pages/SettingsPage"));
 const ServicesPage = lazy(() => import("./pages/ServicesPage"));
+const ClientsPage = lazy(() => import("./pages/ClientsPage"));
 const FinancialPage = lazy(() => import("./pages/FinancialPage"));
 const ExpensesPage = lazy(() => import("./pages/ExpensesPage"));
 const TeamPage = lazy(() => import("./pages/TeamPage"));
@@ -120,6 +121,7 @@ function AppRoutes() {
 				<Route element={<AuthGate requireAuth />}>
 					<Route path="/app" element={<AppPage />} />
 					<Route path="/services" element={<ServicesPage />} />
+					<Route path="/clients" element={<ClientsPage />} />
 					<Route path="/team" element={<TeamPage />} />
 					<Route path="/financial" element={<FinancialPage />} />
 					<Route path="/expenses" element={<ExpensesPage />} />
