@@ -18,6 +18,20 @@ async function ensureClient(clientId, context) {
 	return client;
 }
 
+async function ensureClientCut(clientId, cutId, context) {
+	const cut = await ClientsRepository.findClientCutById(clientId, cutId, context);
+	if (!cut) throw new AppError(404, "NOT_FOUND", "Corte nao encontrado.");
+	return cut;
+}
+
+async function ensureWaitlistEntry(id, context) {
+	const entry = await ClientsRepository.findWaitlistEntryById(id, context);
+	if (!entry) {
+		throw new AppError(404, "NOT_FOUND", "Cliente da espera nao encontrado.");
+	}
+	return entry;
+}
+
 exports.listFixedClients = async function (user) {
 	return ClientsRepository.findFixedClients(getBarbeariaContext(user));
 };
@@ -49,6 +63,7 @@ exports.createClientCut = async function (clientId, payload, user) {
 exports.updateClientCut = async function (clientId, cutId, payload, user) {
 	const context = getBarbeariaContext(user);
 	await ensureClient(clientId, context);
+	await ensureClientCut(clientId, cutId, context);
 	await ClientsRepository.updateClientCut(clientId, cutId, payload, context);
 	return ClientsRepository.findFixedClientById(clientId, context);
 };
@@ -56,6 +71,7 @@ exports.updateClientCut = async function (clientId, cutId, payload, user) {
 exports.deleteClientCut = async function (clientId, cutId, user) {
 	const context = getBarbeariaContext(user);
 	await ensureClient(clientId, context);
+	await ensureClientCut(clientId, cutId, context);
 	await ClientsRepository.removeClientCut(clientId, cutId, context);
 	return ClientsRepository.findFixedClientById(clientId, context);
 };
@@ -69,14 +85,18 @@ exports.createWaitlistEntry = async function (payload, user) {
 };
 
 exports.updateWaitlistEntry = async function (id, payload, user) {
+	const context = getBarbeariaContext(user);
+	await ensureWaitlistEntry(id, context);
 	return ClientsRepository.updateWaitlistEntry(
 		id,
 		payload,
-		getBarbeariaContext(user),
+		context,
 	);
 };
 
 exports.deleteWaitlistEntry = async function (id, user) {
-	await ClientsRepository.removeWaitlistEntry(id, getBarbeariaContext(user));
+	const context = getBarbeariaContext(user);
+	await ensureWaitlistEntry(id, context);
+	await ClientsRepository.removeWaitlistEntry(id, context);
 	return true;
 };

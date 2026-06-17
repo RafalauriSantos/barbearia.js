@@ -193,6 +193,18 @@ exports.createClientCut = async function (clientId, payload, { barbeariaId }) {
 	return toCutApi(data);
 };
 
+exports.findClientCutById = async function (clientId, cutId, { barbeariaId }) {
+	const { data, error } = await supabase
+		.from("cliente_cortes")
+		.select("*")
+		.eq("id", cutId)
+		.eq("cliente_id", clientId)
+		.eq("barbearia_id", barbeariaId)
+		.maybeSingle();
+	if (error) throw error;
+	return data ? toCutApi(data) : null;
+};
+
 exports.updateClientCut = async function (
 	clientId,
 	cutId,
@@ -249,6 +261,17 @@ exports.createWaitlistEntry = async function (payload, { barbeariaId }) {
 		.single();
 	if (error) throw error;
 	return toWaitlistApi(data);
+};
+
+exports.findWaitlistEntryById = async function (id, { barbeariaId }) {
+	const { data, error } = await supabase
+		.from("lista_espera")
+		.select("*")
+		.eq("id", id)
+		.eq("barbearia_id", barbeariaId)
+		.maybeSingle();
+	if (error) throw error;
+	return data ? toWaitlistApi(data) : null;
 };
 
 exports.updateWaitlistEntry = async function (id, updates, { barbeariaId }) {
