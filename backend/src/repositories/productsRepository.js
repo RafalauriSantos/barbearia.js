@@ -11,6 +11,7 @@ function toApi(row) {
 		cost_price: costPrice,
 		supplier_name: row.fornecedor || "",
 		seller_commission_percent: Number(row.comissao_venda_percentual || 0),
+		stock_quantity: Number(row.quantidade_estoque || 0),
 		estimated_profit: Math.max(price - costPrice, 0),
 		active: row.ativo,
 		barbearia_id: row.barbearia_id,
@@ -36,6 +37,9 @@ function toDatabase(payload) {
 					payload.seller_commission_percent || 0,
 				),
 			}
+		:	{}),
+		...(payload.stock_quantity !== undefined ?
+			{ quantidade_estoque: Number(payload.stock_quantity || 0) }
 		:	{}),
 		...(payload.active !== undefined ? { ativo: payload.active } : {}),
 	};
@@ -72,6 +76,7 @@ exports.create = async function (payload, { barbeariaId }) {
 		custo: Number(payload.cost_price || 0),
 		fornecedor: payload.supplier_name || null,
 		comissao_venda_percentual: Number(payload.seller_commission_percent || 0),
+		quantidade_estoque: Number(payload.stock_quantity || 0),
 		ativo: true,
 	};
 	const { data, error } = await supabase

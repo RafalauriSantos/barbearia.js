@@ -75,8 +75,13 @@ t.test("core CRUD routes respond through layered modules", async (t) => {
 
 	require.cache[require.resolve("../src/repositories/expensesRepository")] = {
 		exports: {
-			findAll: async ({ date } = {}) => [
-				{ id: "e1", name: "Aluguel", value: 100, date: date || "2026-04-29" },
+			findAll: async ({ date, startDate } = {}) => [
+				{
+					id: "e1",
+					name: "Aluguel",
+					value: 100,
+					date: date || startDate || "2026-04-29",
+				},
 			],
 			findById: async () => ({ id: "e1", name: "Aluguel", value: 100 }),
 			create: async (payload) => ({ id: "e2", ...payload }),
@@ -189,6 +194,14 @@ t.test("core CRUD routes respond through layered modules", async (t) => {
 	});
 	t.equal(expenses.statusCode, 200);
 	t.equal(JSON.parse(expenses.payload)[0].date, "2026-04-29");
+
+	const expensesPeriod = await app.inject({
+		method: "GET",
+		url: "/expenses?start_date=2026-04-01&end_date=2026-04-30",
+		headers: authHeaders,
+	});
+	t.equal(expensesPeriod.statusCode, 200);
+	t.equal(JSON.parse(expensesPeriod.payload)[0].date, "2026-04-01");
 
 	const fixedClients = await app.inject({
 		method: "GET",

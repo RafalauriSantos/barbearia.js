@@ -35,6 +35,7 @@ const adminUser = {
 t.test("admin creates barber invite and dev url", async (t) => {
 	let storedTokenHash;
 	let sentEmail;
+	let revokeArgs;
 	const service = loadInvitesService({
 		authRepository: {},
 		barbersRepository: {
@@ -47,7 +48,9 @@ t.test("admin creates barber invite and dev url", async (t) => {
 			update: async () => ({ id: "barber-1" }),
 		},
 		invitesRepository: {
-			revokePendingForBarber: async () => true,
+			revokePendingForBarber: async (barbeiroId) => {
+				revokeArgs = { barbeiroId };
+			},
 			create: async ({ tokenHash, email }) => {
 				storedTokenHash = tokenHash;
 				return {
@@ -77,6 +80,9 @@ t.test("admin creates barber invite and dev url", async (t) => {
 	t.equal(result.invite.email, "joao@example.com");
 	t.match(result.inviteUrl, /\/accept-invite\?token=/);
 	t.equal(storedTokenHash.length, 64);
+	t.same(revokeArgs, {
+		barbeiroId: "barber-1",
+	});
 	t.equal(sentEmail.to, "joao@example.com");
 	t.match(sentEmail.inviteUrl, /\/accept-invite\?token=/);
 });

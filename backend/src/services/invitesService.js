@@ -118,7 +118,7 @@ exports.createBarberInvite = async function (barbeiroId, payload, user) {
 
 	return {
 		invite: toPublicInvite(invite),
-		inviteUrl: env.NODE_ENV === "production" ? undefined : inviteUrl,
+		inviteUrl,
 	};
 };
 

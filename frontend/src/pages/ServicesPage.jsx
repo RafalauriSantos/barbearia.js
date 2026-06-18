@@ -56,6 +56,7 @@ export default function ServicesPage() {
 	const [costPrice, setCostPrice] = useState("");
 	const [supplierName, setSupplierName] = useState("");
 	const [sellerCommissionPercent, setSellerCommissionPercent] = useState("");
+	const [stockQuantity, setStockQuantity] = useState("");
 	const [showForm, setShowForm] = useState(false);
 
 	const reloadData = useCallback(async () => {
@@ -96,6 +97,7 @@ export default function ServicesPage() {
 		setCostPrice("");
 		setSupplierName("");
 		setSellerCommissionPercent("");
+		setStockQuantity("");
 		setFormError("");
 		setShowForm(false);
 	};
@@ -111,6 +113,10 @@ export default function ServicesPage() {
 				validateMoney(sellerCommissionPercent || "0", "Comissao", {
 					min: 0,
 					max: 100,
+				}) ||
+				validateMoney(stockQuantity || "0", "Estoque", {
+					min: 0,
+					max: 99999,
 				})
 			:	"";
 		return (
@@ -129,6 +135,7 @@ export default function ServicesPage() {
 			data.seller_commission_percent = parseMoneyInput(
 				sellerCommissionPercent || "0",
 			);
+			data.stock_quantity = Number(parseMoneyInput(stockQuantity || "0"));
 		}
 		return data;
 	};
@@ -162,6 +169,7 @@ export default function ServicesPage() {
 			setCostPrice("");
 			setSupplierName("");
 			setSellerCommissionPercent("");
+			setStockQuantity("");
 			setFormError("");
 			setShowForm(false);
 		} catch (error) {
@@ -181,6 +189,7 @@ export default function ServicesPage() {
 		setSellerCommissionPercent(
 			Number(item.seller_commission_percent || 0).toString(),
 		);
+		setStockQuantity(Number(item.stock_quantity || 0).toString());
 		setFormError("");
 		setShowForm(true);
 	};
@@ -214,6 +223,7 @@ export default function ServicesPage() {
 			setCostPrice("");
 			setSupplierName("");
 			setSellerCommissionPercent("");
+			setStockQuantity("");
 			setFormError("");
 			setShowForm(false);
 		} catch (error) {
@@ -432,6 +442,25 @@ export default function ServicesPage() {
 									</div>
 									<label className="block">
 										<span className="block mb-1 font-mono-ui text-[10px] text-foreground-faint">
+											Estoque disponível
+										</span>
+										<input
+											type="number"
+											min="0"
+											step="1"
+											value={stockQuantity}
+											onChange={(e) => {
+												setStockQuantity(e.target.value);
+												setFormError("");
+											}}
+											className="w-full rounded-md border border-border bg-secondary px-3 py-3 text-sm text-foreground"
+											placeholder="0"
+											inputMode="numeric"
+											disabled={isSubmitting}
+										/>
+									</label>
+									<label className="block">
+										<span className="block mb-1 font-mono-ui text-[10px] text-foreground-faint">
 											Fornecedor
 										</span>
 										<input
@@ -516,6 +545,9 @@ export default function ServicesPage() {
 												</span>
 												<span className="rounded-md border border-border bg-background-deep px-2 py-1 font-mono-ui text-[10px] text-foreground-faint">
 													Lucro {formatCurrency(item.estimated_profit || 0)}
+												</span>
+												<span className="rounded-md border border-border bg-background-deep px-2 py-1 font-mono-ui text-[10px] text-foreground-faint">
+													Estoque {Number(item.stock_quantity || 0)}
 												</span>
 												{item.supplier_name && (
 													<span className="rounded-md border border-border bg-background-deep px-2 py-1 font-mono-ui text-[10px] text-foreground-faint">

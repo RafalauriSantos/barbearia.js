@@ -12,6 +12,11 @@ export async function listExpensesByDay(dayKey) {
 	return response.data;
 }
 
+export async function listExpensesByPeriod(params = {}) {
+	const response = await apiClient.get("/expenses", { params });
+	return response.data;
+}
+
 export async function createExpense(expense) {
 	const response = await apiClient.post("/expenses", expense);
 	return response.data;

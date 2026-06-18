@@ -1,7 +1,6 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { BottomNav } from "@/components/BottomNav";
 import {
-	DateStepper,
 	EmptyState,
 	IconButton,
 	Notice,
@@ -10,7 +9,6 @@ import {
 import {
 	formatCurrency,
 	formatDayKey,
-	formatDateDisplay,
 	addExpense,
 	updateExpense,
 	deleteExpense,
@@ -26,13 +24,31 @@ import {
 const initialForm = {
 	name: "",
 	value: "",
+	date: "",
 };
+
+function addDays(date, amount) {
+	const next = new Date(date);
+	next.setDate(next.getDate() + amount);
+	return next;
+}
+
+function getMonthStart(date) {
+	return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-01`;
+}
+
+function formatShortDate(dayKey) {
+	if (!dayKey) return "";
+	return dayKey.split("-").reverse().join("/");
+}
 
 export default function ExpensesPage() {
 	const initialDate = new Date();
 	const initialDayKey = formatDayKey(initialDate);
-	const initialExpenses = getCachedExpenses(initialDayKey);
-	const [currentDate, setCurrentDate] = useState(initialDate);
+	const initialParams = { start_date: initialDayKey, end_date: initialDayKey };
+	const initialExpenses = getCachedExpenses(initialParams);
+	const [startDate, setStartDate] = useState(initialDayKey);
+	const [endDate, setEndDate] = useState(initialDayKey);
 	const [expenses, setExpenses] = useState(initialExpenses || []);
 	const [form, setForm] = useState(initialForm);
 	const [isLoading, setIsLoading] = useState(!initialExpenses);
@@ -44,7 +60,11 @@ export default function ExpensesPage() {
 	const [showForm, setShowForm] = useState(false);
 	const [editingId, setEditingId] = useState(null);
 
-	const dayKey = formatDayKey(currentDate);
+	const filterParams = useMemo(() => (
+		startDate <= endDate ?
+			{ start_date: startDate, end_date: endDate }
+		:	{ start_date: endDate, end_date: startDate }
+	), [endDate, startDate]);
 
 	const reload = useCallback(async () => {
 		const hasLoaded = hasLoadedRef.current;
@@ -52,7 +72,7 @@ export default function ExpensesPage() {
 		setIsRefreshing(hasLoaded);
 		setErrorMessage("");
 		try {
-			const list = await loadExpenses(dayKey, { force: true });
+			const list = await loadExpenses(filterParams, { force: true });
 			setExpenses(list);
 		} catch (error) {
 			setErrorMessage(error.message || "Falha ao carregar despesas.");
@@ -64,7 +84,7 @@ export default function ExpensesPage() {
 			setIsRefreshing(false);
 			hasLoadedRef.current = true;
 		}
-	}, [dayKey]);
+	}, [filterParams]);
 
 	useEffect(() => {
 		reload();
@@ -75,20 +95,26 @@ export default function ExpensesPage() {
 		0,
 	);
 
-	const prevDay = () => {
-		const d = new Date(currentDate);
-		d.setDate(d.getDate() - 1);
-		setCurrentDate(d);
+	const setSingleDay = (date) => {
+		const key = formatDayKey(date);
+		setStartDate(key);
+		setEndDate(key);
 	};
 
-	const nextDay = () => {
-		const d = new Date(currentDate);
-		d.setDate(d.getDate() + 1);
-		setCurrentDate(d);
+	const setLastSevenDays = () => {
+		const today = new Date();
+		setStartDate(formatDayKey(addDays(today, -6)));
+		setEndDate(formatDayKey(today));
+	};
+
+	const setCurrentMonth = () => {
+		const today = new Date();
+		setStartDate(getMonthStart(today));
+		setEndDate(formatDayKey(today));
 	};
 
 	const resetForm = () => {
-		setForm(initialForm);
+		setForm({ ...initialForm, date: endDate });
 		setFormError("");
 		setEditingId(null);
 		setShowForm(false);
@@ -96,6 +122,7 @@ export default function ExpensesPage() {
 
 	const openCreateForm = () => {
 		resetForm();
+		setForm({ ...initialForm, date: endDate });
 		setShowForm(true);
 	};
 
@@ -104,6 +131,7 @@ export default function ExpensesPage() {
 		setForm({
 			name: item.name || "",
 			value: String(item.value ?? ""),
+			date: item.date || endDate,
 		});
 		setFormError("");
 		setShowForm(true);
@@ -117,7 +145,9 @@ export default function ExpensesPage() {
 			validateRequiredText(form.name, "Nome da despesa", {
 				minLength: 3,
 				maxLength: 80,
-			}) || validateMoney(form.value, "Valor", { max: 99999.99 });
+			}) ||
+			validateMoney(form.value, "Valor", { max: 99999.99 }) ||
+			validateRequiredText(form.date, "Data", { minLength: 10, maxLength: 10 });
 		if (validationMessage) {
 			setFormError(validationMessage);
 			return;
@@ -130,7 +160,7 @@ export default function ExpensesPage() {
 			const payload = {
 				name: form.name.trim(),
 				value: parseMoneyInput(form.value),
-				date: dayKey,
+				date: form.date,
 			};
 			if (editingId) {
 				await updateExpense(editingId, payload);
@@ -175,20 +205,65 @@ export default function ExpensesPage() {
 						+
 					</IconButton>
 				}>
-				<DateStepper
-					label={formatDateDisplay(currentDate)}
-					onPrev={prevDay}
-					onNext={nextDay}
-				/>
+				<div className="mt-4 space-y-3 rounded-lg border border-border bg-background-deep p-3">
+					<div className="grid grid-cols-2 gap-2">
+						<label className="block">
+							<span className="mb-1 block font-mono-ui text-[10px] uppercase text-foreground-faint">
+								De
+							</span>
+							<input
+								type="date"
+								value={startDate}
+								onChange={(event) => setStartDate(event.target.value)}
+								className="h-10 w-full rounded-md border border-border bg-secondary px-2 font-mono-ui text-xs text-foreground"
+							/>
+						</label>
+						<label className="block">
+							<span className="mb-1 block font-mono-ui text-[10px] uppercase text-foreground-faint">
+								Ate
+							</span>
+							<input
+								type="date"
+								value={endDate}
+								onChange={(event) => setEndDate(event.target.value)}
+								className="h-10 w-full rounded-md border border-border bg-secondary px-2 font-mono-ui text-xs text-foreground"
+							/>
+						</label>
+					</div>
+					<div className="grid grid-cols-3 gap-2">
+						<button
+							type="button"
+							onClick={() => setSingleDay(new Date())}
+							className="rounded-md border border-border px-3 py-2 font-mono-ui text-[10px] text-foreground-faint">
+							Hoje
+						</button>
+						<button
+							type="button"
+							onClick={setLastSevenDays}
+							className="rounded-md border border-border px-3 py-2 font-mono-ui text-[10px] text-foreground-faint">
+							7 dias
+						</button>
+						<button
+							type="button"
+							onClick={setCurrentMonth}
+							className="rounded-md border border-border px-3 py-2 font-mono-ui text-[10px] text-foreground-faint">
+							Mês
+						</button>
+					</div>
+				</div>
 			</ScreenHeader>
 
 			<div className="shrink-0 px-4 pt-4">
 				<div className="rounded-lg border border-border bg-card p-4">
 					<p className="font-mono-ui text-[10px] uppercase text-foreground-faint">
-						Total do dia
+						Total do período
 					</p>
 					<p className="mt-1 font-value text-3xl leading-none text-overdue">
 						{formatCurrency(total)}
+					</p>
+					<p className="mt-2 font-mono-ui text-[10px] text-foreground-faint">
+						{expenses.length} despesas de {formatShortDate(filterParams.start_date)} a{" "}
+						{formatShortDate(filterParams.end_date)}
 					</p>
 				</div>
 			</div>
@@ -257,6 +332,21 @@ export default function ExpensesPage() {
 								disabled={isSubmitting}
 							/>
 						</div>
+						<div className="rounded-lg border border-border bg-card p-4">
+							<label className="mb-1 block font-mono-ui text-[10px] text-foreground-faint">
+								Data
+							</label>
+							<input
+								type="date"
+								value={form.date}
+								onChange={(e) =>
+									setForm((prev) => ({ ...prev, date: e.target.value }))
+								}
+								onInput={() => setFormError("")}
+								className="w-full rounded-md border border-border bg-secondary px-3 py-3 text-sm text-foreground"
+								disabled={isSubmitting}
+							/>
+						</div>
 						<div className="flex gap-2">
 							<button
 								type="submit"
@@ -291,7 +381,7 @@ export default function ExpensesPage() {
 					<div className="mx-4 mt-4">
 						<EmptyState
 							title="Nenhuma despesa neste dia"
-							hint="Registre apenas saídas que afetam o caixa do dia."
+							hint="Registre apenas saídas que afetam o caixa do período."
 						/>
 					</div>
 				:	<div className="grid gap-2 px-4 py-4 sm:grid-cols-2 xl:grid-cols-3">
@@ -306,6 +396,9 @@ export default function ExpensesPage() {
 										</p>
 										<p className="mt-1 font-value text-lg text-overdue">
 											{formatCurrency(Number(item.value || 0))}
+										</p>
+										<p className="mt-1 font-mono-ui text-[10px] text-foreground-faint">
+											{formatShortDate(item.date)}
 										</p>
 									</div>
 									<div className="flex shrink-0 gap-2">

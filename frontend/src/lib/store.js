@@ -32,6 +32,7 @@ import {
 import {
 	listExpenses,
 	listExpensesByDay,
+	listExpensesByPeriod,
 	createExpense,
 	updateExpenseById,
 	deleteExpenseById,
@@ -279,7 +280,7 @@ const cacheKeys = {
 	waitlist: "clients:waitlist",
 	barbers: "barbers",
 	paymentMethods: "paymentMethods",
-	expenses: (dayKey) => (dayKey ? `expenses:day:${dayKey}` : "expenses:all"),
+	expenses: (params) => makeStableKey("expenses", params || {}),
 	appointments: (dayKey, filters = {}) =>
 		makeStableKey(`appointments:${dayKey}`, filters),
 	financialSummary: (params = {}) => makeStableKey("financial:summary", params),
@@ -659,15 +660,25 @@ export async function deleteWaitlistEntry(id) {
 // ── Expenses ──
 
 // Carrega as despesas cadastradas.
-export function getCachedExpenses(dayKey) {
-	return readCache(cacheKeys.expenses(dayKey));
+export function getCachedExpenses(params) {
+	if (typeof params === "string") {
+		return readCache(cacheKeys.expenses({ date: params }));
+	}
+	return readCache(cacheKeys.expenses(params));
 }
 
-export async function loadExpenses(dayKey, options = {}) {
-	if (dayKey) {
+export async function loadExpenses(params, options = {}) {
+	if (typeof params === "string") {
 		return loadCached(
-			cacheKeys.expenses(dayKey),
-			() => listExpensesByDay(dayKey),
+			cacheKeys.expenses({ date: params }),
+			() => listExpensesByDay(params),
+			options,
+		);
+	}
+	if (params?.date || params?.start_date || params?.end_date) {
+		return loadCached(
+			cacheKeys.expenses(params),
+			() => listExpensesByPeriod(params),
 			options,
 		);
 	}

@@ -12,8 +12,17 @@ function getBarbeariaContext(user) {
 	return { barbeariaId: user.barbearia_id };
 }
 
-exports.listExpenses = async function ({ date } = {}, user) {
-	return ExpensesRepository.findAll({ date, ...getBarbeariaContext(user) });
+exports.listExpenses = async function ({ date, start_date, end_date } = {}, user) {
+	const startDate =
+		start_date && end_date && start_date > end_date ? end_date : start_date;
+	const endDate =
+		start_date && end_date && start_date > end_date ? start_date : end_date;
+	return ExpensesRepository.findAll({
+		date,
+		startDate,
+		endDate,
+		...getBarbeariaContext(user),
+	});
 };
 
 exports.createExpense = async function (payload, user) {

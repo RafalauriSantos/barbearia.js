@@ -5,6 +5,10 @@ const itemSchema = z.object({
 	name: z.string().min(1).optional(),
 	price: z.coerce.number().nonnegative(),
 	quantity: z.coerce.number().int().positive().optional(),
+	purchase_type: z.enum(["avista", "consignado"]).optional(),
+	cost_price: z.coerce.number().nonnegative().optional(),
+	supplier_name: z.string().max(120).optional().nullable(),
+	seller_commission_percent: z.coerce.number().min(0).max(100).optional(),
 });
 
 const appointmentSchema = z.object({

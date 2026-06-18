@@ -57,16 +57,6 @@ function toTimeLabel(totalMinutes) {
 	return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
 }
 
-function normalizeDate(date) {
-	const next = new Date(date);
-	next.setHours(0, 0, 0, 0);
-	return next;
-}
-
-function isBeforeToday(date) {
-	return normalizeDate(date) < normalizeDate(new Date());
-}
-
 function getStatusLabel(status) {
 	if (status === "paid") return "pago";
 	if (status === "fiado") return "fiado";
@@ -702,10 +692,6 @@ export default function AppPage() {
 	};
 
 	const openNewAppointment = () => {
-		if (isBeforeToday(currentDate)) {
-			setFeedbackMessage("Nao e possivel adicionar em datas passadas.");
-			return;
-		}
 		if (isAdmin && !selectedBarberId) {
 			setFeedbackMessage("Selecione uma agenda antes de adicionar cliente.");
 			return;

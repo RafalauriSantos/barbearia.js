@@ -3,6 +3,7 @@ process.env.SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || "anon";
 
 const t = require("tap");
 const jwt = require("jsonwebtoken");
+const PIX_METHOD_ID = "11111111-1111-4111-8111-111111111111";
 
 function clearFlowCache() {
 	for (const modulePath of [
@@ -16,9 +17,22 @@ function clearFlowCache() {
 		"../src/services/appointmentsService",
 		"../src/services/financialService",
 		"../src/services/authService",
+		"../src/repositories/paymentMethodsRepository",
 	]) {
 		delete require.cache[require.resolve(modulePath)];
 	}
+}
+
+function mockPaymentMethodsRepository() {
+	require.cache[require.resolve("../src/repositories/paymentMethodsRepository")] = {
+		exports: {
+			findById: async (id) => ({
+				id,
+				active: true,
+				fee_percent: 0,
+			}),
+		},
+	};
 }
 
 t.test("paid appointment created from agenda enters same-day financial summary", async (t) => {
@@ -31,6 +45,7 @@ t.test("paid appointment created from agenda enters same-day financial summary",
 	const rows = [];
 
 	clearFlowCache();
+	mockPaymentMethodsRepository();
 
 	require.cache[require.resolve("../src/services/authService")] = {
 		exports: {
@@ -83,6 +98,7 @@ t.test("paid appointment created from agenda enters same-day financial summary",
 					total,
 					valor_manual: total,
 					status_pagamento: payload.status === "paid" ? "pago" : "pendente",
+					forma_pagamento_id: payload.payment_method_id || null,
 					services: payload.services,
 				};
 				rows.push(row);
@@ -93,6 +109,7 @@ t.test("paid appointment created from agenda enters same-day financial summary",
 					time_slot: row.hora,
 					value: row.total,
 					status: "paid",
+					payment_method_id: row.forma_pagamento_id,
 					barbeiro_id: row.barbeiro_id,
 					services: row.services,
 					products: [],
@@ -162,6 +179,7 @@ t.test("paid appointment created from agenda enters same-day financial summary",
 			day_key: "2026-06-15",
 			time_slot: "10:00",
 			status: "paid",
+			payment_method_id: PIX_METHOD_ID,
 			services: [
 				{
 					id: "service-cut",
@@ -200,6 +218,7 @@ t.test("pending appointment marked as paid enters same-day financial summary", a
 	const rows = [];
 
 	clearFlowCache();
+	mockPaymentMethodsRepository();
 
 	require.cache[require.resolve("../src/services/authService")] = {
 		exports: {
@@ -237,6 +256,7 @@ t.test("pending appointment marked as paid enters same-day financial summary", a
 					total: Number(payload.value || 0),
 					valor_manual: Number(payload.value || 0),
 					status_pagamento: "pendente",
+					forma_pagamento_id: null,
 				};
 				rows.push(row);
 				return {
@@ -252,6 +272,7 @@ t.test("pending appointment marked as paid enters same-day financial summary", a
 			update: async (id, updates) => {
 				const row = rows.find((item) => item.id === id);
 				row.status_pagamento = updates.status === "paid" ? "pago" : "pendente";
+				row.forma_pagamento_id = updates.payment_method_id || null;
 				return {
 					id: row.id,
 					client_name: row.cliente_nome,
@@ -259,6 +280,7 @@ t.test("pending appointment marked as paid enters same-day financial summary", a
 					time_slot: row.hora,
 					value: row.total,
 					status: "paid",
+					payment_method_id: row.forma_pagamento_id,
 					barbeiro_id: row.barbeiro_id,
 				};
 			},
@@ -313,7 +335,7 @@ t.test("pending appointment marked as paid enters same-day financial summary", a
 		method: "PATCH",
 		url: `/agendamentos/${created.id}`,
 		headers: { authorization: `Bearer ${token}` },
-		payload: { status: "paid" },
+		payload: { status: "paid", payment_method_id: PIX_METHOD_ID },
 	});
 	t.equal(updateRes.statusCode, 200);
 	t.equal(JSON.parse(updateRes.payload).status, "paid");

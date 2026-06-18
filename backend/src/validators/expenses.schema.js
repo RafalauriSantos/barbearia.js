@@ -7,6 +7,11 @@ const createSchema = z.object({
 });
 
 const updateSchema = createSchema.partial();
+const listQuerySchema = z.object({
+	date: z.string().min(1).optional(),
+	start_date: z.string().min(1).optional(),
+	end_date: z.string().min(1).optional(),
+});
 
 function validateCreateExpense(body) {
 	return createSchema.parse(body);
@@ -16,4 +21,12 @@ function validateUpdateExpense(body) {
 	return updateSchema.parse(body);
 }
 
-module.exports = { validateCreateExpense, validateUpdateExpense };
+function validateListExpensesQuery(query) {
+	return listQuerySchema.parse(query || {});
+}
+
+module.exports = {
+	validateCreateExpense,
+	validateUpdateExpense,
+	validateListExpensesQuery,
+};

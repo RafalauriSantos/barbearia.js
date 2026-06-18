@@ -2,6 +2,7 @@ const AuthService = require("../services/authService");
 const ExpensesService = require("../services/expensesService");
 const {
 	validateCreateExpense,
+	validateListExpensesQuery,
 	validateUpdateExpense,
 } = require("../validators/expenses.schema");
 
@@ -11,7 +12,8 @@ async function getCurrentUser(request) {
 
 exports.list = async (request, reply) => {
 	const user = await getCurrentUser(request);
-	const expenses = await ExpensesService.listExpenses(request.query || {}, user);
+	const query = validateListExpensesQuery(request.query);
+	const expenses = await ExpensesService.listExpenses(query, user);
 	return reply.send(expenses);
 };
 

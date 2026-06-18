@@ -181,3 +181,90 @@ t.test("paid appointment stores payment fee snapshot from method", async (t) => 
 	t.equal(capturedPayload.payment_fee_value, 1.71);
 	t.equal(capturedPayload.net_value, 98.29);
 });
+
+t.test("paid appointment requires payment method", async (t) => {
+	const service = loadService({
+		appointmentsRepository: {
+			findById: async () => ({
+				id: "appt-1",
+				barbearia_id: "shop-1",
+				barbeiro_id: "barber-1",
+				value: 100,
+				status: "normal",
+			}),
+			update: async () => {
+				throw new Error("update should not run");
+			},
+		},
+		barbersRepository: {
+			findByIdInBarbearia: async () => null,
+		},
+	});
+
+	await t.rejects(
+		service.updateAppointment("appt-1", { status: "paid" }, barberUser),
+		{ status: 400, code: "PAYMENT_METHOD_REQUIRED" },
+	);
+});
+
+t.test("paid appointment item update reuses payment method and recalculates value", async (t) => {
+	let capturedPayload;
+	const service = loadService({
+		appointmentsRepository: {
+			findById: async () => ({
+				id: "appt-1",
+				barbearia_id: "shop-1",
+				barbeiro_id: "barber-1",
+				value: 100,
+				status: "paid",
+				payment_method_id: "method-pix",
+			}),
+			update: async (_id, payload) => {
+				capturedPayload = payload;
+				return { id: "appt-1", ...payload };
+			},
+		},
+		barbersRepository: {
+			findByIdInBarbearia: async () => null,
+		},
+		paymentMethodsRepository: {
+			findById: async (id) => ({
+				id,
+				active: true,
+				fee_percent: 0,
+			}),
+		},
+	});
+
+	await service.updateAppointment(
+		"appt-1",
+		{
+			services: [{ id: "service-1", name: "Corte", price: 80, quantity: 1 }],
+			products: [
+				{
+					id: "product-1",
+					name: "Gel",
+					price: 25,
+					quantity: 1,
+					purchase_type: "consignado",
+					cost_price: 13,
+					supplier_name: "Gerson",
+				},
+			],
+		},
+		barberUser,
+	);
+
+	t.equal(capturedPayload.value, undefined);
+	t.equal(capturedPayload.payment_method_id, "method-pix");
+	t.equal(capturedPayload.net_value, 105);
+	t.same(capturedPayload.products[0], {
+		id: "product-1",
+		name: "Gel",
+		price: 25,
+		quantity: 1,
+		purchase_type: "consignado",
+		cost_price: 13,
+		supplier_name: "Gerson",
+	});
+});

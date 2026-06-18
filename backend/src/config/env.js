@@ -1,6 +1,8 @@
 require("dotenv").config();
 const { z } = require("zod");
 
+const PRODUCTION_APP_URL = "https://kurt-barbearia.vercel.app";
+
 const envSchema = z
 	.object({
 		NODE_ENV: z
@@ -57,6 +59,15 @@ function normalizeBoolean(value, fallback = false) {
 	return fallback;
 }
 
+function normalizeAppUrl(value, nodeEnv) {
+	const rawValue = String(value || "").trim();
+	const localUrlPattern = /^https?:\/\/(localhost|127\.0\.0\.1|0\.0\.0\.0)(:|\/|$)/i;
+	if (nodeEnv === "production" && (!rawValue || localUrlPattern.test(rawValue))) {
+		return PRODUCTION_APP_URL;
+	}
+	return rawValue || undefined;
+}
+
 const parsed = envSchema.parse({
 	NODE_ENV: process.env.NODE_ENV,
 	HOST: process.env.HOST,
@@ -70,7 +81,7 @@ const parsed = envSchema.parse({
 	JWT_SECRET: process.env.JWT_SECRET,
 	DEFAULT_BARBEARIA_ID: process.env.DEFAULT_BARBEARIA_ID,
 	DEFAULT_BARBEIRO_ID: process.env.DEFAULT_BARBEIRO_ID,
-	APP_URL: process.env.APP_URL,
+	APP_URL: normalizeAppUrl(process.env.APP_URL, process.env.NODE_ENV),
 	SMTP_HOST: process.env.SMTP_HOST,
 	SMTP_PORT: process.env.SMTP_PORT,
 	SMTP_SECURE: normalizeBoolean(process.env.SMTP_SECURE, false),

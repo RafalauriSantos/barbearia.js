@@ -616,7 +616,9 @@ export default function ClientsPage() {
 				</div>
 			</ScreenHeader>
 
-			<ClientStats clients={clients} waitlist={waitlist} />
+			{activeTab === "fixed" && (
+				<ClientStats clients={clients} waitlist={waitlist} />
+			)}
 
 			<div className="min-h-0 flex-1 overflow-y-auto safe-bottom px-4 py-4">
 				{errorMessage && (

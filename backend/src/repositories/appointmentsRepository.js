@@ -189,6 +189,13 @@ function isMissingProductSnapshotColumn(error) {
 	].some((column) => text.includes(column));
 }
 
+function isMissingProductStockColumn(error) {
+	const text = `${error?.code || ""} ${error?.message || ""} ${
+		error?.details || ""
+	}`;
+	return text.includes("quantidade_estoque");
+}
+
 function stripProductSnapshotRows(rows) {
 	return rows.map(
 		({
@@ -199,6 +206,59 @@ function stripProductSnapshotRows(rows) {
 			...legacyRow
 		}) => legacyRow,
 	);
+}
+
+function toQuantityMap(items = []) {
+	const quantities = new Map();
+	for (const item of items) {
+		const productId = item.produto_id || item.id;
+		if (!productId) continue;
+		quantities.set(
+			productId,
+			Number(quantities.get(productId) || 0) + Number(item.quantidade || item.quantity || 1),
+		);
+	}
+	return quantities;
+}
+
+async function getAppointmentProductQuantities(appointmentId) {
+	const { data, error } = await supabase
+		.from("agendamento_produtos")
+		.select("produto_id,quantidade")
+		.eq("agendamento_id", appointmentId);
+	if (error) throw error;
+	return toQuantityMap(data || []);
+}
+
+async function adjustProductStock(previousQuantities, nextQuantities) {
+	const productIds = new Set([
+		...Array.from(previousQuantities.keys()),
+		...Array.from(nextQuantities.keys()),
+	]);
+
+	for (const productId of productIds) {
+		const previous = Number(previousQuantities.get(productId) || 0);
+		const next = Number(nextQuantities.get(productId) || 0);
+		const delta = next - previous;
+		if (!delta) continue;
+
+		const { data, error } = await supabase
+			.from("produtos")
+			.select("quantidade_estoque")
+			.eq("id", productId)
+			.maybeSingle();
+		if (error && isMissingProductStockColumn(error)) return;
+		if (error) throw error;
+
+		const currentStock = Number(data?.quantidade_estoque || 0);
+		const nextStock = Math.max(currentStock - delta, 0);
+		const result = await supabase
+			.from("produtos")
+			.update({ quantidade_estoque: nextStock })
+			.eq("id", productId);
+		if (result.error && isMissingProductStockColumn(result.error)) return;
+		if (result.error) throw result.error;
+	}
 }
 
 async function upsertAppointmentService(appointmentId, payload) {
@@ -231,12 +291,22 @@ async function upsertAppointmentService(appointmentId, payload) {
 async function upsertAppointmentProducts(appointmentId, payload) {
 	const { provided, items } = normalizeProducts(payload);
 	if (!provided) return;
+	const previousQuantities = await getAppointmentProductQuantities(appointmentId);
+	const nextQuantities = toQuantityMap(
+		items.map((item) => ({
+			produto_id: item.id,
+			quantidade: item.quantity,
+		})),
+	);
 
 	await supabase
 		.from("agendamento_produtos")
 		.delete()
 		.eq("agendamento_id", appointmentId);
-	if (items.length === 0) return;
+	if (items.length === 0) {
+		await adjustProductStock(previousQuantities, nextQuantities);
+		return;
+	}
 
 	const rows = items.map((item) => {
 		const quantity = Number(item.quantity || 1) || 1;
@@ -264,9 +334,11 @@ async function upsertAppointmentProducts(appointmentId, payload) {
 			.from("agendamento_produtos")
 			.insert(stripProductSnapshotRows(rows));
 		if (legacyResult.error) throw legacyResult.error;
+		await adjustProductStock(previousQuantities, nextQuantities);
 		return;
 	}
 	if (error) throw error;
+	await adjustProductStock(previousQuantities, nextQuantities);
 }
 
 exports.findAll = async function ({ date, barbeariaId, barbeiroId } = {}) {
@@ -386,8 +458,10 @@ exports.update = async function (id, updates, { barbeariaId }) {
 };
 
 exports.remove = async function (id, { barbeariaId }) {
+	const previousProductQuantities = await getAppointmentProductQuantities(id);
 	await supabase.from("agendamento_servicos").delete().eq("agendamento_id", id);
 	await supabase.from("agendamento_produtos").delete().eq("agendamento_id", id);
+	await adjustProductStock(previousProductQuantities, new Map());
 
 	const { error } = await supabase
 		.from("agendamentos")

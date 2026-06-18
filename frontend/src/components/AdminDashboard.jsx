@@ -339,6 +339,7 @@ export function AdminDashboard({
 	const [isSubmittingBarber, setIsSubmittingBarber] = useState(false);
 	const [panelMessage, setPanelMessage] = useState("");
 	const [panelError, setPanelError] = useState("");
+	const [lastInviteUrl, setLastInviteUrl] = useState("");
 	const slots = useMemo(() => getSlots(), []);
 
 	const grouped = useMemo(
@@ -386,6 +387,7 @@ export function AdminDashboard({
 		setIsSubmittingBarber(true);
 		setPanelMessage("");
 		setPanelError("");
+		setLastInviteUrl("");
 		try {
 			const created = await addBarber({
 				nome: name.trim(),
@@ -397,9 +399,10 @@ export function AdminDashboard({
 			setEmail("");
 			setCommission("50");
 			setSendInviteNow(true);
+			setLastInviteUrl(created.inviteUrl || "");
 			setPanelMessage(
 				created.inviteUrl ?
-					"Barbeiro salvo. Enviamos o convite por email."
+					"Barbeiro salvo. Convite enviado e link pronto para copiar."
 				:	"Barbeiro salvo.",
 			);
 			await onReload();
@@ -418,14 +421,31 @@ export function AdminDashboard({
 
 		setPanelMessage("");
 		setPanelError("");
+		setLastInviteUrl("");
 		try {
 			const result = await sendBarberInvite(barber.id, { email: barber.email });
+			setLastInviteUrl(result.inviteUrl || "");
 			setPanelMessage(
-				result.inviteUrl ? "Convite enviado por email." : "Convite enviado.",
+				result.inviteUrl ?
+					"Convite enviado e link pronto para copiar."
+				:	"Convite enviado.",
 			);
 			await onReload();
 		} catch (error) {
 			setPanelError(error.message || "Nao foi possivel enviar convite.");
+		}
+	};
+
+	const handleCopyInviteLink = async () => {
+		if (!lastInviteUrl) return;
+		try {
+			if (!navigator.clipboard?.writeText) {
+				throw new Error("Clipboard API indisponivel");
+			}
+			await navigator.clipboard.writeText(lastInviteUrl);
+			setPanelMessage("Link do convite copiado.");
+		} catch {
+			setPanelMessage("Selecione e copie o link do convite.");
 		}
 	};
 
@@ -679,6 +699,31 @@ export function AdminDashboard({
 								<Notice tone={panelError ? "error" : "success"}>
 									{panelError || panelMessage}
 								</Notice>
+							)}
+
+							{lastInviteUrl && !panelError && (
+								<div className="rounded-lg border border-paid/20 bg-paid/10 p-3">
+									<label className="mb-2 block font-mono-ui text-[10px] uppercase text-paid">
+										Link do convite
+									</label>
+									<div className="grid grid-cols-[1fr_auto] gap-2">
+										<input
+											readOnly
+											value={lastInviteUrl}
+											className="min-w-0 rounded-md border border-paid/20 bg-background px-3 py-2 font-mono-ui text-[10px] text-foreground"
+											onFocus={(event) => event.target.select()}
+										/>
+										<button
+											type="button"
+											onClick={handleCopyInviteLink}
+											className="rounded-md bg-paid px-3 py-2 font-mono-ui text-[10px] text-primary-foreground">
+											Copiar
+										</button>
+									</div>
+									<p className="mt-2 font-client text-xs leading-snug text-foreground-faint">
+										Se o email demorar ou cair no spam, envie este link pelo WhatsApp.
+									</p>
+								</div>
 							)}
 
 							<div className="space-y-2">

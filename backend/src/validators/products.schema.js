@@ -7,6 +7,7 @@ const createSchema = z.object({
 	cost_price: z.coerce.number().nonnegative().optional(),
 	supplier_name: z.string().max(120).optional().nullable(),
 	seller_commission_percent: z.coerce.number().min(0).max(100).optional(),
+	stock_quantity: z.coerce.number().int().nonnegative().optional(),
 });
 
 const updateSchema = createSchema.partial();

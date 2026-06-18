@@ -18,12 +18,19 @@ function toDatabase(payload) {
 	};
 }
 
-exports.findAll = async function ({ date, barbeariaId } = {}) {
+exports.findAll = async function ({
+	date,
+	startDate,
+	endDate,
+	barbeariaId,
+} = {}) {
 	let query = supabase
 		.from("despesas")
 		.select("*")
 		.eq("barbearia_id", barbeariaId);
 	if (date) query = query.eq("data", date);
+	if (!date && startDate) query = query.gte("data", startDate);
+	if (!date && endDate) query = query.lte("data", endDate);
 
 	const { data, error } = await query.order("data", { ascending: true });
 	if (error) throw error;

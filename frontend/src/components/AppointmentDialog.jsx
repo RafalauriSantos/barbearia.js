@@ -2,8 +2,10 @@ import { useEffect, useRef, useState } from "react";
 import {
 	getCachedProducts,
 	getCachedServices,
+	getCachedPaymentMethods,
 	loadServices,
 	loadProducts,
+	loadPaymentMethods,
 	addAppointment,
 	updateAppointment,
 } from "@/lib/store";
@@ -33,6 +35,7 @@ export function AppointmentDialog({
 		initialCatalogRef.current = {
 			services: getCachedServices(),
 			products: getCachedProducts(),
+			paymentMethods: getCachedPaymentMethods(),
 		};
 	}
 	const initialCatalog = initialCatalogRef.current;
@@ -43,6 +46,12 @@ export function AppointmentDialog({
 	const [products, setProducts] = useState(initialCatalog.products || []);
 	const [isLoadingProducts, setIsLoadingProducts] = useState(
 		!initialCatalog.products,
+	);
+	const [paymentMethods, setPaymentMethods] = useState(
+		initialCatalog.paymentMethods || [],
+	);
+	const [isLoadingPaymentMethods, setIsLoadingPaymentMethods] = useState(
+		!initialCatalog.paymentMethods,
 	);
 	// Campos do formulario (novo ou edicao).
 	const [clientName, setClientName] = useState(appointment?.client_name || "");
@@ -70,6 +79,9 @@ export function AppointmentDialog({
 		appointment?.barbeiro_id || defaultBarberId || forcedBarberId || "",
 	);
 	const [status, setStatus] = useState(appointment?.status || "normal");
+	const [paymentMethodId, setPaymentMethodId] = useState(
+		appointment?.payment_method_id || appointment?.forma_pagamento_id || "",
+	);
 	const [prazoDate, setPrazoDate] = useState(appointment?.prazo_date || "");
 	const [autoValue, setAutoValue] = useState(() => {
 		const initialValue = Number(appointment?.value || 0);
@@ -122,6 +134,26 @@ export function AppointmentDialog({
 			mounted = false;
 		};
 	}, [initialCatalog.products, initialCatalog.services]);
+
+	useEffect(() => {
+		let mounted = true;
+
+		loadPaymentMethods({ force: Boolean(initialCatalog.paymentMethods) })
+			.then((list) => {
+				if (mounted) setPaymentMethods(list);
+			})
+			.catch(() => {
+				if (mounted && !initialCatalog.paymentMethods) setPaymentMethods([]);
+			})
+			.finally(() => {
+				if (mounted) setIsLoadingPaymentMethods(false);
+			});
+
+		return () => {
+			mounted = false;
+		};
+	}, [initialCatalog.paymentMethods]);
+
 	const addService = (svc) => {
 		setSelectedServices((prev) => {
 			const existing = prev.find((item) => item.id === svc.id);
@@ -216,6 +248,13 @@ export function AppointmentDialog({
 			return;
 		}
 
+		if (status === "paid" && !paymentMethodId) {
+			const message = "Informe a forma de pagamento.";
+			setErrorMessage(message);
+			if (onError) onError(message);
+			return;
+		}
+
 		if (canChooseBarber && !barberId) {
 			const message = "Selecione o barbeiro do atendimento.";
 			setErrorMessage(message);
@@ -238,6 +277,7 @@ export function AppointmentDialog({
 			status,
 			prazo_date: status === "fiado" ? prazoDate || null : null,
 		};
+		if (status === "paid") data.payment_method_id = paymentMethodId;
 		if (Number.isFinite(parsedValue)) data.value = parsedValue;
 		if (forcedBarberId) {
 			data.barbeiro_id = forcedBarberId;
@@ -487,6 +527,9 @@ export function AppointmentDialog({
 									if (e.target.value !== "fiado") {
 										setPrazoDate("");
 									}
+									if (e.target.value !== "paid") {
+										setPaymentMethodId("");
+									}
 									setErrorMessage("");
 								}}
 								className="rounded-md border border-border bg-secondary px-3 py-3 text-sm text-foreground"
@@ -511,6 +554,34 @@ export function AppointmentDialog({
 							<p className="mt-2 font-mono-ui text-[9px] text-foreground-faint">
 								Informe a data para cobrar o fiado.
 							</p>
+						)}
+						{status === "paid" && (
+							<div className="mt-3">
+								<label className="mb-1 block font-mono-ui text-[10px] text-foreground-faint">
+									Forma de pagamento
+								</label>
+								<select
+									value={paymentMethodId}
+									onChange={(e) => {
+										setPaymentMethodId(e.target.value);
+										setErrorMessage("");
+									}}
+									className="w-full rounded-md border border-border bg-secondary px-3 py-3 text-sm text-foreground"
+									disabled={isSubmitting || isLoadingPaymentMethods}>
+									<option value="">
+										{isLoadingPaymentMethods ?
+											"Carregando formas..."
+										:	"Selecione a forma"}
+									</option>
+									{paymentMethods
+										.filter((method) => method.active !== false)
+										.map((method) => (
+											<option key={method.id} value={method.id}>
+												{method.name}
+											</option>
+										))}
+								</select>
+							</div>
 						)}
 					</div>
 

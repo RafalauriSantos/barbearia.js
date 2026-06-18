@@ -67,6 +67,11 @@ export default function AcceptInvitePage() {
 
 		setIsSubmitting(true);
 		setErrorMessage("");
+		if (password.length < 8) {
+			setErrorMessage("Informe uma senha com pelo menos 8 caracteres.");
+			setIsSubmitting(false);
+			return;
+		}
 		try {
 			await acceptInvite({
 				token,
@@ -150,6 +155,7 @@ export default function AcceptInvitePage() {
 									className="w-full rounded-md border border-border bg-secondary px-3 py-3 text-sm text-foreground"
 									autoComplete="new-password"
 									minLength={8}
+									required
 									disabled={isSubmitting}
 									placeholder="Obrigatoria para novo acesso"
 								/>

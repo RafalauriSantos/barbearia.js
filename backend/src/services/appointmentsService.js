@@ -63,6 +63,13 @@ async function withPaymentSnapshot(payload, fallbackAppointment = null) {
 
 	const gross = resolveGrossValue(payload, fallbackAppointment);
 	let feePercent = 0;
+	if (!paymentMethodId) {
+		throw new AppError(
+			400,
+			"PAYMENT_METHOD_REQUIRED",
+			"Informe a forma de pagamento.",
+		);
+	}
 	if (paymentMethodId) {
 		const paymentMethod = await PaymentMethodsRepository.findById(paymentMethodId);
 		if (!paymentMethod || !paymentMethod.active) {
