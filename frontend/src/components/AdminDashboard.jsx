@@ -261,7 +261,7 @@ function BarberAgenda({ barber, rows, slots, onBack, onAdd, onEdit }) {
 					type="button"
 					onClick={onBack}
 					className="rounded-md border border-border bg-card px-3 py-2 font-mono-ui text-[10px] text-foreground">
-					Todos
+					Voltar
 				</button>
 			</div>
 
@@ -474,9 +474,9 @@ export function AdminDashboard({
 							<p className="font-mono-ui text-[10px] uppercase text-foreground-faint">
 								Equipe
 							</p>
-							<h1 className="truncate font-logo text-xl leading-tight text-foreground">
-								Agenda dos barbeiros
-							</h1>
+							<p className="mt-1 font-client text-sm text-foreground-faint">
+								{barbers.length} barbeiros na equipe
+							</p>
 						</div>
 						<IconButton
 							label="Gerenciar equipe"
@@ -749,13 +749,17 @@ export function AdminDashboard({
 											<p className="font-mono-ui text-[10px] text-foreground-faint">
 												Comissão {barber.comissao_percent}%
 											</p>
-											<button
-												type="button"
-												onClick={() => handleInvite(barber)}
-												disabled={Boolean(barber.usuario_id)}
-												className="rounded-md border border-border px-3 py-2 font-mono-ui text-[10px] text-foreground-faint disabled:opacity-40">
-												Convite
-											</button>
+											{barber.usuario_id ?
+												<span className="rounded-md border border-paid/25 bg-paid/10 px-3 py-2 font-mono-ui text-[10px] text-paid">
+													Acesso ativo
+												</span>
+											:	<button
+													type="button"
+													onClick={() => handleInvite(barber)}
+													className="rounded-md border border-border px-3 py-2 font-mono-ui text-[10px] text-foreground-faint">
+													Enviar convite
+												</button>
+											}
 										</div>
 									</div>
 								))}

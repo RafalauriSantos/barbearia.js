@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import { Notice } from "@/components/ScreenPrimitives";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import {
 	getCachedPaymentMethods,
 	getCachedProfile,
@@ -683,18 +684,19 @@ export default function SettingsPage() {
 				className="min-h-0 flex-1 overflow-y-auto pb-8">
 				<header className="mb-6 px-5 pt-5">
 					<div className="flex items-center gap-3">
-					<button
-						type="button"
-						onClick={() => navigate("/app")}
-						aria-label="Voltar"
-						title="Voltar"
-						className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] border border-white/10 bg-white/5 font-client text-lg leading-none text-[#a0a09a] transition-colors hover:bg-white/[0.08]">
-						‹
-					</button>
-					<h1 className="truncate font-client text-xl font-semibold leading-none tracking-tight text-[#f0f0ea]">
-						Configurações
-					</h1>
-				</div>
+						<button
+							type="button"
+							onClick={() => navigate("/app")}
+							aria-label="Voltar"
+							title="Voltar"
+							className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] border border-white/10 bg-white/5 font-client text-lg leading-none text-[#a0a09a] transition-colors hover:bg-white/[0.08]">
+							‹
+						</button>
+						<h1 className="min-w-0 flex-1 truncate font-client text-xl font-semibold leading-none tracking-tight text-[#f0f0ea]">
+							Configurações
+						</h1>
+						<ThemeToggle className="rounded-[10px] border-white/10 bg-white/5 text-[#a0a09a] hover:bg-white/[0.08] hover:text-[#f0f0ea]" />
+					</div>
 				</header>
 
 				<div aria-live="polite" className="mx-5 space-y-3">
@@ -928,7 +930,7 @@ export default function SettingsPage() {
 											className="w-full rounded-[10px] border border-[#1D9E75]/30 bg-[#1D9E75]/15 py-3 font-client text-sm font-medium text-[#5DCAA5] transition-colors hover:bg-[#1D9E75]/25 disabled:opacity-60">
 											{isSavingPayments ?
 												"Salvando taxas..."
-											:	"Salvar taxas de cartão"}
+											:	"Salvar taxas"}
 										</button>
 									</div>
 								</GroupItem>
@@ -955,13 +957,13 @@ export default function SettingsPage() {
 						</FieldGroup>
 					</SettingsSection>
 
-					<SettingsSection label="Zona de perigo">
+					<SettingsSection label="Conta">
 						<div className="mx-5 rounded-2xl border border-[#A32D2D]/20 bg-[#A32D2D]/[0.08] p-4">
 							<p className="mb-3 flex items-center gap-1.5 font-client text-[11px] font-semibold uppercase tracking-[0.8px] text-[#A32D2D]">
 								<span className="flex h-3.5 w-3.5 items-center justify-center rounded-full border border-[#A32D2D]/40 text-[9px]">
 									!
 								</span>
-								Ação irreversível
+								Sessão atual
 							</p>
 							<button
 								type="button"

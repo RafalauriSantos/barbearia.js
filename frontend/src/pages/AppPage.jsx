@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AppointmentDialog } from "@/components/AppointmentDialog";
 import { BottomNav } from "@/components/BottomNav";
 import { IconButton, LoadingCard, Notice } from "@/components/ScreenPrimitives";
-import { ThemeToggle } from "@/components/ThemeToggle";
 import {
 	deleteAppointment,
 	formatCurrency,
@@ -940,7 +939,6 @@ export default function AppPage() {
 						</div>
 					</div>
 					<div className="flex items-center gap-2">
-						<ThemeToggle className="h-9 w-9 rounded-full border border-border bg-card" />
 						<IconButton
 							label="Configurações"
 							onClick={() => navigate("/settings")}

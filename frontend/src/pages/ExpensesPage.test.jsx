@@ -52,9 +52,7 @@ describe("ExpensesPage", () => {
 
 		fireEvent.click(screen.getByRole("button", { name: "Editar" }));
 
-		expect(
-			screen.getByRole("heading", { name: "Editar despesa" }),
-		).toBeTruthy();
+		expect(screen.getByRole("heading", { name: "Editar custo" })).toBeTruthy();
 
 		fireEvent.change(screen.getByDisplayValue("Aluguel"), {
 			target: { value: "Internet" },

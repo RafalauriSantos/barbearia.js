@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Navigate, useNavigate, useSearchParams } from "react-router-dom";
+import { Link, Navigate, useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import { getInvite } from "@/lib/api/auth.api";
 
@@ -109,6 +109,11 @@ export default function AcceptInvitePage() {
 							<p className="mt-1 font-client text-sm text-overdue">
 								{errorMessage}
 							</p>
+							<Link
+								to="/login"
+								className="mt-3 block rounded-md border border-overdue/30 px-3 py-2 text-center font-mono-ui text-[10px] text-overdue">
+								Ir para login
+							</Link>
 						</div>
 					:	<form onSubmit={handleSubmit} className="space-y-3">
 							<div className="rounded-md bg-background-deep px-3 py-3">
@@ -122,6 +127,9 @@ export default function AcceptInvitePage() {
 									Acesso para {barberName}
 								</p>
 							</div>
+							<p className="font-client text-sm leading-snug text-foreground-faint">
+								Crie uma senha para acessar a agenda da barbearia.
+							</p>
 
 							{errorMessage && (
 								<div className="rounded-md border border-overdue/30 bg-overdue/10 px-3 py-2">

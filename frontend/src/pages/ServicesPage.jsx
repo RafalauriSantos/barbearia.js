@@ -264,8 +264,8 @@ export default function ServicesPage() {
 	);
 	const emptyLabel =
 		tab === "services" ?
-			"NENHUM SERVIÇO CADASTRADO"
-		:	"NENHUM PRODUTO CADASTRADO";
+			"Nenhum serviço cadastrado"
+		:	"Nenhum produto cadastrado";
 	const emptyHint =
 		tab === "services" ?
 			"Adicione serviços para usar nos agendamentos"
@@ -274,6 +274,7 @@ export default function ServicesPage() {
 	const formPlaceholder =
 		tab === "services" ? "Ex: Corte + Barba" : "Ex: Pomada, Shampoo";
 	const isProductsTab = tab === "products";
+	const createLabel = tab === "services" ? "Novo serviço" : "Novo produto";
 	return (
 		<div className="app-shell flex flex-col overflow-hidden bg-background">
 			<ScreenHeader
@@ -281,7 +282,7 @@ export default function ServicesPage() {
 				title="Catálogo"
 				action={
 					<IconButton
-						label="Novo item"
+						label={createLabel}
 						onClick={() => {
 							cancelEdit();
 							setShowForm(true);
@@ -325,7 +326,7 @@ export default function ServicesPage() {
 									{tab === "services" ? "Serviços" : "Produtos"}
 								</p>
 								<h2 className="mt-1 font-logo text-lg text-foreground">
-									{editingId ? "Editar item" : "Novo item"}
+									{editingId ? "Editar item" : createLabel}
 								</h2>
 							</div>
 							<IconButton label="Fechar" onClick={cancelEdit}>
@@ -518,7 +519,21 @@ export default function ServicesPage() {
 
 				{items.length === 0 && !showForm ?
 					<div className="mx-4 mt-4">
-						<EmptyState title={emptyLabel} hint={emptyHint} />
+						<EmptyState
+							title={emptyLabel}
+							hint={emptyHint}
+							action={
+								<button
+									type="button"
+									onClick={() => {
+										cancelEdit();
+										setShowForm(true);
+									}}
+									className="rounded-md bg-foreground px-4 py-3 font-mono-ui text-sm text-primary-foreground">
+									{createLabel}
+								</button>
+							}
+						/>
 					</div>
 				:	<div className="grid gap-2 px-4 py-4 sm:grid-cols-2 xl:grid-cols-3">
 						{items.map((item) => (

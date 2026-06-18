@@ -34,7 +34,7 @@ export function ScreenHeader({
 	title,
 	action,
 	children,
-	showThemeToggle = true,
+	showThemeToggle = false,
 }) {
 	return (
 		<header className="z-50 shrink-0 border-b border-border bg-background/95 px-4 pb-3 pt-4 backdrop-blur">

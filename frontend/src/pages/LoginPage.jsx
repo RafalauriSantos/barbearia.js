@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, Navigate, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
-import { resendEmailCode } from "@/lib/api/auth.api";
 import { warmUpApi } from "@/lib/api/client";
 
 const SIGNUP_SUCCESS_MESSAGE =
@@ -20,7 +19,6 @@ export default function LoginPage() {
 	const [email, setEmail] = useState("");
 	const [password, setPassword] = useState("");
 	const [isSubmitting, setIsSubmitting] = useState(false);
-	const [isResending, setIsResending] = useState(false);
 	const [errorMessage, setErrorMessage] = useState("");
 	const [successMessage, setSuccessMessage] = useState("");
 
@@ -75,26 +73,6 @@ export default function LoginPage() {
 			);
 		} finally {
 			setIsSubmitting(false);
-		}
-	};
-
-	const handleResendCode = async () => {
-		const cleanEmail = email.trim();
-		if (!cleanEmail || isResending) {
-			setErrorMessage("Informe o email para reenviar o codigo.");
-			return;
-		}
-
-		setIsResending(true);
-		setErrorMessage("");
-		setSuccessMessage("");
-		try {
-			await resendEmailCode({ email: cleanEmail });
-			setSuccessMessage("Reenviamos um novo codigo para seu email.");
-		} catch (error) {
-			setErrorMessage(error.message || "Nao foi possivel reenviar o codigo.");
-		} finally {
-			setIsResending(false);
 		}
 	};
 
@@ -242,15 +220,6 @@ export default function LoginPage() {
 							Esqueci minha senha
 						</Link>
 
-						{isSignup && (
-							<button
-								type="button"
-								onClick={handleResendCode}
-								disabled={isResending || isSubmitting || isLoading}
-								className="w-full rounded-md border border-border px-6 py-3 font-mono-ui text-xs text-foreground-faint disabled:opacity-60">
-								{isResending ? "Reenviando..." : "Reenviar codigo"}
-							</button>
-						)}
 					</form>
 				</div>
 			</div>

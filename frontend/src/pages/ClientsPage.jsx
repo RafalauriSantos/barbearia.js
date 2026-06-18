@@ -643,9 +643,6 @@ export default function ClientsPage() {
 											{entry.phone || "Sem telefone"}
 										</p>
 									</div>
-									<span className="rounded-md border border-fiado/30 bg-fiado/10 px-2 py-1 font-mono-ui text-[9px] uppercase text-fiado">
-										Espera
-									</span>
 								</div>
 								{entry.preference && (
 									<p className="mt-3 rounded-md bg-background-deep px-3 py-2 font-client text-sm text-foreground">

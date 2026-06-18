@@ -19,11 +19,6 @@ function getMonthStart(date) {
 	return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-01`;
 }
 
-function formatPeriodLabel(startDate, endDate) {
-	if (startDate === endDate) return startDate.split("-").reverse().join("/");
-	return `${startDate.split("-").reverse().join("/")} a ${endDate.split("-").reverse().join("/")}`;
-}
-
 function PaymentMethodBreakdown({ rows = [] }) {
 	if (!rows.length) {
 		return (
@@ -285,12 +280,6 @@ export default function FinancialPage() {
 		setEndDate(formatDayKey(today));
 	};
 
-	const isAdminSummary = summary?.type === "admin";
-	const quantidade =
-		isAdminSummary ?
-			summary.quantidade_atendimentos_pagos
-		:	summary?.quantidade_atendimentos || 0;
-
 	return (
 		<div className="app-shell flex flex-col overflow-hidden bg-background">
 			<ScreenHeader eyebrow="Caixa" title="Financeiro">
@@ -363,19 +352,6 @@ export default function FinancialPage() {
 							rows={summary.resumo_por_forma_pagamento || []}
 						/>
 						<ProductSalesBreakdown summary={summary.resumo_produtos} />
-						<div className="rounded-lg border border-border bg-background-deep p-4">
-							<p className="font-mono-ui text-[10px] uppercase text-foreground-faint">
-								Base do resumo
-							</p>
-							<p className="mt-2 font-client text-sm text-foreground-faint">
-								{quantidade} atendimentos pagos entram no período de{" "}
-								{formatPeriodLabel(
-									summaryParams.start_date,
-									summaryParams.end_date,
-								)}
-								.
-							</p>
-						</div>
 					</div>
 				)}
 			</div>

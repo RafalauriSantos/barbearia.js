@@ -75,7 +75,7 @@ export default function ExpensesPage() {
 			const list = await loadExpenses(filterParams, { force: true });
 			setExpenses(list);
 		} catch (error) {
-			setErrorMessage(error.message || "Falha ao carregar despesas.");
+			setErrorMessage(error.message || "Falha ao carregar custos.");
 			if (!hasLoaded) {
 				setExpenses([]);
 			}
@@ -142,7 +142,7 @@ export default function ExpensesPage() {
 		if (isSubmitting) return;
 
 		const validationMessage =
-			validateRequiredText(form.name, "Nome da despesa", {
+			validateRequiredText(form.name, "Nome do custo", {
 				minLength: 3,
 				maxLength: 80,
 			}) ||
@@ -170,7 +170,7 @@ export default function ExpensesPage() {
 			resetForm();
 			await reload();
 		} catch (error) {
-			setErrorMessage(error.message || "Falha ao salvar despesa.");
+			setErrorMessage(error.message || "Falha ao salvar custo.");
 		} finally {
 			setIsSubmitting(false);
 		}
@@ -178,7 +178,7 @@ export default function ExpensesPage() {
 
 	const handleDelete = async (id) => {
 		if (isSubmitting) return;
-		if (!window.confirm("Excluir esta despesa?")) return;
+		if (!window.confirm("Excluir este custo?")) return;
 
 		setIsSubmitting(true);
 		setErrorMessage("");
@@ -186,7 +186,7 @@ export default function ExpensesPage() {
 			await deleteExpense(id);
 			await reload();
 		} catch (error) {
-			setErrorMessage(error.message || "Falha ao excluir despesa.");
+			setErrorMessage(error.message || "Falha ao excluir custo.");
 		} finally {
 			setIsSubmitting(false);
 		}
@@ -196,10 +196,10 @@ export default function ExpensesPage() {
 		<div className="app-shell flex flex-col overflow-hidden bg-background">
 			<ScreenHeader
 				eyebrow="Saídas"
-				title="Despesas"
+				title="Custos"
 				action={
 					<IconButton
-						label="Adicionar despesa"
+						label="Adicionar custo"
 						onClick={openCreateForm}
 						tone="primary">
 						+
@@ -262,7 +262,7 @@ export default function ExpensesPage() {
 						{formatCurrency(total)}
 					</p>
 					<p className="mt-2 font-mono-ui text-[10px] text-foreground-faint">
-						{expenses.length} despesas de {formatShortDate(filterParams.start_date)} a{" "}
+						{expenses.length} custos de {formatShortDate(filterParams.start_date)} a{" "}
 						{formatShortDate(filterParams.end_date)}
 					</p>
 				</div>
@@ -279,10 +279,10 @@ export default function ExpensesPage() {
 						<div className="flex items-center justify-between gap-3">
 							<div>
 								<p className="font-mono-ui text-[10px] uppercase text-foreground-faint">
-									Saída do dia
+									Saída do caixa
 								</p>
 								<h2 className="mt-1 font-logo text-lg text-foreground">
-									{editingId ? "Editar despesa" : "Nova despesa"}
+									{editingId ? "Editar custo" : "Novo custo"}
 								</h2>
 							</div>
 							<IconButton label="Fechar" onClick={resetForm}>
@@ -301,7 +301,7 @@ export default function ExpensesPage() {
 						)}
 						<div className="rounded-lg border border-border bg-card p-4">
 							<label className="mb-1 block font-mono-ui text-[10px] text-foreground-faint">
-								Nome da despesa
+								Nome do custo
 							</label>
 							<input
 								type="text"
@@ -356,7 +356,7 @@ export default function ExpensesPage() {
 									"Salvando..."
 								: editingId ?
 									"Salvar"
-								:	"Adicionar despesa"}
+								:	"Adicionar custo"}
 							</button>
 							<button
 								type="button"
@@ -373,14 +373,14 @@ export default function ExpensesPage() {
 			<div className="min-h-0 flex-1 overflow-y-auto safe-bottom">
 				{isLoading && expenses.length === 0 && (
 					<p className="mx-4 mt-4 rounded-md border border-border bg-card px-3 py-2 font-mono-ui text-[10px] uppercase text-foreground-faint">
-						Atualizando despesas...
+						Atualizando custos...
 					</p>
 				)}
 
 				{expenses.length === 0 ?
 					<div className="mx-4 mt-4">
 						<EmptyState
-							title="Nenhuma despesa neste dia"
+							title="Nenhum custo no período"
 							hint="Registre apenas saídas que afetam o caixa do período."
 						/>
 					</div>
