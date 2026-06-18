@@ -27,6 +27,7 @@
 			content="Sistema simples para barbearias controlarem agenda, caixa, equipe, produtos, despesas e fiados em um painel operacional." />
 		<meta name="robots" content="index, follow" />
 		<link rel="canonical" href="https://kurt-barbearia.vercel.app/" />
+		<link rel="preconnect" href="https://kurt-api.onrender.com" crossorigin />
 		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
 		<link rel="shortcut icon" href="/favicon.svg" />
 		<link
@@ -264,6 +265,20 @@
 				}
 			}
 		</style>
+		<script>
+			(() => {
+				const apiUrl = "https://kurt-api.onrender.com";
+
+				try {
+					const endpoint = `${apiUrl.replace(/\/+$/, "")}/health`;
+					fetch(endpoint, {
+						cache: "no-store",
+						keepalive: true,
+						mode: "no-cors",
+					}).catch(() => {});
+				} catch {}
+			})();
+		</script>
 
 		<meta property="og:type" content="website" />
 		<meta property="og:site_name" content="Gestor Barbearia" />

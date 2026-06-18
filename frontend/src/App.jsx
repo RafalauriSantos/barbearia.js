@@ -5,6 +5,7 @@ import {
 	useLocation,
 } from "react-router-dom";
 import { lazy, Suspense, useEffect } from "react";
+import { warmUpApi } from "@/lib/api/client";
 import LandingPage from "./pages/LandingPage";
 
 const AuthGate = lazy(() => import("./components/AuthGate"));
@@ -135,10 +136,16 @@ function AppRoutes() {
 
 // Define as rotas principais do sistema.
 // Junta todas as telas e decide qual abrir por rota.
-const App = () => (
-	<BrowserRouter>
-		<RouteSeo />
-		<AppRoutes />
-	</BrowserRouter>
-);
+const App = () => {
+	useEffect(() => {
+		warmUpApi();
+	}, []);
+
+	return (
+		<BrowserRouter>
+			<RouteSeo />
+			<AppRoutes />
+		</BrowserRouter>
+	);
+};
 export default App;
