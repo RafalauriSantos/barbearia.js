@@ -58,49 +58,6 @@ function formatShortDate(dayKey) {
 	return `${day}/${month}/${year}`;
 }
 
-function ClientStats({ clients, waitlist }) {
-	const dueValue = clients.reduce(
-		(sum, client) => sum + Number(client.payment_due_value || 0),
-		0,
-	);
-	const pendingCuts = clients.reduce(
-		(sum, client) => sum + Number(client.pending_payment_count || 0),
-		0,
-	);
-
-	return (
-		<div className="grid gap-2 px-4 pt-4 sm:grid-cols-3">
-			<div className="rounded-lg border border-border bg-card p-3">
-				<p className="font-mono-ui text-[10px] uppercase text-foreground-faint">
-					Fixos ativos
-				</p>
-				<p className="mt-1 font-value text-2xl text-foreground">
-					{clients.length}
-				</p>
-			</div>
-			<div className="rounded-lg border border-border bg-card p-3">
-				<p className="font-mono-ui text-[10px] uppercase text-foreground-faint">
-					Pendente
-				</p>
-				<p className="mt-1 font-value text-2xl text-foreground">
-					{formatCurrency(dueValue)}
-				</p>
-				<p className="mt-1 font-mono-ui text-[10px] text-foreground-faint">
-					{pendingCuts} cortes sem pagamento
-				</p>
-			</div>
-			<div className="rounded-lg border border-border bg-card p-3">
-				<p className="font-mono-ui text-[10px] uppercase text-foreground-faint">
-					Aguardando
-				</p>
-				<p className="mt-1 font-value text-2xl text-foreground">
-					{waitlist.length}
-				</p>
-			</div>
-		</div>
-	);
-}
-
 function Field({ label, children }) {
 	return (
 		<label className="block">
@@ -615,10 +572,6 @@ export default function ClientsPage() {
 					</button>
 				</div>
 			</ScreenHeader>
-
-			{activeTab === "fixed" && (
-				<ClientStats clients={clients} waitlist={waitlist} />
-			)}
 
 			<div className="min-h-0 flex-1 overflow-y-auto safe-bottom px-4 py-4">
 				{errorMessage && (
