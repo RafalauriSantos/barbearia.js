@@ -8,6 +8,7 @@ import {
 import { useAuth } from "@/context/AuthContext";
 import { DateStepper, IconButton } from "@/components/ScreenPrimitives";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { BrandName } from "@/components/BrandName";
 
 // Cabecalho da tela com dados do perfil e controle de data.
 export function AppHeader({ currentDate, onPrevDay, onNextDay, onSettings }) {
@@ -59,8 +60,8 @@ export function AppHeader({ currentDate, onPrevDay, onNextDay, onSettings }) {
 					<p className="font-mono-ui text-[10px] uppercase text-paid">
 						Agenda
 					</p>
-					<h1 className="truncate font-logo text-lg leading-tight text-foreground">
-						{profile?.shopName || "Gestor Barbearia"}
+					<h1 className="truncate text-foreground">
+						<BrandName size="sm" />
 					</h1>
 				</div>
 				<div className="flex items-center gap-2">

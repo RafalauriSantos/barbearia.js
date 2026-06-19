@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { requestPasswordReset, resetPassword } from "@/lib/api/auth.api";
+import { BrandName } from "@/components/BrandName";
 
 export default function ForgotPasswordPage() {
 	const [searchParams] = useSearchParams();
@@ -70,8 +71,8 @@ export default function ForgotPasswordPage() {
 						<p className="font-mono-ui text-[10px] uppercase text-foreground-faint">
 							Redefinir senha
 						</p>
-						<h1 className="mt-2 font-logo text-4xl leading-none text-foreground">
-							Gestor Barbearia
+						<h1 className="mt-2 text-foreground">
+							<BrandName size="lg" />
 						</h1>
 					</div>
 

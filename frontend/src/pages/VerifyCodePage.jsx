@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import { resendEmailCode } from "@/lib/api/auth.api";
+import { BrandName } from "@/components/BrandName";
 
 const PENDING_VERIFICATION_EMAIL_KEY =
 	"gestor_barbearia_pending_verification_email";
@@ -91,8 +92,8 @@ export default function VerifyCodePage() {
 						<p className="font-mono-ui text-[10px] uppercase text-foreground-faint">
 						Verificacao da conta
 					</p>
-					<h1 className="mt-2 font-logo text-4xl leading-none text-foreground">
-						Gestor Barbearia
+					<h1 className="mt-2 text-foreground">
+						<BrandName size="lg" />
 					</h1>
 
 					<form onSubmit={handleSubmit} className="mt-5 space-y-3 text-left">

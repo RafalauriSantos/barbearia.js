@@ -1,25 +1,5 @@
 import { useEffect, useState } from "react";
-
-const THEME_KEY = "gestor_barbearia_theme";
-
-function getStoredTheme() {
-	if (typeof window === "undefined") return "dark";
-	try {
-		const saved = window.localStorage.getItem(THEME_KEY);
-		if (saved === "light" || saved === "dark") return saved;
-		return window.matchMedia?.("(prefers-color-scheme: light)").matches ?
-				"light"
-			:	"dark";
-	} catch {
-		return "dark";
-	}
-}
-
-function applyTheme(theme) {
-	if (typeof document === "undefined") return;
-	document.documentElement.dataset.theme = theme;
-	document.documentElement.style.colorScheme = theme;
-}
+import { applyTheme, getTheme, subscribeToTheme } from "@/lib/theme";
 
 function SunIcon() {
 	return (
@@ -54,52 +34,39 @@ function MoonIcon() {
 	);
 }
 
-export function ThemeToggle({ className = "" }) {
-	const [theme, setTheme] = useState(getStoredTheme);
+export function ThemeToggle({ className = "", showLabel = false }) {
+	const [theme, setTheme] = useState(getTheme);
 	const isLight = theme === "light";
 
 	useEffect(() => {
-		applyTheme(theme);
-	}, [theme]);
-
-	useEffect(() => {
-		const handleThemeChange = (event) => {
-			if (event.detail?.theme) setTheme(event.detail.theme);
-		};
-		window.addEventListener("gestor-barbearia-theme-change", handleThemeChange);
-		return () =>
-			window.removeEventListener(
-				"gestor-barbearia-theme-change",
-				handleThemeChange,
-			);
+		const currentTheme = getTheme();
+		applyTheme(currentTheme, { persist: false, notify: false });
+		setTheme(currentTheme);
+		return subscribeToTheme(setTheme);
 	}, []);
 
 	const toggleTheme = () => {
-		const nextTheme = isLight ? "dark" : "light";
-		try {
-			window.localStorage.setItem(THEME_KEY, nextTheme);
-		} catch {
-			// If storage is unavailable, the in-memory state still updates.
-		}
+		const nextTheme = getTheme() === "light" ? "dark" : "light";
 		applyTheme(nextTheme);
-		setTheme(nextTheme);
-		window.dispatchEvent(
-			new CustomEvent("gestor-barbearia-theme-change", {
-				detail: { theme: nextTheme },
-			}),
-		);
 	};
+	const nextThemeLabel = isLight ? "escuro" : "claro";
 
 	return (
 		<button
 			type="button"
 			onClick={toggleTheme}
-			aria-label={isLight ? "Ativar tema escuro" : "Ativar tema claro"}
-			title={isLight ? "Tema escuro" : "Tema claro"}
-			className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-border bg-card text-foreground-faint transition-colors hover:text-foreground ${className}`}>
-			<span>
+			aria-label={`Ativar tema ${nextThemeLabel}`}
+			aria-pressed={isLight}
+			title={`Ativar tema ${nextThemeLabel}`}
+			className={`flex h-9 shrink-0 items-center justify-center gap-2 rounded-md border border-border bg-card px-2.5 text-foreground-faint transition-colors hover:bg-muted hover:text-foreground ${showLabel ? "min-w-[92px]" : "w-9 px-0"} ${className}`}>
+			<span aria-hidden="true">
 				{isLight ? <MoonIcon /> : <SunIcon />}
 			</span>
+			{showLabel && (
+				<span className="font-mono-ui text-[10px] uppercase">
+					{isLight ? "Claro" : "Escuro"}
+				</span>
+			)}
 		</button>
 	);
 }

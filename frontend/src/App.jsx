@@ -6,6 +6,7 @@ import {
 } from "react-router-dom";
 import { lazy, Suspense, useEffect } from "react";
 import { warmUpApi } from "@/lib/api/client";
+import { APP_NAME } from "@/lib/brand";
 import LandingPage from "./pages/LandingPage";
 
 const AuthGate = lazy(() => import("./components/AuthGate"));
@@ -24,8 +25,7 @@ const ForgotPasswordPage = lazy(() => import("./pages/ForgotPasswordPage"));
 const AcceptInvitePage = lazy(() => import("./pages/AcceptInvitePage"));
 
 const SITE_URL = "https://kurt-barbearia.vercel.app";
-const LANDING_TITLE =
-	"Gestor Barbearia | Sistema de agenda e caixa para barbearias";
+const LANDING_TITLE = `${APP_NAME} | Sistema de agenda e caixa para barbearias`;
 const LANDING_DESCRIPTION =
 	"Sistema simples para barbearias controlarem agenda, caixa, equipe, produtos, despesas e fiados em um painel operacional.";
 
@@ -63,7 +63,7 @@ function RouteSeo() {
 			`${SITE_URL}${pathname}`
 		);
 		const title =
-			isLanding || isDuplicateLanding ? LANDING_TITLE : "Gestor Barbearia";
+			isLanding || isDuplicateLanding ? LANDING_TITLE : APP_NAME;
 
 		document.title = title;
 		upsertMeta("meta[name='description']", {

@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import { Notice } from "@/components/ScreenPrimitives";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { getBrandedShopName } from "@/lib/brand";
 import {
 	getCachedPaymentMethods,
 	getCachedProfile,
@@ -285,7 +286,9 @@ export default function SettingsPage() {
 	}
 	const initialProfile = initialProfileRef.current || null;
 	const initialPaymentMethods = initialPaymentMethodsRef.current || [];
-	const [shopName, setShopName] = useState(initialProfile?.shopName || "");
+	const [shopName, setShopName] = useState(
+		getBrandedShopName(initialProfile?.shopName),
+	);
 	const [phone, setPhone] = useState(initialProfile?.phone || "");
 	const [address, setAddress] = useState(initialProfile?.address || "");
 	const [openingTime, setOpeningTime] = useState(
@@ -336,7 +339,7 @@ export default function SettingsPage() {
 			try {
 				const profile = await loadProfile({ force: Boolean(initialProfile) });
 				if (mounted) {
-					setShopName(profile?.shopName || "");
+					setShopName(getBrandedShopName(profile?.shopName));
 					setPhone(profile?.phone || "");
 					setAddress(profile?.address || "");
 					setOpeningTime(profile?.openingTime || DEFAULT_OPENING_TIME);
@@ -695,7 +698,7 @@ export default function SettingsPage() {
 						<h1 className="min-w-0 flex-1 truncate font-client text-xl font-semibold leading-none tracking-tight text-foreground">
 							Configurações
 						</h1>
-						<ThemeToggle className="rounded-[10px]" />
+						<ThemeToggle className="rounded-[10px]" showLabel />
 					</div>
 				</header>
 
@@ -750,7 +753,7 @@ export default function SettingsPage() {
 							<SettingsPill tone="green">
 								{isAdmin ? "Dono da barbearia" : "Barbeiro"}
 							</SettingsPill>
-							<SettingsPill>{shopName || "Gestor Barbearia"}</SettingsPill>
+							<SettingsPill>{getBrandedShopName(shopName)}</SettingsPill>
 						</div>
 
 						<div className="mt-2 flex flex-wrap gap-1.5">
@@ -862,7 +865,7 @@ export default function SettingsPage() {
 									<GroupItem>
 										<ReadOnlyCell
 											label="Nome da barbearia"
-											value={shopName || "Gestor Barbearia"}
+											value={getBrandedShopName(shopName)}
 										/>
 									</GroupItem>
 									<ReadOnlyCell

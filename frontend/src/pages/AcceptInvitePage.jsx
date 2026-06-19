@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, Navigate, useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import { getInvite } from "@/lib/api/auth.api";
+import { BrandName } from "@/components/BrandName";
 
 export default function AcceptInvitePage() {
 	const [searchParams] = useSearchParams();
@@ -93,8 +94,8 @@ export default function AcceptInvitePage() {
 					<p className="font-mono-ui text-[10px] uppercase text-foreground-faint">
 						Convite de equipe
 					</p>
-					<h1 className="mt-2 font-logo text-4xl leading-none text-foreground">
-						Gestor Barbearia
+					<h1 className="mt-2 text-foreground">
+						<BrandName size="lg" />
 					</h1>
 				</div>
 

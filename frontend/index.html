@@ -10,18 +10,21 @@
 				try {
 					const saved = localStorage.getItem("gestor_barbearia_theme");
 					const theme =
-						saved ||
+						(saved === "light" || saved === "dark" ? saved : null) ||
 						(matchMedia("(prefers-color-scheme: light)").matches ? "light" : (
 							"dark"
 						));
 					document.documentElement.dataset.theme = theme;
 					document.documentElement.style.colorScheme = theme;
+					document.documentElement.classList.toggle("dark", theme === "dark");
 				} catch {
 					document.documentElement.dataset.theme = "dark";
+					document.documentElement.style.colorScheme = "dark";
+					document.documentElement.classList.add("dark");
 				}
 			})();
 		</script>
-		<title>Gestor Barbearia | Sistema de agenda e caixa para barbearias</title>
+		<title>Marque’s Barbearia | Sistema de agenda e caixa para barbearias</title>
 		<meta
 			name="description"
 			content="Sistema simples para barbearias controlarem agenda, caixa, equipe, produtos, despesas e fiados em um painel operacional." />
@@ -143,20 +146,24 @@
 				background: #f0c987;
 				transform: translate(-50%, -50%);
 			}
-			.static-brand strong,
-			.static-title {
+			.static-wordmark {
 				display: block;
-				font-family:
-					"Aptos Display", Aptos, "Segoe UI", system-ui, -apple-system,
-					sans-serif;
-				font-weight: 800;
-				letter-spacing: 0;
-			}
-			.static-brand strong {
-				font-size: 1.125rem;
+				white-space: nowrap;
 				line-height: 1;
 			}
-			.static-brand span span {
+			.static-marques {
+				font-family: "Bodoni MT", Didot, Georgia, ui-serif, serif;
+				font-size: 1.35em;
+				font-style: italic;
+				font-weight: 600;
+			}
+			.static-barbearia {
+				margin-left: 0.28em;
+				font-family: "Aptos Display", Aptos, "Segoe UI", system-ui, sans-serif;
+				font-size: 0.62em;
+				font-weight: 700;
+			}
+			.static-tagline {
 				display: block;
 				margin-top: 0.15rem;
 				font-size: 0.625rem;
@@ -193,10 +200,11 @@
 				text-transform: uppercase;
 			}
 			.static-title {
+				display: block;
 				margin: 1rem 0 0;
 				max-width: 47.5rem;
-				font-size: clamp(3rem, 9vw, 6.4rem);
-				line-height: 0.86;
+				font-size: 2.5rem;
+				line-height: 1;
 			}
 			.static-copy p {
 				margin: 1.25rem 0 0;
@@ -254,6 +262,9 @@
 				line-height: 1.2;
 			}
 			@media (min-width: 640px) {
+				.static-title {
+					font-size: 4.75rem;
+				}
 				.static-nav-login {
 					display: inline-flex;
 				}
@@ -262,6 +273,11 @@
 				}
 				.static-copy p {
 					font-size: 1.125rem;
+				}
+			}
+			@media (min-width: 1024px) {
+				.static-title {
+					font-size: 5.75rem;
 				}
 			}
 		</style>
@@ -281,10 +297,10 @@
 		</script>
 
 		<meta property="og:type" content="website" />
-		<meta property="og:site_name" content="Gestor Barbearia" />
+		<meta property="og:site_name" content="Marque’s Barbearia" />
 		<meta property="og:url" content="https://kurt-barbearia.vercel.app/" />
-		<meta property="og:title" content="Gestor Barbearia | Sistema de agenda e caixa para barbearias" />
-		<meta name="twitter:title" content="Gestor Barbearia | Sistema de agenda e caixa para barbearias" />
+		<meta property="og:title" content="Marque’s Barbearia | Sistema de agenda e caixa para barbearias" />
+		<meta name="twitter:title" content="Marque’s Barbearia | Sistema de agenda e caixa para barbearias" />
 		<meta
 			property="og:description"
 			content="Controle agendamentos, caixa, equipe, produtos, despesas e fiados em um painel feito para a rotina da barbearia." />
@@ -294,7 +310,7 @@
 		<meta
 			property="og:image"
 			content="https://kurt-barbearia.vercel.app/images/landing-hero-barbershop.webp" />
-		<meta property="og:image:alt" content="Gestor Barbearia em uso no balcão da barbearia" />
+		<meta property="og:image:alt" content="Marque’s Barbearia em uso no balcão da barbearia" />
 		<meta
 			name="twitter:image"
 			content="https://kurt-barbearia.vercel.app/images/landing-hero-barbershop.webp" />
@@ -303,7 +319,7 @@
 			{
 				"@context": "https://schema.org",
 				"@type": "SoftwareApplication",
-				"name": "Gestor Barbearia",
+				"name": "Marque’s Barbearia",
 				"applicationCategory": "BusinessApplication",
 				"operatingSystem": "Web",
 				"url": "https://kurt-barbearia.vercel.app/",
@@ -323,7 +339,7 @@
 	<body>
 		<div id="root"></div>
 		<template id="static-landing-template">
-			<main class="static-landing" aria-label="Gestor Barbearia">
+			<main class="static-landing" aria-label="Marque’s Barbearia">
 				<section class="static-hero">
 					<picture>
 						<source srcset="/images/landing-hero-barbershop.webp" type="image/webp" />
@@ -338,8 +354,8 @@
 						<a class="static-brand" href="/">
 							<span class="static-mark" aria-hidden="true"></span>
 							<span>
-								<strong>Gestor Barbearia</strong>
-								<span>Operação em tempo real</span>
+								<strong class="static-wordmark"><span class="static-marques">Marque’s</span><span class="static-barbearia">Barbearia</span></strong>
+								<span class="static-tagline">Operação em tempo real</span>
 							</span>
 						</a>
 						<a class="static-nav-login" href="/login">Entrar</a>
@@ -347,7 +363,7 @@
 					<div class="static-content">
 						<div class="static-copy">
 							<div class="static-kicker">Agenda, caixa e equipe no mesmo ritmo</div>
-							<h1 class="static-title">Gestor Barbearia</h1>
+							<h1 class="static-title static-wordmark"><span class="static-marques">Marque’s</span><span class="static-barbearia">Barbearia</span></h1>
 							<p>
 								Um painel operacional para abrir o dia, atender, receber e fechar
 								o caixa sem depender de caderno, WhatsApp e planilha.

@@ -25,7 +25,7 @@ exports.sendTestEmail = async (request, reply) => {
 	const to = String(body.to || "").trim();
 	const subject = String(body.subject || "Teste de email").trim();
 	const text = String(
-		body.text || "Email transacional enviado pela API do Gestor Barbearia.",
+		body.text || "Email transacional enviado pela API do Marque’s Barbearia.",
 	).trim();
 
 	if (!to) {

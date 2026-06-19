@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, Navigate, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import { warmUpApi } from "@/lib/api/client";
+import { BrandName } from "@/components/BrandName";
 
 const SIGNUP_SUCCESS_MESSAGE =
 	"Conta criada. Enviamos um codigo de 6 digitos para seu email.";
@@ -87,9 +88,7 @@ export default function LoginPage() {
 			<div className="mx-auto flex min-h-[calc(var(--app-height)-32px)] w-full max-w-[480px] flex-col justify-center rounded-lg border border-border bg-background px-5 py-6 shadow-2xl shadow-black/30">
 				<div className="mb-6 flex items-start justify-between gap-4">
 					<div>
-						<p className="font-mono-ui text-[10px] uppercase text-paid">
-							Gestor Barbearia
-						</p>
+						<BrandName size="sm" className="text-paid" />
 						<h1 className="mt-2 font-logo text-4xl leading-none text-foreground">
 							Acesso da barbearia
 						</h1>

@@ -15,8 +15,9 @@ export default {
 				"2xl": "1400px",
 			},
 		},
-		extend: {
+			extend: {
 			fontFamily: {
+				brand: ['"Bodoni MT"', '"Didot"', '"Georgia"', "ui-serif", "serif"],
 				logo: ['"Aptos Display"', '"Segoe UI"', "ui-sans-serif", "system-ui"],
 				mono: ['"SFMono-Regular"', "Consolas", "ui-monospace", "monospace"],
 				client: ['"Aptos"', '"Segoe UI"', "ui-sans-serif", "system-ui"],

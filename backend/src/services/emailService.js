@@ -2,7 +2,7 @@ const nodemailer = require("nodemailer");
 const { env } = require("../config/env");
 
 const BREVO_SEND_EMAIL_URL = "https://api.brevo.com/v3/smtp/email";
-const DEFAULT_BRAND_NAME = "Gestor Barbearia";
+const DEFAULT_BRAND_NAME = "Marque’s Barbearia";
 
 function escapeHtml(value) {
 	return String(value)

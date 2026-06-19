@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { BrandName } from "@/components/BrandName";
 
 const focusClass =
 	"focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#6ee7b7]";
@@ -81,9 +82,7 @@ export default function LandingPage() {
 								<span className="absolute mt-1 h-[3px] w-4 rounded-full bg-[#f0c987]" />
 							</span>
 							<span className="min-w-0">
-								<span className="block truncate font-logo text-lg leading-none">
-									Gestor Barbearia
-								</span>
+								<BrandName size="sm" className="block text-white" />
 								<span className="block truncate font-mono-ui text-[10px] uppercase text-[#98f5cf]/75">
 									Operação em tempo real
 								</span>
@@ -102,8 +101,8 @@ export default function LandingPage() {
 						<p className="font-mono-ui text-[11px] uppercase text-[#98f5cf]">
 							Agenda, caixa e equipe no mesmo ritmo
 						</p>
-						<h1 className="mt-4 max-w-[760px] text-balance font-logo text-[clamp(3rem,9vw,6.4rem)] leading-[0.86] text-white">
-							Gestor Barbearia
+						<h1 className="mt-4 max-w-[760px] text-white">
+							<BrandName size="hero" />
 						</h1>
 						<p className="mt-5 max-w-[34rem] text-pretty font-client text-base leading-relaxed text-white/[0.78] sm:text-lg">
 							Um painel operacional para abrir o dia, atender, receber e

@@ -110,7 +110,7 @@ describe("SettingsPage", () => {
 			</MemoryRouter>,
 		);
 
-		expect(await screen.findByDisplayValue("Gestor Barbearia")).toBeTruthy();
+		expect(await screen.findByDisplayValue("Marque’s Barbearia")).toBeTruthy();
 		expect(screen.queryByText("Horários")).toBeNull();
 		expect(screen.queryByLabelText("Duração padrão")).toBeNull();
 		expect(await screen.findByText("Recebimento")).toBeTruthy();
@@ -147,14 +147,14 @@ describe("SettingsPage", () => {
 		);
 
 		fireEvent.change(await screen.findByLabelText("Nome da barbearia"), {
-			target: { value: "Gestor Barbearia Prime" },
+			target: { value: "Marque’s Barbearia Prime" },
 		});
 		fireEvent.click(screen.getByRole("button", { name: "Salvar alterações" }));
 
 		await waitFor(() => {
 			expect(storeMock.saveProfile).toHaveBeenCalledWith(
 				expect.objectContaining({
-					shopName: "Gestor Barbearia Prime",
+					shopName: "Marque’s Barbearia Prime",
 					barberName: "Rafael",
 					phone: "(11) 99999-9999",
 					address: "Rua Central, 100",
