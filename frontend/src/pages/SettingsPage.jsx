@@ -144,7 +144,7 @@ async function createCroppedAvatarUpload({ draft, focus, zoom }) {
 function SettingsSection({ label, children }) {
 	return (
 		<section>
-			<p className="mb-2 mt-5 px-5 font-client text-[10px] font-semibold uppercase tracking-[1px] text-[#5F5E5A]">
+			<p className="mb-2 mt-5 px-5 font-client text-[10px] font-semibold uppercase tracking-[1px] text-foreground-faint">
 				{label}
 			</p>
 			{children}
@@ -154,7 +154,7 @@ function SettingsSection({ label, children }) {
 
 function FieldGroup({ children }) {
 	return (
-		<div className="mx-5 overflow-hidden rounded-2xl border border-white/[0.07] bg-[#111110]">
+		<div className="mx-5 overflow-hidden rounded-2xl border border-border bg-card">
 			{children}
 		</div>
 	);
@@ -163,7 +163,7 @@ function FieldGroup({ children }) {
 function GroupItem({ children, className = "" }) {
 	return (
 		<div
-			className={`border-b border-white/[0.05] last:border-b-0 ${className}`}>
+			className={`border-b border-border last:border-b-0 ${className}`}>
 			{children}
 		</div>
 	);
@@ -171,7 +171,7 @@ function GroupItem({ children, className = "" }) {
 
 function GridPair({ children }) {
 	return (
-		<div className="grid grid-cols-2 divide-x divide-white/[0.05] border-b border-white/[0.05] last:border-b-0">
+		<div className="grid grid-cols-2 divide-x divide-border border-b border-border last:border-b-0">
 			{children}
 		</div>
 	);
@@ -182,11 +182,11 @@ function VerticalField({ id, label, children, hint }) {
 		<div className="flex min-w-0 flex-col gap-1 px-4 py-3.5">
 			<label
 				htmlFor={id}
-				className="font-client text-[11px] font-medium tracking-[0.2px] text-[#5F5E5A]">
+				className="font-client text-[11px] font-medium tracking-[0.2px] text-foreground-faint">
 				{label}
 			</label>
 			{hint && (
-				<p className="font-client text-[11px] leading-snug text-[#3a3a38]">
+				<p className="font-client text-[11px] leading-snug text-foreground-faint/70">
 					{hint}
 				</p>
 			)}
@@ -201,11 +201,11 @@ function RowField({ id, label, hint, children }) {
 			<div className="min-w-0">
 				<label
 					htmlFor={id}
-					className="block font-client text-sm text-[#c8c8c2]">
+					className="block font-client text-sm text-foreground">
 					{label}
 				</label>
 				{hint && (
-					<p className="mt-0.5 font-client text-[11px] leading-tight text-[#3a3a38]">
+					<p className="mt-0.5 font-client text-[11px] leading-tight text-foreground-faint/70">
 						{hint}
 					</p>
 				)}
@@ -218,10 +218,10 @@ function RowField({ id, label, hint, children }) {
 function ReadOnlyCell({ label, value }) {
 	return (
 		<div className="flex min-w-0 flex-col gap-1 px-4 py-3.5">
-			<p className="font-client text-[11px] font-medium tracking-[0.2px] text-[#5F5E5A]">
+			<p className="font-client text-[11px] font-medium tracking-[0.2px] text-foreground-faint">
 				{label}
 			</p>
-			<p className="break-words font-client text-[12px] text-[#e8e8e2]">
+			<p className="break-words font-client text-[12px] text-foreground">
 				{value}
 			</p>
 		</div>
@@ -234,9 +234,9 @@ function NavRow({ label, onClick, disabled }) {
 			type="button"
 			onClick={onClick}
 			disabled={disabled}
-			className="flex min-h-[52px] w-full cursor-pointer items-center justify-between gap-4 px-4 py-3.5 text-left font-client text-sm text-[#c8c8c2] transition-colors hover:bg-white/[0.03] disabled:opacity-60">
+			className="flex min-h-[52px] w-full cursor-pointer items-center justify-between gap-4 px-4 py-3.5 text-left font-client text-sm text-foreground transition-colors hover:bg-muted/60 disabled:opacity-60">
 			<span>{label}</span>
-			<span aria-hidden="true" className="font-client text-lg leading-none text-[#3a3a38]">
+			<span aria-hidden="true" className="font-client text-lg leading-none text-foreground-faint">
 				›
 			</span>
 		</button>
@@ -245,8 +245,8 @@ function NavRow({ label, onClick, disabled }) {
 
 function SettingsPill({ children, tone = "neutral" }) {
 	const tones = {
-		green: "border-[#1D9E75]/30 bg-[#1D9E75]/15 text-[#5DCAA5]",
-		neutral: "border-white/10 bg-white/[0.06] text-[#888780]",
+		green: "border-paid/30 bg-paid-bg text-paid",
+		neutral: "border-border bg-muted text-foreground-faint",
 	};
 
 	return (
@@ -658,9 +658,9 @@ export default function SettingsPage() {
 	};
 
 	const inputClass =
-		"w-full bg-transparent p-0 font-client text-sm text-[#e8e8e2] outline-none placeholder:text-[#3a3a38] disabled:text-[#5F5E5A]";
+		"w-full bg-transparent p-0 font-client text-sm text-foreground outline-none placeholder:text-foreground-faint/70 disabled:text-foreground-faint";
 	const rowInputClass =
-		"w-full bg-transparent p-0 text-right font-mono text-sm text-[#e8e8e2] outline-none disabled:text-[#5F5E5A]";
+		"w-full bg-transparent p-0 text-right font-mono text-sm text-foreground outline-none disabled:text-foreground-faint";
 	const avatarPreviewUrl =
 		barberPhotoDraft?.dataUrl || (!removeBarberPhoto ? barberPhotoUrl : "");
 	const avatarImageStyle =
@@ -677,7 +677,7 @@ export default function SettingsPage() {
 		: "Salvar alterações";
 
 	return (
-		<div className="mx-auto flex h-[var(--app-height)] min-h-[100dvh] w-full max-w-[420px] flex-col overflow-hidden bg-[#0a0a0a] font-client text-[#f0f0ea]">
+		<div className="mx-auto flex h-[var(--app-height)] min-h-[100dvh] w-full max-w-[420px] flex-col overflow-hidden bg-background-deep font-client text-foreground">
 			<form
 				id="settingsForm"
 				onSubmit={handleSaveProfile}
@@ -689,13 +689,13 @@ export default function SettingsPage() {
 							onClick={() => navigate("/app")}
 							aria-label="Voltar"
 							title="Voltar"
-							className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] border border-white/10 bg-white/5 font-client text-lg leading-none text-[#a0a09a] transition-colors hover:bg-white/[0.08]">
+							className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] border border-border bg-card font-client text-lg leading-none text-foreground-faint transition-colors hover:bg-muted hover:text-foreground">
 							‹
 						</button>
-						<h1 className="min-w-0 flex-1 truncate font-client text-xl font-semibold leading-none tracking-tight text-[#f0f0ea]">
+						<h1 className="min-w-0 flex-1 truncate font-client text-xl font-semibold leading-none tracking-tight text-foreground">
 							Configurações
 						</h1>
-						<ThemeToggle className="rounded-[10px] border-white/10 bg-white/5 text-[#a0a09a] hover:bg-white/[0.08] hover:text-[#f0f0ea]" />
+						<ThemeToggle className="rounded-[10px]" />
 					</div>
 				</header>
 
@@ -713,7 +713,7 @@ export default function SettingsPage() {
 						)}
 
 						{isLoading && (
-							<p className="rounded-lg border border-white/[0.07] bg-[#111110] px-3 py-2 font-mono-ui text-[10px] uppercase text-[#5F5E5A]">
+							<p className="rounded-lg border border-border bg-card px-3 py-2 font-mono-ui text-[10px] uppercase text-foreground-faint">
 								Atualizando perfil...
 							</p>
 						)}
@@ -730,8 +730,8 @@ export default function SettingsPage() {
 						disabled={isSaving || isLoading}
 					/>
 
-				<section className="mx-5 flex items-center gap-4 rounded-2xl border border-white/[0.08] bg-[#111110] p-5">
-					<div className="flex h-[60px] w-[60px] shrink-0 items-center justify-center overflow-hidden rounded-full border-2 border-[#1D9E75]/30 bg-gradient-to-br from-[#1a3a2a] to-[#0f6e56] text-[22px] font-semibold text-[#5DCAA5]">
+				<section className="mx-5 flex items-center gap-4 rounded-2xl border border-border bg-card p-5">
+					<div className="flex h-[60px] w-[60px] shrink-0 items-center justify-center overflow-hidden rounded-full border-2 border-paid/30 bg-paid-bg text-[22px] font-semibold text-paid">
 								{avatarPreviewUrl ?
 									<img
 										src={avatarPreviewUrl}
@@ -743,7 +743,7 @@ export default function SettingsPage() {
 					</div>
 
 					<div className="min-w-0 flex-1">
-						<h2 className="mb-1 truncate font-client text-base font-semibold leading-tight tracking-tight text-[#f0f0ea]">
+						<h2 className="mb-1 truncate font-client text-base font-semibold leading-tight tracking-tight text-foreground">
 							{barberName || user?.email || "Seu perfil"}
 						</h2>
 						<div className="flex flex-wrap gap-1.5">
@@ -756,7 +756,7 @@ export default function SettingsPage() {
 						<div className="mt-2 flex flex-wrap gap-1.5">
 							<label
 								htmlFor="barberPhoto"
-								className="cursor-pointer rounded-[7px] border border-white/[0.12] bg-white/5 px-2.5 py-1 font-client text-[11px] font-medium text-[#a0a09a] transition-colors hover:bg-white/[0.08] hover:text-[#f0f0ea]">
+								className="cursor-pointer rounded-[7px] border border-border bg-muted/60 px-2.5 py-1 font-client text-[11px] font-medium text-foreground-faint transition-colors hover:bg-muted hover:text-foreground">
 								Trocar foto
 							</label>
 							{avatarPreviewUrl && (
@@ -764,7 +764,7 @@ export default function SettingsPage() {
 									type="button"
 									onClick={handleEditCurrentPhoto}
 									disabled={isSaving || isLoading}
-									className="rounded-[7px] border border-white/[0.12] bg-white/5 px-2.5 py-1 font-client text-[11px] font-medium text-[#a0a09a] transition-colors hover:bg-white/[0.08] hover:text-[#f0f0ea] disabled:opacity-60">
+									className="rounded-[7px] border border-border bg-muted/60 px-2.5 py-1 font-client text-[11px] font-medium text-foreground-faint transition-colors hover:bg-muted hover:text-foreground disabled:opacity-60">
 									Recortar
 								</button>
 							)}
@@ -773,7 +773,7 @@ export default function SettingsPage() {
 									type="button"
 									onClick={handleRemovePhoto}
 									disabled={isSaving || isLoading}
-									className="rounded-[7px] border border-white/[0.12] bg-white/5 px-2.5 py-1 font-client text-[11px] font-medium text-[#a0a09a] transition-colors hover:bg-[#A32D2D]/15 hover:text-[#E24B4A] disabled:opacity-60">
+									className="rounded-[7px] border border-border bg-muted/60 px-2.5 py-1 font-client text-[11px] font-medium text-foreground-faint transition-colors hover:bg-overdue-bg hover:text-overdue disabled:opacity-60">
 									Remover
 								</button>
 							)}
@@ -901,7 +901,7 @@ export default function SettingsPage() {
 																[method.id]: event.target.value,
 															}))
 														}
-														className="w-16 bg-transparent p-0 text-right font-mono text-sm text-[#e8e8e2] outline-none disabled:text-[#5F5E5A]"
+														className="w-16 bg-transparent p-0 text-right font-mono text-sm text-foreground outline-none disabled:text-foreground-faint"
 														disabled={
 															isSaving ||
 															isLoading ||
@@ -909,7 +909,7 @@ export default function SettingsPage() {
 															isLoadingPayments
 														}
 													/>
-													<span className="font-mono text-sm text-[#5F5E5A]">
+													<span className="font-mono text-sm text-foreground-faint">
 														%
 													</span>
 												</div>
@@ -927,7 +927,7 @@ export default function SettingsPage() {
 												isSavingPayments ||
 												isLoadingPayments
 											}
-											className="w-full rounded-[10px] border border-[#1D9E75]/30 bg-[#1D9E75]/15 py-3 font-client text-sm font-medium text-[#5DCAA5] transition-colors hover:bg-[#1D9E75]/25 disabled:opacity-60">
+											className="w-full rounded-[10px] border border-paid/30 bg-paid-bg py-3 font-client text-sm font-medium text-paid transition-colors hover:bg-paid/20 disabled:opacity-60">
 											{isSavingPayments ?
 												"Salvando taxas..."
 											:	"Salvar taxas"}
@@ -958,9 +958,9 @@ export default function SettingsPage() {
 					</SettingsSection>
 
 					<SettingsSection label="Conta">
-						<div className="mx-5 rounded-2xl border border-[#A32D2D]/20 bg-[#A32D2D]/[0.08] p-4">
-							<p className="mb-3 flex items-center gap-1.5 font-client text-[11px] font-semibold uppercase tracking-[0.8px] text-[#A32D2D]">
-								<span className="flex h-3.5 w-3.5 items-center justify-center rounded-full border border-[#A32D2D]/40 text-[9px]">
+						<div className="mx-5 rounded-2xl border border-overdue/20 bg-overdue-bg p-4">
+							<p className="mb-3 flex items-center gap-1.5 font-client text-[11px] font-semibold uppercase tracking-[0.8px] text-overdue">
+								<span className="flex h-3.5 w-3.5 items-center justify-center rounded-full border border-overdue/40 text-[9px]">
 									!
 								</span>
 								Sessão atual
@@ -969,7 +969,7 @@ export default function SettingsPage() {
 								type="button"
 								onClick={handleLogout}
 								disabled={isSaving}
-								className="w-full rounded-[10px] border border-[#A32D2D]/30 bg-[#A32D2D]/15 py-3 font-client text-sm font-medium text-[#E24B4A] transition-colors hover:bg-[#A32D2D]/25 disabled:opacity-60">
+								className="w-full rounded-[10px] border border-overdue/30 bg-overdue/10 py-3 font-client text-sm font-medium text-overdue transition-colors hover:bg-overdue/20 disabled:opacity-60">
 								Sair da conta
 							</button>
 						</div>
@@ -979,7 +979,7 @@ export default function SettingsPage() {
 						<button
 							type="submit"
 							disabled={isSaving || isLoading}
-							className="sticky bottom-0 mx-5 mt-6 flex w-[calc(100%-2.5rem)] cursor-pointer items-center justify-center rounded-2xl bg-[#1D9E75] px-4 py-3 text-center font-client text-[15px] font-semibold tracking-tight text-[#04342C] transition-opacity disabled:opacity-60">
+							className="sticky bottom-0 mx-5 mt-6 flex w-[calc(100%-2.5rem)] cursor-pointer items-center justify-center rounded-2xl bg-primary px-4 py-3 text-center font-client text-[15px] font-semibold tracking-tight text-primary-foreground transition-opacity disabled:opacity-60">
 							{footerSaveLabel}
 						</button>
 					)}
@@ -987,14 +987,14 @@ export default function SettingsPage() {
 			{barberPhotoDraft && (
 				<div
 					data-testid="avatar-editor-panel"
-					className="fixed bottom-0 left-1/2 top-0 z-[100] flex w-full max-w-[420px] -translate-x-1/2 flex-col overflow-hidden bg-[#0a0a0a] text-[#f0f0ea] shadow-[0_24px_80px_hsl(220_30%_1%/0.55)]">
-					<div className="shrink-0 border-b border-white/[0.07] bg-[#0a0a0a]/95 px-5 pb-3 pt-[calc(0.75rem+env(safe-area-inset-top))] backdrop-blur">
+					className="fixed bottom-0 left-1/2 top-0 z-[100] flex w-full max-w-[420px] -translate-x-1/2 flex-col overflow-hidden bg-background-deep text-foreground shadow-[0_24px_80px_hsl(220_30%_1%/0.55)]">
+					<div className="shrink-0 border-b border-border bg-background-deep/95 px-5 pb-3 pt-[calc(0.75rem+env(safe-area-inset-top))] backdrop-blur">
 						<div className="mx-auto flex max-w-[420px] items-center justify-between gap-3">
 							<div className="min-w-0">
-								<p className="font-mono-ui text-[10px] uppercase tracking-[0.12em] text-[#5DCAA5]">
+								<p className="font-mono-ui text-[10px] uppercase tracking-[0.12em] text-paid">
 									Editando foto
 								</p>
-								<h2 className="mt-1 truncate font-client text-lg leading-tight text-[#f0f0ea]">
+								<h2 className="mt-1 truncate font-client text-lg leading-tight text-foreground">
 									Enquadramento da agenda
 								</h2>
 							</div>
@@ -1002,7 +1002,7 @@ export default function SettingsPage() {
 								type="button"
 								onClick={handleCancelPhotoDraft}
 								disabled={isSaving || isLoading}
-								className="shrink-0 rounded-md border border-white/[0.07] bg-white/[0.04] px-3 py-2 font-mono-ui text-[10px] uppercase tracking-[0.08em] text-[#c8c8c2] transition-colors hover:bg-white/[0.07] disabled:opacity-60">
+								className="shrink-0 rounded-md border border-border bg-muted/60 px-3 py-2 font-mono-ui text-[10px] uppercase tracking-[0.08em] text-foreground transition-colors hover:bg-muted disabled:opacity-60">
 								Sair sem salvar
 							</button>
 						</div>
@@ -1010,7 +1010,7 @@ export default function SettingsPage() {
 
 					<div className="min-h-0 flex-1 overflow-y-auto px-5 py-5">
 						<div className="mx-auto max-w-[420px] space-y-5">
-							<p className="font-client text-sm leading-snug text-[#c8c8c2]">
+							<p className="font-client text-sm leading-snug text-foreground-faint">
 								Arraste na foto para escolher o foco e use o zoom para aproximar.
 								Se a foto ja estava salva, o ajuste acontece sobre o recorte atual.
 							</p>
@@ -1022,7 +1022,7 @@ export default function SettingsPage() {
 								onPointerMove={handleAvatarPointerMove}
 								onPointerUp={handleAvatarPointerUp}
 								onPointerCancel={handleAvatarPointerUp}
-								className="mx-auto flex h-56 w-56 touch-none items-center justify-center overflow-hidden rounded-full border border-[#5DCAA5]/40 bg-[#111110] shadow-[0_0_0_8px_rgba(29,158,117,0.08)]">
+								className="mx-auto flex h-56 w-56 touch-none items-center justify-center overflow-hidden rounded-full border border-paid/40 bg-card shadow-[0_0_0_8px_hsl(var(--status-paid)/0.08)]">
 								<img
 									src={barberPhotoDraft.dataUrl}
 									alt=""
@@ -1032,14 +1032,14 @@ export default function SettingsPage() {
 								/>
 							</div>
 
-							<div className="rounded-xl border border-white/[0.07] bg-[#111110] p-4">
+							<div className="rounded-xl border border-border bg-card p-4">
 								<div className="flex items-center justify-between gap-3">
 									<label
 										htmlFor="avatarZoom"
-										className="font-mono-ui text-[10px] uppercase tracking-[0.12em] text-[#5F5E5A]">
+										className="font-mono-ui text-[10px] uppercase tracking-[0.12em] text-foreground-faint">
 										Zoom da foto
 									</label>
-									<span className="font-value text-[11px] text-[#5DCAA5]">
+									<span className="font-value text-[11px] text-paid">
 										{Math.round(avatarZoom * 100)}%
 									</span>
 								</div>
@@ -1059,14 +1059,14 @@ export default function SettingsPage() {
 									className="mt-4 grid grid-cols-2 gap-2">
 									<label
 										htmlFor="barberPhoto"
-										className="flex h-11 cursor-pointer items-center justify-center rounded-md border border-white/[0.07] bg-white/[0.03] px-2 text-center font-mono-ui text-[10px] uppercase tracking-[0.08em] text-[#e8e8e2] transition-colors hover:bg-white/[0.06]">
+										className="flex h-11 cursor-pointer items-center justify-center rounded-md border border-border bg-muted/50 px-2 text-center font-mono-ui text-[10px] uppercase tracking-[0.08em] text-foreground transition-colors hover:bg-muted">
 										Trocar foto
 									</label>
 									<button
 										type="button"
 										onClick={handleResetAvatarFrame}
 										disabled={isSaving || isLoading}
-										className="h-11 rounded-md border border-white/[0.07] bg-white/[0.03] px-2 font-mono-ui text-[10px] uppercase tracking-[0.08em] text-[#e8e8e2] transition-colors hover:bg-white/[0.06] disabled:opacity-60">
+										className="h-11 rounded-md border border-border bg-muted/50 px-2 font-mono-ui text-[10px] uppercase tracking-[0.08em] text-foreground transition-colors hover:bg-muted disabled:opacity-60">
 										Centralizar
 									</button>
 								</div>
@@ -1074,20 +1074,20 @@ export default function SettingsPage() {
 						</div>
 					</div>
 
-					<div className="shrink-0 border-t border-white/[0.07] bg-[#0a0a0a]/95 px-5 py-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] backdrop-blur">
+					<div className="shrink-0 border-t border-border bg-background-deep/95 px-5 py-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] backdrop-blur">
 						<div className="mx-auto grid max-w-[420px] grid-cols-[0.8fr_1.2fr] gap-2">
 							<button
 								type="button"
 								onClick={handleCancelPhotoDraft}
 								disabled={isSaving || isLoading}
-								className="rounded-xl border border-white/[0.07] bg-white/[0.03] px-3 py-3 font-mono-ui text-[10px] uppercase tracking-[0.08em] text-[#c8c8c2] transition-colors hover:bg-white/[0.06] disabled:opacity-60">
+								className="rounded-xl border border-border bg-muted/50 px-3 py-3 font-mono-ui text-[10px] uppercase tracking-[0.08em] text-foreground transition-colors hover:bg-muted disabled:opacity-60">
 								Cancelar
 							</button>
 							<button
 								type="submit"
 								form="settingsForm"
 								disabled={isSaving || isLoading}
-								className="rounded-xl bg-[#1D9E75] px-3 py-3 font-mono-ui text-sm text-[#04342C] transition-opacity disabled:opacity-60">
+								className="rounded-xl bg-primary px-3 py-3 font-mono-ui text-sm text-primary-foreground transition-opacity disabled:opacity-60">
 								{footerSaveLabel}
 							</button>
 						</div>
