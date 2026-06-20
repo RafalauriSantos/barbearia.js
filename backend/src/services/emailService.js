@@ -20,9 +20,13 @@ function buildEmailTemplate({ title, body, cta, code }) {
 		cta ?
 			`
 			<p style="margin:0 0 18px;">
-				<a href="${cta.url}" style="display:inline-block;background:#00d37a;color:#0b0b0b;text-decoration:none;font-weight:700;font-size:13px;letter-spacing:0.3px;padding:12px 18px;border-radius:8px;">
+				<a href="${escapeHtml(cta.url)}" style="display:inline-block;background:#00d37a;color:#0b0b0b;text-decoration:none;font-weight:700;font-size:13px;letter-spacing:0.3px;padding:12px 18px;border-radius:8px;">
 					${escapeHtml(cta.label)}
 				</a>
+			</p>
+			<p style="margin:0 0 18px;color:#8a8a8a;font-size:12px;line-height:1.6;word-break:break-all;">
+				Se o botao nao abrir, copie este link:<br />
+				<a href="${escapeHtml(cta.url)}" style="color:#5dcaa5;">${escapeHtml(cta.url)}</a>
 			</p>
 		`
 		:	"";

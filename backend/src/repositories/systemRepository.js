@@ -5,6 +5,7 @@ const { getDefaultBarbeariaId } = require("../lib/tenant");
 const TABLES = [
 	"cliente_cortes",
 	"lista_espera",
+	"contas_receber",
 	"agendamentos",
 	"despesas",
 	"clientes",
@@ -33,7 +34,7 @@ exports.reset = async function () {
 		}
 	}
 
-	for (const table of TABLES.slice(0, 4)) {
+	for (const table of TABLES.slice(0, 5)) {
 		const { error } = await supabase
 			.from(table)
 			.delete()
@@ -41,7 +42,7 @@ exports.reset = async function () {
 		if (error) throw error;
 	}
 
-	for (const table of TABLES.slice(4)) {
+	for (const table of TABLES.slice(5)) {
 		const { error } = await supabase
 			.from(table)
 			.update({ ativo: false })

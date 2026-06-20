@@ -46,6 +46,13 @@ import {
 } from "@/lib/api/barbers.api";
 import { getFinancialSummary } from "@/lib/api/financial.api";
 import {
+	listReceivables,
+	createReceivable,
+	updateReceivableById,
+	receiveReceivableById,
+	cancelReceivableById,
+} from "@/lib/api/receivables.api";
+import {
 	listPaymentMethods,
 	updatePaymentMethodById,
 } from "@/lib/api/paymentMethods.api";
@@ -284,6 +291,7 @@ const cacheKeys = {
 	appointments: (dayKey, filters = {}) =>
 		makeStableKey(`appointments:${dayKey}`, filters),
 	financialSummary: (params = {}) => makeStableKey("financial:summary", params),
+	receivables: (params = {}) => makeStableKey("receivables", params),
 };
 
 // Chaves usadas para salvar dados no navegador.
@@ -418,6 +426,48 @@ export async function loadFinancialSummary(params = {}, options = {}) {
 		() => getFinancialSummary(params),
 		options,
 	);
+}
+
+export function getCachedReceivables(params = {}) {
+	return readCache(cacheKeys.receivables(params));
+}
+
+export async function loadReceivables(params = {}, options = {}) {
+	return loadCached(
+		cacheKeys.receivables(params),
+		() => listReceivables(params),
+		options,
+	);
+}
+
+function invalidateReceivables() {
+	invalidateCache("receivables:");
+	invalidateCache("financial:");
+	invalidateCache("appointments:");
+}
+
+export async function addReceivable(payload) {
+	const receivable = await createReceivable(payload);
+	invalidateReceivables();
+	return receivable;
+}
+
+export async function saveReceivable(id, payload) {
+	const receivable = await updateReceivableById(id, payload);
+	invalidateReceivables();
+	return receivable;
+}
+
+export async function receiveReceivable(id, payload) {
+	const receivable = await receiveReceivableById(id, payload);
+	invalidateReceivables();
+	return receivable;
+}
+
+export async function cancelReceivable(id) {
+	const receivable = await cancelReceivableById(id);
+	invalidateReceivables();
+	return receivable;
 }
 // ── Services ──
 

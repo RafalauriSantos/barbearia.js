@@ -7,6 +7,7 @@ const {
 	validateUpdateClientCut,
 	validateWaitlistEntry,
 	validateUpdateWaitlistEntry,
+	validateListClientsQuery,
 } = require("../validators/clients.schema");
 
 async function getCurrentUser(request) {
@@ -15,7 +16,8 @@ async function getCurrentUser(request) {
 
 exports.listFixed = async (request, reply) => {
 	const user = await getCurrentUser(request);
-	const clients = await ClientsService.listFixedClients(user);
+	const query = validateListClientsQuery(request.query);
+	const clients = await ClientsService.listFixedClients(user, query);
 	return reply.send(clients);
 };
 
@@ -78,7 +80,8 @@ exports.removeCut = async (request, reply) => {
 
 exports.listWaitlist = async (request, reply) => {
 	const user = await getCurrentUser(request);
-	const entries = await ClientsService.listWaitlist(user);
+	const query = validateListClientsQuery(request.query);
+	const entries = await ClientsService.listWaitlist(user, query);
 	return reply.send(entries);
 };
 

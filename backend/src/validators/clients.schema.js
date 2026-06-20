@@ -13,6 +13,7 @@ const createFixedClientSchema = z.object({
 	notes: optionalText,
 	interval_days: z.coerce.number().int().positive().max(365).optional(),
 	package_total_cuts: z.coerce.number().int().min(0).max(120).optional(),
+	barbeiro_id: z.string().uuid().optional(),
 });
 
 const updateFixedClientSchema = createFixedClientSchema.partial().extend({
@@ -34,6 +35,11 @@ const waitlistSchema = z.object({
 	preference: z.string().trim().max(120).optional().nullable(),
 	notes: optionalText,
 	status: z.enum(["aguardando", "agendado", "cancelado"]).optional(),
+	barbeiro_id: z.string().uuid().optional(),
+});
+
+const listClientsQuerySchema = z.object({
+	barbeiro_id: z.string().uuid().optional(),
 });
 
 function validateCreateFixedClient(body) {
@@ -60,6 +66,10 @@ function validateUpdateWaitlistEntry(body) {
 	return waitlistSchema.partial().parse(body);
 }
 
+function validateListClientsQuery(query) {
+	return listClientsQuerySchema.parse(query || {});
+}
+
 module.exports = {
 	validateCreateFixedClient,
 	validateUpdateFixedClient,
@@ -67,4 +77,5 @@ module.exports = {
 	validateUpdateClientCut,
 	validateWaitlistEntry,
 	validateUpdateWaitlistEntry,
+	validateListClientsQuery,
 };

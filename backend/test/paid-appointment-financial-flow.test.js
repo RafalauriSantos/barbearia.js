@@ -35,6 +35,15 @@ function mockPaymentMethodsRepository() {
 	};
 }
 
+function mockReceivablesRepository() {
+	require.cache[require.resolve("../src/repositories/receivablesRepository")] = {
+		exports: {
+			upsertFromAppointment: async () => null,
+			updateByAppointment: async () => null,
+		},
+	};
+}
+
 t.test("paid appointment created from agenda enters same-day financial summary", async (t) => {
 	const user = {
 		id: "renan-user",
@@ -46,6 +55,7 @@ t.test("paid appointment created from agenda enters same-day financial summary",
 
 	clearFlowCache();
 	mockPaymentMethodsRepository();
+	mockReceivablesRepository();
 
 	require.cache[require.resolve("../src/services/authService")] = {
 		exports: {
@@ -64,6 +74,7 @@ t.test("paid appointment created from agenda enters same-day financial summary",
 	};
 	require.cache[require.resolve("../src/repositories/appointmentsRepository")] = {
 		exports: {
+			findConflict: async () => null,
 			findAll: async ({ date, barbeiroId }) =>
 				rows
 					.filter((row) => row.data === date)
@@ -219,6 +230,7 @@ t.test("pending appointment marked as paid enters same-day financial summary", a
 
 	clearFlowCache();
 	mockPaymentMethodsRepository();
+	mockReceivablesRepository();
 
 	require.cache[require.resolve("../src/services/authService")] = {
 		exports: {
@@ -237,6 +249,7 @@ t.test("pending appointment marked as paid enters same-day financial summary", a
 	};
 	require.cache[require.resolve("../src/repositories/appointmentsRepository")] = {
 		exports: {
+			findConflict: async () => null,
 			findById: async (id) =>
 				rows.find((row) => row.id === id) ?
 					{

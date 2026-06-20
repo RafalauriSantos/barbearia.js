@@ -1,6 +1,8 @@
 const AppointmentsRepository = require("../repositories/appointmentsRepository");
 const BarbersRepository = require("../repositories/barbersRepository");
 const PaymentMethodsRepository = require("../repositories/paymentMethodsRepository");
+const ClientsRepository = require("../repositories/clientsRepository");
+const ReceivablesRepository = require("../repositories/receivablesRepository");
 const { AppError } = require("../lib/errors");
 
 function isAdmin(user) {
@@ -9,6 +11,15 @@ function isAdmin(user) {
 
 function roundMoney(value) {
 	return Math.round((Number(value || 0) + Number.EPSILON) * 100) / 100;
+}
+
+function todayInSaoPaulo() {
+	return new Intl.DateTimeFormat("en-CA", {
+		timeZone: "America/Sao_Paulo",
+		year: "numeric",
+		month: "2-digit",
+		day: "2-digit",
+	}).format(new Date());
 }
 
 function sumItems(items = []) {
@@ -56,6 +67,7 @@ async function withPaymentSnapshot(payload, fallbackAppointment = null) {
 			payment_fee_percent: 0,
 			payment_fee_value: 0,
 			net_value: resolveGrossValue(payload, fallbackAppointment),
+			payment_date: null,
 		};
 	}
 
@@ -91,7 +103,74 @@ async function withPaymentSnapshot(payload, fallbackAppointment = null) {
 		payment_fee_percent: feePercent,
 		payment_fee_value: feeValue,
 		net_value: netValue,
+		payment_date:
+			payload.payment_date || fallbackAppointment?.payment_date || todayInSaoPaulo(),
 	};
+}
+
+async function assertClientAccess(clientId, user, targetBarberId) {
+	if (!clientId) return null;
+	const client = await ClientsRepository.findFixedClientById(clientId, {
+		barbeariaId: user.barbearia_id,
+		barbeiroId: user.role === "admin" ? null : user.barbeiro_id,
+	});
+	if (!client) {
+		throw new AppError(404, "CLIENT_NOT_FOUND", "Cliente fixo nao encontrado.");
+	}
+	if (client.barbeiro_id && client.barbeiro_id !== targetBarberId) {
+		throw new AppError(
+			409,
+			"CLIENT_BARBER_MISMATCH",
+			"O cliente fixo pertence a outro barbeiro.",
+		);
+	}
+	return client;
+}
+
+async function assertNoScheduleConflict({
+	id,
+	barbeariaId,
+	barbeiroId,
+	date,
+	time,
+}) {
+	if (!barbeiroId || !date || !time) return;
+	if (typeof AppointmentsRepository.findConflict !== "function") return;
+	const conflict = await AppointmentsRepository.findConflict({
+		barbeariaId,
+		barbeiroId,
+		date,
+		time,
+		excludeId: id,
+	});
+	if (conflict) {
+		throw new AppError(
+			409,
+			"APPOINTMENT_CONFLICT",
+			"Este barbeiro ja possui um agendamento nesse horario.",
+		);
+	}
+}
+
+async function syncReceivable(appointment, userId) {
+	if (appointment.status === "fiado") {
+		await ReceivablesRepository.upsertFromAppointment(appointment, { userId });
+		return;
+	}
+	if (appointment.status === "paid") {
+		await ReceivablesRepository.updateByAppointment(appointment.id, {
+			status: "pago",
+			payment_method_id: appointment.payment_method_id,
+			payment_fee_percent: appointment.payment_fee_percent,
+			payment_fee_value: appointment.payment_fee_value,
+			net_value: appointment.net_value,
+			payment_date: appointment.payment_date || todayInSaoPaulo(),
+		});
+		return;
+	}
+	await ReceivablesRepository.updateByAppointment(appointment.id, {
+		status: "cancelado",
+	});
 }
 
 function assertBarbeariaContext(user) {
@@ -173,11 +252,22 @@ exports.listAppointments = async function (
 
 exports.createAppointment = async function (payload, user) {
 	const barbeiroId = await resolveTargetBarber(user, payload);
+	await assertClientAccess(payload.cliente_id, user, barbeiroId);
+	await assertNoScheduleConflict({
+		barbeariaId: user.barbearia_id,
+		barbeiroId,
+		date: payload.data || payload.day_key,
+		time: payload.hora || payload.time_slot,
+	});
 	const payloadWithPayment = await withPaymentSnapshot(payload);
-	return AppointmentsRepository.create(
+	const appointment = await AppointmentsRepository.create(
 		{ ...payloadWithPayment, barbeiro_id: barbeiroId },
 		{ barbeariaId: user.barbearia_id, barbeiroId },
 	);
+	if (appointment.status === "fiado") {
+		await syncReceivable(appointment, user.id);
+	}
+	return appointment;
 };
 
 exports.updateAppointment = async function (id, updates, user) {
@@ -204,10 +294,21 @@ exports.updateAppointment = async function (id, updates, user) {
 	}
 
 	payload = await withPaymentSnapshot(payload, existing);
+	const targetBarberId = payload.barbeiro_id || existing.barbeiro_id;
+	await assertClientAccess(payload.cliente_id ?? existing.cliente_id, user, targetBarberId);
+	await assertNoScheduleConflict({
+		id,
+		barbeariaId: user.barbearia_id,
+		barbeiroId: targetBarberId,
+		date: payload.data || payload.day_key || existing.day_key,
+		time: payload.hora || payload.time_slot || existing.time_slot,
+	});
 
-	return AppointmentsRepository.update(id, payload, {
+	const appointment = await AppointmentsRepository.update(id, payload, {
 		barbeariaId: user.barbearia_id,
 	});
+	await syncReceivable(appointment, user.id);
+	return appointment;
 };
 
 exports.deleteAppointment = async function (id, user) {

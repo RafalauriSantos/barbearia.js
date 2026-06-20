@@ -103,11 +103,13 @@ function toApi(row) {
 		barber_name: row.barbeiros?.nome,
 		barbearia_id: row.barbearia_id,
 		barbeiro_id: row.barbeiro_id,
+		cliente_id: row.cliente_id || null,
 		forma_pagamento_id: row.forma_pagamento_id,
 		payment_method_id: row.forma_pagamento_id,
 		forma_pagamento: row.formas_pagamento?.codigo,
 		payment_method_code: row.formas_pagamento?.codigo,
 		payment_method_name: row.formas_pagamento?.nome,
+		payment_date: row.data_pagamento || null,
 		payment_fee_percent: Number(row.taxa_pagamento_percentual || 0),
 		payment_fee_value: Number(row.taxa_pagamento_valor || 0),
 		net_value: Number(row.valor_liquido || row.total || row.valor_manual || 0),
@@ -152,6 +154,12 @@ function toAppointmentDatabase(payload) {
 		:	{}),
 		...(payload.barbeiro_id !== undefined ?
 			{ barbeiro_id: payload.barbeiro_id || null }
+		:	{}),
+		...(payload.cliente_id !== undefined ?
+			{ cliente_id: payload.cliente_id || null }
+		:	{}),
+		...(payload.payment_date !== undefined ?
+			{ data_pagamento: payload.payment_date || null }
 		:	{}),
 	};
 }
@@ -368,6 +376,27 @@ exports.findById = async function (id, { barbeariaId } = {}) {
 	const { data, error } = await query.single();
 	if (error && error.code !== "PGRST116") throw error;
 	return data ? toApi(data) : null;
+};
+
+exports.findConflict = async function ({
+	barbeariaId,
+	barbeiroId,
+	date,
+	time,
+	excludeId,
+}) {
+	let query = supabase
+		.from("agendamentos")
+		.select("id")
+		.eq("barbearia_id", barbeariaId)
+		.eq("barbeiro_id", barbeiroId)
+		.eq("data", date)
+		.eq("hora", time)
+		.neq("status_atendimento", "cancelado");
+	if (excludeId) query = query.neq("id", excludeId);
+	const { data, error } = await query.limit(1).maybeSingle();
+	if (error) throw error;
+	return data || null;
 };
 
 exports.create = async function (payload, { barbeariaId, barbeiroId }) {

@@ -26,6 +26,9 @@ export function AppointmentDialog({
 	defaultBarberId = "",
 	forcedBarberId = "",
 	defaultTimeSlot = "09:00",
+	defaultClientId = "",
+	defaultClientName = "",
+	canChooseDate = false,
 	onClose,
 	onSave,
 	onError,
@@ -54,9 +57,14 @@ export function AppointmentDialog({
 		!initialCatalog.paymentMethods,
 	);
 	// Campos do formulario (novo ou edicao).
-	const [clientName, setClientName] = useState(appointment?.client_name || "");
+	const [clientName, setClientName] = useState(
+		appointment?.client_name || defaultClientName,
+	);
 	const [timeSlot, setTimeSlot] = useState(
 		String(appointment?.time_slot || defaultTimeSlot || "09:00").slice(0, 5),
+	);
+	const [appointmentDate, setAppointmentDate] = useState(
+		appointment?.day_key || dayKey,
 	);
 	const [selectedServices, setSelectedServices] = useState(
 		appointment?.services?.length ? appointment.services
@@ -270,10 +278,11 @@ export function AppointmentDialog({
 		const parsedValue = parseMoneyInput(value);
 		const data = {
 			client_name: clientName.trim(),
+			cliente_id: appointment?.cliente_id || defaultClientId || null,
 			time_slot: timeSlot,
 			services: selectedServices,
 			products: selectedProducts,
-			day_key: dayKey,
+			day_key: appointmentDate,
 			status,
 			prazo_date: status === "fiado" ? prazoDate || null : null,
 		};
@@ -466,6 +475,21 @@ export function AppointmentDialog({
 							</div>
 						)}
 					</div>
+
+					{canChooseDate && (
+						<div className="rounded-lg border border-border bg-card p-4">
+							<label className="mb-1 block font-mono-ui text-[10px] text-foreground-faint">
+								Data
+							</label>
+							<input
+								type="date"
+								value={appointmentDate}
+								onChange={(event) => setAppointmentDate(event.target.value)}
+								className="w-full rounded-md border border-border bg-secondary px-3 py-3 text-sm text-foreground"
+								disabled={isSubmitting}
+							/>
+						</div>
+					)}
 
 					<div className="grid grid-cols-2 gap-3">
 						<div className="rounded-lg border border-border bg-card p-4">

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { BottomNav } from "@/components/BottomNav";
+import { AppointmentDialog } from "@/components/AppointmentDialog";
 import {
 	EmptyState,
 	IconButton,
@@ -122,6 +123,7 @@ function FixedClientCard({
 	onToggleCutPaid,
 	onDeleteCut,
 	onRemoveClient,
+	onSchedule,
 	isSubmitting,
 }) {
 	const totalCuts = Number(client.package_total_cuts || 0);
@@ -141,6 +143,11 @@ function FixedClientCard({
 					<p className="mt-1 truncate font-mono-ui text-[10px] text-foreground-faint">
 						{client.phone || "Sem telefone"} • a cada {client.interval_days} dias
 					</p>
+					{client.barber_name && (
+						<p className="mt-1 truncate font-mono-ui text-[9px] uppercase text-paid">
+							{client.barber_name}
+						</p>
+					)}
 				</div>
 				<button
 					type="button"
@@ -173,7 +180,11 @@ function FixedClientCard({
 						Proximo
 					</p>
 					<p className="mt-1 font-value text-lg text-foreground">
-						{client.next_due_date ? formatShortDate(client.next_due_date) : "-"}
+						{client.next_appointment ?
+							`${formatShortDate(client.next_appointment.date)} ${client.next_appointment.time}`
+						: client.next_due_date ?
+							formatShortDate(client.next_due_date)
+						: 	"-"}
 					</p>
 				</div>
 			</div>
@@ -232,6 +243,13 @@ function FixedClientCard({
 			<div className="mt-4 flex gap-2">
 				<button
 					type="button"
+					onClick={() => onSchedule(client)}
+					disabled={isSubmitting}
+					className="flex-1 rounded-md bg-paid px-3 py-2 font-mono-ui text-[10px] text-primary-foreground disabled:opacity-60">
+					{client.next_appointment ? "Agendar outro" : "Agendar próximo"}
+				</button>
+				<button
+					type="button"
 					onClick={() => onEdit(client)}
 					disabled={isSubmitting}
 					className="flex-1 rounded-md border border-border px-3 py-2 font-mono-ui text-[10px] text-foreground-faint">
@@ -265,6 +283,7 @@ export default function ClientsPage() {
 	const [waitForm, setWaitForm] = useState(emptyWaitForm);
 	const [editingClientId, setEditingClientId] = useState(null);
 	const [cutClient, setCutClient] = useState(null);
+	const [scheduleClient, setScheduleClient] = useState(null);
 	const [showClientSheet, setShowClientSheet] = useState(false);
 	const [showWaitSheet, setShowWaitSheet] = useState(false);
 	const hasLoadedRef = useRef(Boolean(cachedFixed && cachedWaitlist));
@@ -313,6 +332,7 @@ export default function ClientsPage() {
 		setShowClientSheet(false);
 		setShowWaitSheet(false);
 		setCutClient(null);
+		setScheduleClient(null);
 		setEditingClientId(null);
 		setClientForm(emptyClientForm);
 		setCutForm(emptyCutForm);
@@ -625,6 +645,7 @@ export default function ClientsPage() {
 								onToggleCutPaid={toggleCutPaid}
 								onDeleteCut={removeCut}
 								onRemoveClient={removeClient}
+								onSchedule={setScheduleClient}
 								isSubmitting={isSubmitting}
 							/>
 						))}
@@ -905,6 +926,22 @@ export default function ClientsPage() {
 						</button>
 					</form>
 				</Sheet>
+			)}
+
+			{scheduleClient && (
+				<AppointmentDialog
+					dayKey={scheduleClient.next_due_date || formatDayKey(new Date())}
+					defaultClientId={scheduleClient.id}
+					defaultClientName={scheduleClient.name}
+					forcedBarberId={scheduleClient.barbeiro_id}
+					canChooseDate
+					onClose={() => setScheduleClient(null)}
+					onSave={async () => {
+						setScheduleClient(null);
+						await reload();
+					}}
+					onError={setErrorMessage}
+				/>
 			)}
 
 			<BottomNav />

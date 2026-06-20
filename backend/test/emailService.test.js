@@ -147,6 +147,42 @@ t.test("brand name does not depend on EMAIL_FROM display name", async (t) => {
 	t.notMatch(body.htmlContent, /Kash Flow/);
 });
 
+t.test("barber invite email includes button and visible direct link", async (t) => {
+	const originalFetch = global.fetch;
+	let capturedRequest;
+
+	global.fetch = async (url, options) => {
+		capturedRequest = { url, options };
+		return {
+			ok: true,
+			status: 201,
+			text: async () => JSON.stringify({ messageId: "invite-1" }),
+		};
+	};
+
+	t.teardown(() => {
+		global.fetch = originalFetch;
+	});
+
+	const emailService = loadEmailService({
+		EMAIL_PROVIDER: "brevo",
+		BREVO_API_KEY: "xkeysib-test",
+	});
+	const inviteUrl = "https://example.com/accept-invite?token=abc123";
+
+	await emailService.sendBarberInviteEmail({
+		to: "samuel@example.com",
+		barberName: "Samuel",
+		shopName: "Marque’s Barbearia",
+		inviteUrl,
+	});
+
+	const body = JSON.parse(capturedRequest.options.body);
+	t.match(body.htmlContent, /Criar acesso/);
+	t.match(body.htmlContent, /Se o botao nao abrir, copie este link/);
+	t.ok(body.htmlContent.split(inviteUrl).length - 1 >= 2);
+});
+
 t.test("without Brevo or SMTP, email is logged with stream transport", async (t) => {
 	const originalLog = console.log;
 	const logs = [];

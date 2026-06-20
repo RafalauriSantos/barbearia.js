@@ -24,6 +24,7 @@ module.exports = async function (fastify, opts) {
 	fastify.register(require("./appointments"), { prefix: "/agendamentos" });
 	fastify.register(require("./barbers"), { prefix: "/barbers" });
 	fastify.register(require("./financial"), { prefix: "/financial" });
+	fastify.register(require("./receivables"), { prefix: "/receivables" });
 	fastify.register(require("./paymentMethods"), { prefix: "/payment-methods" });
 	fastify.register(require("./profile"), { prefix: "/profile" });
 	fastify.register(require("./invites"), { prefix: "/invites" });

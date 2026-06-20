@@ -428,12 +428,22 @@ exports.getSummary = async function (query, user) {
 		);
 	}
 
-	const rows = await FinancialRepository.findPaidAppointments({
+	const filters = {
 		barbeariaId: user.barbearia_id,
 		barbeiroId: targetBarberId,
 		startDate: query.start_date,
 		endDate: query.end_date,
-	});
+	};
+	const [appointmentRows, manualReceivableRows] = await Promise.all([
+		FinancialRepository.findPaidAppointments(filters),
+		Object.prototype.hasOwnProperty.call(
+			FinancialRepository,
+			"findPaidManualReceivables",
+		) ?
+			FinancialRepository.findPaidManualReceivables(filters)
+		: 	Promise.resolve([]),
+	]);
+	const rows = [...appointmentRows, ...manualReceivableRows];
 
 	if (isAdmin(user)) {
 		return buildAdminSummary(rows);

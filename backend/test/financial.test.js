@@ -107,6 +107,57 @@ t.test("admin financial summary splits paid appointments by commission", async (
 	});
 });
 
+t.test("paid manual debt enters consolidated cash on payment date", async (t) => {
+	let capturedFilters;
+	const service = loadFinancialService({
+		financialRepository: {
+			findPaidAppointments: async () => [],
+			findPaidManualReceivables: async (filters) => {
+				capturedFilters = filters;
+				return [
+					{
+						id: "receivable:manual-1",
+						total: 60,
+						valor_liquido: 60,
+						barbeiro_id: "barber-1",
+						forma_pagamento_id: "pay-pix",
+						barbeiros: {
+							id: "barber-1",
+							nome: "Renan",
+							comissao_percent: 50,
+						},
+						formas_pagamento: {
+							id: "pay-pix",
+							codigo: "pix",
+							nome: "Pix",
+						},
+						agendamento_produtos: [],
+					},
+				];
+			},
+		},
+		barbersRepository: {
+			findByIdInBarbearia: async () => ({ id: "barber-1" }),
+		},
+	});
+
+	const summary = await service.getSummary(
+		{ start_date: "2026-06-20", end_date: "2026-06-20" },
+		adminUser,
+	);
+
+	t.equal(summary.total_pago_geral, 60);
+	t.equal(summary.total_barbearia, 30);
+	t.equal(summary.total_barbeiros, 30);
+	t.equal(summary.quantidade_atendimentos_pagos, 1);
+	t.same(capturedFilters, {
+		barbeariaId: "shop-1",
+		barbeiroId: null,
+		startDate: "2026-06-20",
+		endDate: "2026-06-20",
+	});
+});
+
 t.test("barber financial summary only uses own barber", async (t) => {
 	let capturedFilter;
 	const service = loadFinancialService({

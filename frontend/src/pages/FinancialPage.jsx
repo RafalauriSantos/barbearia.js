@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { BottomNav } from "@/components/BottomNav";
 import { FinancialSummaryCompact } from "@/components/FinancialSummaryCompact";
+import { ReceivablesPanel } from "@/components/ReceivablesPanel";
 import { Notice, ScreenHeader } from "@/components/ScreenPrimitives";
 import {
 	formatDayKey,
@@ -230,6 +231,7 @@ export default function FinancialPage() {
 	const [isLoading, setIsLoading] = useState(!initialSummary);
 	const hasLoadedRef = useRef(Boolean(initialSummary));
 	const [errorMessage, setErrorMessage] = useState("");
+	const [activeView, setActiveView] = useState("summary");
 
 	const summaryParams = useMemo(() => {
 		if (startDate <= endDate) {
@@ -283,6 +285,25 @@ export default function FinancialPage() {
 	return (
 		<div className="app-shell flex flex-col overflow-hidden bg-background">
 			<ScreenHeader eyebrow="Caixa" title="Financeiro">
+				<div className="mt-4 grid grid-cols-3 rounded-lg border border-border bg-background-deep p-1">
+					{[
+						["summary", "Resumo"],
+						["open", "A cobrar"],
+						["paid", "Histórico"],
+					].map(([value, label]) => (
+						<button
+							key={value}
+							type="button"
+							onClick={() => setActiveView(value)}
+							className={`rounded-md px-2 py-2 font-mono-ui text-[10px] ${
+								activeView === value ?
+									"bg-card text-foreground shadow-sm"
+								: 	"text-foreground-faint"
+							}`}>
+							{label}
+						</button>
+					))}
+				</div>
 				<div className="mt-4 space-y-3 rounded-lg border border-border bg-background-deep p-3">
 					<div className="grid grid-cols-2 gap-2">
 						<label className="block">
@@ -332,7 +353,7 @@ export default function FinancialPage() {
 			</ScreenHeader>
 
 			<div className="min-h-0 flex-1 overflow-y-auto safe-bottom">
-				{errorMessage && (
+				{activeView === "summary" && errorMessage && (
 					<div className="mx-4 mt-4">
 						<Notice tone="error" title="Erro">
 							{errorMessage}
@@ -340,19 +361,39 @@ export default function FinancialPage() {
 					</div>
 				)}
 
-				<FinancialSummaryCompact
-					summary={summary}
-					isLoading={isLoading}
-					showBreakdown
-				/>
+				{activeView === "summary" && (
+					<FinancialSummaryCompact
+						summary={summary}
+						isLoading={isLoading}
+						showBreakdown
+					/>
+				)}
 
-				{!isLoading && summary && (
+				{activeView === "summary" && !isLoading && summary && (
 					<div className="space-y-3 px-4 pb-6">
 						<PaymentMethodBreakdown
 							rows={summary.resumo_por_forma_pagamento || []}
 						/>
 						<ProductSalesBreakdown summary={summary.resumo_produtos} />
 					</div>
+				)}
+
+				{activeView === "open" && (
+					<ReceivablesPanel
+						status="aberto"
+						startDate={summaryParams.start_date}
+						endDate={summaryParams.end_date}
+						onChanged={reload}
+					/>
+				)}
+
+				{activeView === "paid" && (
+					<ReceivablesPanel
+						status="pago"
+						startDate={summaryParams.start_date}
+						endDate={summaryParams.end_date}
+						onChanged={reload}
+					/>
 				)}
 			</div>
 

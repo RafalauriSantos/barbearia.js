@@ -1,7 +1,8 @@
 const ClientsRepository = require("../repositories/clientsRepository");
+const BarbersRepository = require("../repositories/barbersRepository");
 const { AppError } = require("../lib/errors");
 
-function getBarbeariaContext(user) {
+function getBarbeariaContext(user, requestedBarberId) {
 	if (!user?.barbearia_id) {
 		throw new AppError(
 			403,
@@ -9,7 +10,34 @@ function getBarbeariaContext(user) {
 			"Usuario sem barbearia vinculada.",
 		);
 	}
-	return { barbeariaId: user.barbearia_id };
+	if (user.role !== "admin" && !user.barbeiro_id) {
+		throw new AppError(
+			403,
+			"BARBER_CONTEXT_REQUIRED",
+			"Usuario sem barbeiro vinculado.",
+		);
+	}
+	return {
+		barbeariaId: user.barbearia_id,
+		barbeiroId: user.role === "admin" ? requestedBarberId || null : user.barbeiro_id,
+	};
+}
+
+async function getWriteContext(user, requestedBarberId) {
+	const context = getBarbeariaContext(user);
+	const barbeiroId =
+		user.role === "admin" ? requestedBarberId || user.barbeiro_id : user.barbeiro_id;
+	if (!barbeiroId) {
+		throw new AppError(400, "BARBER_REQUIRED", "Informe o barbeiro responsavel.");
+	}
+	const barber = await BarbersRepository.findByIdInBarbearia(
+		barbeiroId,
+		context.barbeariaId,
+	);
+	if (!barber) {
+		throw new AppError(403, "BARBER_FORBIDDEN", "Barbeiro nao pertence a esta barbearia.");
+	}
+	return { ...context, barbeiroId };
 }
 
 async function ensureClient(clientId, context) {
@@ -32,18 +60,26 @@ async function ensureWaitlistEntry(id, context) {
 	return entry;
 }
 
-exports.listFixedClients = async function (user) {
-	return ClientsRepository.findFixedClients(getBarbeariaContext(user));
+exports.listFixedClients = async function (user, query = {}) {
+	return ClientsRepository.findFixedClients(
+		getBarbeariaContext(user, query.barbeiro_id),
+	);
 };
 
 exports.createFixedClient = async function (payload, user) {
-	return ClientsRepository.createFixedClient(payload, getBarbeariaContext(user));
+	const context = await getWriteContext(user, payload.barbeiro_id);
+	return ClientsRepository.createFixedClient(payload, context);
 };
 
 exports.updateFixedClient = async function (id, payload, user) {
 	const context = getBarbeariaContext(user);
 	await ensureClient(id, context);
-	return ClientsRepository.updateFixedClient(id, payload, context);
+	let updates = payload;
+	if (payload.barbeiro_id) {
+		const writeContext = await getWriteContext(user, payload.barbeiro_id);
+		updates = { ...payload, barbeiro_id: writeContext.barbeiroId };
+	}
+	return ClientsRepository.updateFixedClient(id, updates, context);
 };
 
 exports.deleteFixedClient = async function (id, user) {
@@ -76,20 +112,28 @@ exports.deleteClientCut = async function (clientId, cutId, user) {
 	return ClientsRepository.findFixedClientById(clientId, context);
 };
 
-exports.listWaitlist = async function (user) {
-	return ClientsRepository.findWaitlist(getBarbeariaContext(user));
+exports.listWaitlist = async function (user, query = {}) {
+	return ClientsRepository.findWaitlist(
+		getBarbeariaContext(user, query.barbeiro_id),
+	);
 };
 
 exports.createWaitlistEntry = async function (payload, user) {
-	return ClientsRepository.createWaitlistEntry(payload, getBarbeariaContext(user));
+	const context = await getWriteContext(user, payload.barbeiro_id);
+	return ClientsRepository.createWaitlistEntry(payload, context);
 };
 
 exports.updateWaitlistEntry = async function (id, payload, user) {
 	const context = getBarbeariaContext(user);
 	await ensureWaitlistEntry(id, context);
+	let updates = payload;
+	if (payload.barbeiro_id) {
+		const writeContext = await getWriteContext(user, payload.barbeiro_id);
+		updates = { ...payload, barbeiro_id: writeContext.barbeiroId };
+	}
 	return ClientsRepository.updateWaitlistEntry(
 		id,
-		payload,
+		updates,
 		context,
 	);
 };

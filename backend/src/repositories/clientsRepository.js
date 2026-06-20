@@ -11,6 +11,15 @@ function addDays(dayKey, days) {
 	return date.toISOString().slice(0, 10);
 }
 
+function todayInSaoPaulo() {
+	return new Intl.DateTimeFormat("en-CA", {
+		timeZone: "America/Sao_Paulo",
+		year: "numeric",
+		month: "2-digit",
+		day: "2-digit",
+	}).format(new Date());
+}
+
 function sortCuts(cuts = []) {
 	return [...cuts].sort((first, second) => {
 		return String(second.data).localeCompare(String(first.data));
@@ -40,10 +49,22 @@ function toClientApi(row) {
 	);
 	const lastCutDate = cuts[0]?.date || null;
 	const packageTotalCuts = Number(row.pacote_total_cortes || 0);
+	const today = todayInSaoPaulo();
+	const nextAppointment = (row.agendamentos || [])
+		.filter(
+			(appointment) =>
+				appointment.status_atendimento !== "cancelado" &&
+				String(appointment.data) >= today,
+		)
+		.sort((first, second) =>
+			`${first.data} ${first.hora}`.localeCompare(`${second.data} ${second.hora}`),
+		)[0];
 	return {
 		id: row.id,
 		name: row.nome,
 		phone: row.telefone || "",
+		barbeiro_id: row.barbeiro_id || null,
+		barber_name: row.barbeiros?.nome || "",
 		notes: row.observacoes || "",
 		active: Boolean(row.ativo),
 		interval_days: Number(row.intervalo_dias || 15),
@@ -58,6 +79,14 @@ function toClientApi(row) {
 		last_cut_date: lastCutDate,
 		next_due_date:
 			lastCutDate ? addDays(lastCutDate, Number(row.intervalo_dias || 15)) : null,
+		next_appointment:
+			nextAppointment ?
+				{
+					id: nextAppointment.id,
+					date: nextAppointment.data,
+					time: String(nextAppointment.hora || "").slice(0, 5),
+				}
+			: null,
 		created_at: row.criado_em,
 		updated_at: row.atualizado_em,
 	};
@@ -68,6 +97,8 @@ function toWaitlistApi(row) {
 		id: row.id,
 		name: row.nome,
 		phone: row.telefone || "",
+		barbeiro_id: row.barbeiro_id || null,
+		barber_name: row.barbeiros?.nome || "",
 		preference: row.preferencia || "",
 		notes: row.observacoes || "",
 		status: row.status,
@@ -87,6 +118,9 @@ function toClientDatabase(payload) {
 		:	{}),
 		...(payload.package_total_cuts !== undefined ?
 			{ pacote_total_cortes: Number(payload.package_total_cuts) }
+		:	{}),
+		...(payload.barbeiro_id !== undefined ?
+			{ barbeiro_id: payload.barbeiro_id || null }
 		:	{}),
 	};
 }
@@ -109,34 +143,40 @@ function toWaitlistDatabase(payload) {
 		:	{}),
 		...(payload.notes !== undefined ? { observacoes: payload.notes || null } : {}),
 		...(payload.status !== undefined ? { status: payload.status } : {}),
+		...(payload.barbeiro_id !== undefined ?
+			{ barbeiro_id: payload.barbeiro_id || null }
+		:	{}),
 	};
 }
 
-exports.findFixedClients = async function ({ barbeariaId }) {
-	const { data, error } = await supabase
+exports.findFixedClients = async function ({ barbeariaId, barbeiroId }) {
+	let query = supabase
 		.from("clientes")
-		.select("*, cliente_cortes(*)")
+		.select("*, cliente_cortes(*), barbeiros(nome), agendamentos(id,data,hora,status_atendimento)")
 		.eq("barbearia_id", barbeariaId)
-		.eq("ativo", true)
-		.order("nome", { ascending: true });
+		.eq("ativo", true);
+	if (barbeiroId) query = query.eq("barbeiro_id", barbeiroId);
+	const { data, error } = await query.order("nome", { ascending: true });
 	if (error) throw error;
 	return (data || []).map(toClientApi);
 };
 
-exports.findFixedClientById = async function (id, { barbeariaId }) {
-	const { data, error } = await supabase
+exports.findFixedClientById = async function (id, { barbeariaId, barbeiroId }) {
+	let query = supabase
 		.from("clientes")
-		.select("*, cliente_cortes(*)")
+		.select("*, cliente_cortes(*), barbeiros(nome), agendamentos(id,data,hora,status_atendimento)")
 		.eq("id", id)
-		.eq("barbearia_id", barbeariaId)
-		.maybeSingle();
+		.eq("barbearia_id", barbeariaId);
+	if (barbeiroId) query = query.eq("barbeiro_id", barbeiroId);
+	const { data, error } = await query.maybeSingle();
 	if (error) throw error;
 	return data ? toClientApi(data) : null;
 };
 
-exports.createFixedClient = async function (payload, { barbeariaId }) {
+exports.createFixedClient = async function (payload, { barbeariaId, barbeiroId }) {
 	const row = {
 		barbearia_id: barbeariaId,
+		barbeiro_id: barbeiroId,
 		nome: payload.name,
 		telefone: payload.phone || null,
 		observacoes: payload.notes || null,
@@ -147,30 +187,34 @@ exports.createFixedClient = async function (payload, { barbeariaId }) {
 	const { data, error } = await supabase
 		.from("clientes")
 		.insert(row)
-		.select("*, cliente_cortes(*)")
+		.select("*, cliente_cortes(*), barbeiros(nome), agendamentos(id,data,hora,status_atendimento)")
 		.single();
 	if (error) throw error;
 	return toClientApi(data);
 };
 
-exports.updateFixedClient = async function (id, updates, { barbeariaId }) {
-	const { data, error } = await supabase
+exports.updateFixedClient = async function (id, updates, { barbeariaId, barbeiroId }) {
+	let query = supabase
 		.from("clientes")
 		.update(toClientDatabase(updates))
 		.eq("id", id)
-		.eq("barbearia_id", barbeariaId)
-		.select("*, cliente_cortes(*)")
+		.eq("barbearia_id", barbeariaId);
+	if (barbeiroId) query = query.eq("barbeiro_id", barbeiroId);
+	const { data, error } = await query
+		.select("*, cliente_cortes(*), barbeiros(nome), agendamentos(id,data,hora,status_atendimento)")
 		.single();
 	if (error) throw error;
 	return toClientApi(data);
 };
 
-exports.removeFixedClient = async function (id, { barbeariaId }) {
-	const { error } = await supabase
+exports.removeFixedClient = async function (id, { barbeariaId, barbeiroId }) {
+	let query = supabase
 		.from("clientes")
 		.update({ ativo: false })
 		.eq("id", id)
 		.eq("barbearia_id", barbeariaId);
+	if (barbeiroId) query = query.eq("barbeiro_id", barbeiroId);
+	const { error } = await query;
 	if (error) throw error;
 	return true;
 };
@@ -234,20 +278,22 @@ exports.removeClientCut = async function (clientId, cutId, { barbeariaId }) {
 	return true;
 };
 
-exports.findWaitlist = async function ({ barbeariaId }) {
-	const { data, error } = await supabase
+exports.findWaitlist = async function ({ barbeariaId, barbeiroId }) {
+	let query = supabase
 		.from("lista_espera")
-		.select("*")
+		.select("*, barbeiros(nome)")
 		.eq("barbearia_id", barbeariaId)
-		.eq("status", "aguardando")
-		.order("criado_em", { ascending: true });
+		.eq("status", "aguardando");
+	if (barbeiroId) query = query.eq("barbeiro_id", barbeiroId);
+	const { data, error } = await query.order("criado_em", { ascending: true });
 	if (error) throw error;
 	return (data || []).map(toWaitlistApi);
 };
 
-exports.createWaitlistEntry = async function (payload, { barbeariaId }) {
+exports.createWaitlistEntry = async function (payload, { barbeariaId, barbeiroId }) {
 	const row = {
 		barbearia_id: barbeariaId,
+		barbeiro_id: barbeiroId,
 		nome: payload.name,
 		telefone: payload.phone || null,
 		preferencia: payload.preference || null,
@@ -257,41 +303,44 @@ exports.createWaitlistEntry = async function (payload, { barbeariaId }) {
 	const { data, error } = await supabase
 		.from("lista_espera")
 		.insert(row)
-		.select()
+		.select("*, barbeiros(nome)")
 		.single();
 	if (error) throw error;
 	return toWaitlistApi(data);
 };
 
-exports.findWaitlistEntryById = async function (id, { barbeariaId }) {
-	const { data, error } = await supabase
+exports.findWaitlistEntryById = async function (id, { barbeariaId, barbeiroId }) {
+	let query = supabase
 		.from("lista_espera")
-		.select("*")
+		.select("*, barbeiros(nome)")
 		.eq("id", id)
-		.eq("barbearia_id", barbeariaId)
-		.maybeSingle();
+		.eq("barbearia_id", barbeariaId);
+	if (barbeiroId) query = query.eq("barbeiro_id", barbeiroId);
+	const { data, error } = await query.maybeSingle();
 	if (error) throw error;
 	return data ? toWaitlistApi(data) : null;
 };
 
-exports.updateWaitlistEntry = async function (id, updates, { barbeariaId }) {
-	const { data, error } = await supabase
+exports.updateWaitlistEntry = async function (id, updates, { barbeariaId, barbeiroId }) {
+	let query = supabase
 		.from("lista_espera")
 		.update(toWaitlistDatabase(updates))
 		.eq("id", id)
-		.eq("barbearia_id", barbeariaId)
-		.select()
-		.single();
+		.eq("barbearia_id", barbeariaId);
+	if (barbeiroId) query = query.eq("barbeiro_id", barbeiroId);
+	const { data, error } = await query.select("*, barbeiros(nome)").single();
 	if (error) throw error;
 	return toWaitlistApi(data);
 };
 
-exports.removeWaitlistEntry = async function (id, { barbeariaId }) {
-	const { error } = await supabase
+exports.removeWaitlistEntry = async function (id, { barbeariaId, barbeiroId }) {
+	let query = supabase
 		.from("lista_espera")
 		.update({ status: "cancelado" })
 		.eq("id", id)
 		.eq("barbearia_id", barbeariaId);
+	if (barbeiroId) query = query.eq("barbeiro_id", barbeiroId);
+	const { error } = await query;
 	if (error) throw error;
 	return true;
 };

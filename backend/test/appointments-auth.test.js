@@ -4,6 +4,11 @@ function loadService({
 	appointmentsRepository,
 	barbersRepository,
 	paymentMethodsRepository = { findById: async () => null },
+	clientsRepository = { findFixedClientById: async () => null },
+	receivablesRepository = {
+		upsertFromAppointment: async () => null,
+		updateByAppointment: async () => null,
+	},
 }) {
 	const appointmentsPath = require.resolve(
 		"../src/repositories/appointmentsRepository",
@@ -13,10 +18,18 @@ function loadService({
 		"../src/repositories/paymentMethodsRepository",
 	);
 	const servicePath = require.resolve("../src/services/appointmentsService");
+	const clientsPath = require.resolve("../src/repositories/clientsRepository");
+	const receivablesPath = require.resolve(
+		"../src/repositories/receivablesRepository",
+	);
 
-	require.cache[appointmentsPath] = { exports: appointmentsRepository };
+	require.cache[appointmentsPath] = {
+		exports: { findConflict: async () => null, ...appointmentsRepository },
+	};
 	require.cache[barbersPath] = { exports: barbersRepository };
 	require.cache[paymentMethodsPath] = { exports: paymentMethodsRepository };
+	require.cache[clientsPath] = { exports: clientsRepository };
+	require.cache[receivablesPath] = { exports: receivablesRepository };
 	delete require.cache[servicePath];
 
 	return require("../src/services/appointmentsService");
@@ -117,6 +130,77 @@ t.test("barber create ignores payload barber and uses own barber", async (t) => 
 		barbeariaId: "shop-1",
 		barbeiroId: "barber-1",
 	});
+});
+
+t.test("fiado appointment creates one linked receivable", async (t) => {
+	let capturedReceivable;
+	const appointment = {
+		id: "appt-fiado-1",
+		barbearia_id: "shop-1",
+		barbeiro_id: "barber-1",
+		client_name: "Cliente Fiado",
+		status: "fiado",
+		value: 90,
+		day_key: "2026-06-20",
+		time_slot: "14:00",
+	};
+	const service = loadService({
+		appointmentsRepository: {
+			create: async () => appointment,
+		},
+		barbersRepository: {
+			findByIdInBarbearia: async () => null,
+		},
+		receivablesRepository: {
+			upsertFromAppointment: async (row, context) => {
+				capturedReceivable = { row, context };
+			},
+			updateByAppointment: async () => null,
+		},
+	});
+
+	const result = await service.createAppointment(
+		{
+			client_name: "Cliente Fiado",
+			status: "fiado",
+			data: "2026-06-20",
+			hora: "14:00",
+			value: 90,
+		},
+		barberUser,
+	);
+
+	t.equal(result.id, appointment.id);
+	t.same(capturedReceivable, {
+		row: appointment,
+		context: { userId: barberUser.id },
+	});
+});
+
+t.test("appointment creation rejects an occupied barber time", async (t) => {
+	const service = loadService({
+		appointmentsRepository: {
+			findConflict: async () => ({ id: "existing-appointment" }),
+			create: async () => {
+				throw new Error("create should not run");
+			},
+		},
+		barbersRepository: {
+			findByIdInBarbearia: async () => null,
+		},
+	});
+
+	await t.rejects(
+		service.createAppointment(
+			{
+				client_name: "Cliente",
+				data: "2026-06-20",
+				hora: "14:00",
+			},
+			barberUser,
+		),
+		{ status: 409, code: "APPOINTMENT_CONFLICT" },
+	);
 });
 
 t.test("barber cannot update another barber appointment", async (t) => {

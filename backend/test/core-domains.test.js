@@ -92,6 +92,7 @@ t.test("core CRUD routes respond through layered modules", async (t) => {
 
 	require.cache[require.resolve("../src/repositories/appointmentsRepository")] = {
 		exports: {
+			findConflict: async () => null,
 			findAll: async ({ date, barbeariaId, barbeiroId } = {}) => [
 				{
 					id: "a1",
@@ -116,6 +117,12 @@ t.test("core CRUD routes respond through layered modules", async (t) => {
 			}),
 			update: async (id, payload) => ({ id, ...payload }),
 			remove: async () => true,
+		},
+	};
+	require.cache[require.resolve("../src/repositories/receivablesRepository")] = {
+		exports: {
+			upsertFromAppointment: async () => null,
+			updateByAppointment: async () => null,
 		},
 	};
 
