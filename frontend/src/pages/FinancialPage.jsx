@@ -2,6 +2,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { BottomNav } from "@/components/BottomNav";
 import { FinancialSummaryCompact } from "@/components/FinancialSummaryCompact";
 import { ReceivablesPanel } from "@/components/ReceivablesPanel";
+import { SupplierPayablesPanel } from "@/components/SupplierPayablesPanel";
+import { useAuth } from "@/context/AuthContext";
 import { Notice, ScreenHeader } from "@/components/ScreenPrimitives";
 import {
 	formatDayKey,
@@ -218,6 +220,8 @@ function ProductSalesBreakdown({ summary }) {
 }
 
 export default function FinancialPage() {
+	const { user } = useAuth();
+	const isAdmin = user?.role === "admin";
 	const initialDate = new Date();
 	const initialDayKey = formatDayKey(initialDate);
 	const initialSummaryParams = {
@@ -285,11 +289,12 @@ export default function FinancialPage() {
 	return (
 		<div className="app-shell flex flex-col overflow-hidden bg-background">
 			<ScreenHeader eyebrow="Caixa" title="Financeiro">
-				<div className="mt-4 grid grid-cols-3 rounded-lg border border-border bg-background-deep p-1">
+				<div className={`mt-4 grid ${isAdmin ? "grid-cols-4" : "grid-cols-3"} rounded-lg border border-border bg-background-deep p-1`}>
 					{[
 						["summary", "Resumo"],
 						["open", "A cobrar"],
 						["paid", "Histórico"],
+						...(isAdmin ? [["suppliers", "Fornecedores"]] : []),
 					].map(([value, label]) => (
 						<button
 							key={value}
@@ -390,6 +395,14 @@ export default function FinancialPage() {
 				{activeView === "paid" && (
 					<ReceivablesPanel
 						status="pago"
+						startDate={summaryParams.start_date}
+						endDate={summaryParams.end_date}
+						onChanged={reload}
+					/>
+				)}
+
+				{activeView === "suppliers" && isAdmin && (
+					<SupplierPayablesPanel
 						startDate={summaryParams.start_date}
 						endDate={summaryParams.end_date}
 						onChanged={reload}

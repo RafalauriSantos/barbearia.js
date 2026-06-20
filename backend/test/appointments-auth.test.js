@@ -9,6 +9,9 @@ function loadService({
 		upsertFromAppointment: async () => null,
 		updateByAppointment: async () => null,
 	},
+	supplierPayablesRepository = {
+		syncFromAppointment: async () => null,
+	},
 }) {
 	const appointmentsPath = require.resolve(
 		"../src/repositories/appointmentsRepository",
@@ -22,6 +25,9 @@ function loadService({
 	const receivablesPath = require.resolve(
 		"../src/repositories/receivablesRepository",
 	);
+	const supplierPayablesPath = require.resolve(
+		"../src/repositories/supplierPayablesRepository",
+	);
 
 	require.cache[appointmentsPath] = {
 		exports: { findConflict: async () => null, ...appointmentsRepository },
@@ -30,6 +36,7 @@ function loadService({
 	require.cache[paymentMethodsPath] = { exports: paymentMethodsRepository };
 	require.cache[clientsPath] = { exports: clientsRepository };
 	require.cache[receivablesPath] = { exports: receivablesRepository };
+	require.cache[supplierPayablesPath] = { exports: supplierPayablesRepository };
 	delete require.cache[servicePath];
 
 	return require("../src/services/appointmentsService");
@@ -289,6 +296,45 @@ t.test("paid appointment requires payment method", async (t) => {
 		service.updateAppointment("appt-1", { status: "paid" }, barberUser),
 		{ status: 400, code: "PAYMENT_METHOD_REQUIRED" },
 	);
+});
+
+t.test("new backdated paid appointment uses appointment date as payment date", async (t) => {
+	let capturedPayload;
+	let syncedAppointment;
+	const service = loadService({
+		appointmentsRepository: {
+			create: async (payload) => {
+				capturedPayload = payload;
+				return { id: "appt-backdated", barbearia_id: "shop-1", ...payload };
+			},
+		},
+		barbersRepository: {
+			findByIdInBarbearia: async () => null,
+		},
+		paymentMethodsRepository: {
+			findById: async (id) => ({ id, active: true, fee_percent: 0 }),
+		},
+		supplierPayablesRepository: {
+			syncFromAppointment: async (appointment) => {
+				syncedAppointment = appointment;
+			},
+		},
+	});
+
+	await service.createAppointment(
+		{
+			client_name: "Cliente retroativo",
+			day_key: "2026-06-15",
+			time_slot: "10:00",
+			value: 50,
+			status: "paid",
+			payment_method_id: "method-pix",
+		},
+		barberUser,
+	);
+
+	t.equal(capturedPayload.payment_date, "2026-06-15");
+	t.equal(syncedAppointment.id, "appt-backdated");
 });
 
 t.test("paid appointment item update reuses payment method and recalculates value", async (t) => {

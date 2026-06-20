@@ -78,6 +78,41 @@ function getProductRows(row) {
 		:	[];
 }
 
+function getAppointmentDistribution(row) {
+	const total = getAppointmentTotal(row);
+	const fee = getPaymentFeeValue(row);
+	const barber = getBarberRow(row);
+	const productSales = getProductRows(row).map(getProductSale);
+	const productGross = productSales.reduce(
+		(sum, product) => sum + product.total_vendido,
+		0,
+	);
+	const productCost = productSales.reduce(
+		(sum, product) => sum + product.total_custo,
+		0,
+	);
+	const productCommission = productSales.reduce(
+		(sum, product) => sum + product.comissao_barbeiro,
+		0,
+	);
+	const serviceGross = Math.max(total - productGross, 0);
+	const serviceFeeShare = total > 0 ? (fee * serviceGross) / total : 0;
+	const serviceNet = Math.max(serviceGross - serviceFeeShare, 0);
+	const serviceCommission =
+		(serviceNet * Number(barber?.comissao_percent || 0)) / 100;
+	const barberShare = serviceCommission + productCommission;
+	const shopShare = total - fee - productCost - barberShare;
+
+	return {
+		barber,
+		total,
+		fee,
+		net: getAppointmentNetValue(row),
+		barberShare,
+		shopShare,
+	};
+}
+
 function getProductSale(item) {
 	const quantity = Number(item.quantidade || item.quantity || 1) || 1;
 	const unitPrice = Number(item.preco_unitario ?? item.price ?? 0);
@@ -208,15 +243,11 @@ function buildSummaryByBarber(rows) {
 	const buckets = new Map();
 
 	for (const row of rows) {
-		const barber = getBarberRow(row);
+		const distribution = getAppointmentDistribution(row);
+		const barber = distribution.barber;
 		const barbeiroId = row.barbeiro_id || barber?.id || null;
 		const key = barbeiroId || "sem-barbeiro";
-		const total = getAppointmentTotal(row);
-		const taxa = getPaymentFeeValue(row);
-		const liquido = getAppointmentNetValue(row);
 		const comissaoPercent = Number(barber?.comissao_percent || 0);
-		const parteBarbeiro = (liquido * comissaoPercent) / 100;
-		const parteBarbearia = liquido - parteBarbeiro;
 
 		if (!buckets.has(key)) {
 			buckets.set(
@@ -230,11 +261,11 @@ function buildSummaryByBarber(rows) {
 		}
 
 		const bucket = buckets.get(key);
-		bucket.total_pago += total;
-		bucket.total_taxas += taxa;
-		bucket.total_liquido += liquido;
-		bucket.parte_barbeiro += parteBarbeiro;
-		bucket.parte_barbearia += parteBarbearia;
+		bucket.total_pago += distribution.total;
+		bucket.total_taxas += distribution.fee;
+		bucket.total_liquido += distribution.net;
+		bucket.parte_barbeiro += distribution.barberShare;
+		bucket.parte_barbearia += distribution.shopShare;
 		bucket.quantidade_atendimentos += 1;
 	}
 

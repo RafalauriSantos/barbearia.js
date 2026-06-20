@@ -3,6 +3,7 @@ const BarbersRepository = require("../repositories/barbersRepository");
 const PaymentMethodsRepository = require("../repositories/paymentMethodsRepository");
 const ClientsRepository = require("../repositories/clientsRepository");
 const ReceivablesRepository = require("../repositories/receivablesRepository");
+const SupplierPayablesRepository = require("../repositories/supplierPayablesRepository");
 const { AppError } = require("../lib/errors");
 
 function isAdmin(user) {
@@ -104,7 +105,11 @@ async function withPaymentSnapshot(payload, fallbackAppointment = null) {
 		payment_fee_value: feeValue,
 		net_value: netValue,
 		payment_date:
-			payload.payment_date || fallbackAppointment?.payment_date || todayInSaoPaulo(),
+			payload.payment_date ||
+			fallbackAppointment?.payment_date ||
+			(fallbackAppointment ?
+				todayInSaoPaulo()
+			: 	payload.day_key || payload.data || todayInSaoPaulo()),
 	};
 }
 
@@ -171,6 +176,13 @@ async function syncReceivable(appointment, userId) {
 	await ReceivablesRepository.updateByAppointment(appointment.id, {
 		status: "cancelado",
 	});
+}
+
+async function syncFinancialRelations(appointment, userId) {
+	await Promise.all([
+		syncReceivable(appointment, userId),
+		SupplierPayablesRepository.syncFromAppointment(appointment),
+	]);
 }
 
 function assertBarbeariaContext(user) {
@@ -264,9 +276,7 @@ exports.createAppointment = async function (payload, user) {
 		{ ...payloadWithPayment, barbeiro_id: barbeiroId },
 		{ barbeariaId: user.barbearia_id, barbeiroId },
 	);
-	if (appointment.status === "fiado") {
-		await syncReceivable(appointment, user.id);
-	}
+	await syncFinancialRelations(appointment, user.id);
 	return appointment;
 };
 
@@ -307,7 +317,7 @@ exports.updateAppointment = async function (id, updates, user) {
 	const appointment = await AppointmentsRepository.update(id, payload, {
 		barbeariaId: user.barbearia_id,
 	});
-	await syncReceivable(appointment, user.id);
+	await syncFinancialRelations(appointment, user.id);
 	return appointment;
 };
 
@@ -328,6 +338,12 @@ exports.deleteAppointment = async function (id, user) {
 			);
 		}
 	}
+
+	await SupplierPayablesRepository.syncFromAppointment({
+		...existing,
+		status: "normal",
+		products: [],
+	});
 
 	await AppointmentsRepository.remove(id, {
 		barbeariaId: user.barbearia_id,

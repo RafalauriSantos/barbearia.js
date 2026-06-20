@@ -1,5 +1,6 @@
 const ClientsRepository = require("../repositories/clientsRepository");
 const BarbersRepository = require("../repositories/barbersRepository");
+const AppointmentsService = require("./appointmentsService");
 const { AppError } = require("../lib/errors");
 
 function getBarbeariaContext(user, requestedBarberId) {
@@ -91,23 +92,102 @@ exports.deleteFixedClient = async function (id, user) {
 
 exports.createClientCut = async function (clientId, payload, user) {
 	const context = getBarbeariaContext(user);
-	await ensureClient(clientId, context);
-	await ClientsRepository.createClientCut(clientId, payload, context);
+	const client = await ensureClient(clientId, context);
+	const status = payload.status || (payload.paid ? "paid" : "normal");
+	const appointment = await AppointmentsService.createAppointment(
+		{
+			client_name: client.name,
+			cliente_id: client.id,
+			barbeiro_id: client.barbeiro_id,
+			day_key: payload.date,
+			time_slot: payload.time || "09:00",
+			value: Number(payload.value || 0),
+			status,
+			payment_method_id: payload.payment_method_id || undefined,
+			payment_date: status === "paid" ? payload.payment_date || payload.date : null,
+			prazo_date: status === "fiado" ? payload.due_date || null : null,
+			observacoes: payload.notes || null,
+		},
+		user,
+	);
+	try {
+		await ClientsRepository.createClientCut(
+			clientId,
+			{
+				...payload,
+				paid: status === "paid",
+				agendamento_id: appointment.id,
+			},
+			context,
+		);
+	} catch (error) {
+		await AppointmentsService.deleteAppointment(appointment.id, user).catch(() => null);
+		throw error;
+	}
 	return ClientsRepository.findFixedClientById(clientId, context);
 };
 
 exports.updateClientCut = async function (clientId, cutId, payload, user) {
 	const context = getBarbeariaContext(user);
-	await ensureClient(clientId, context);
-	await ensureClientCut(clientId, cutId, context);
-	await ClientsRepository.updateClientCut(clientId, cutId, payload, context);
+	const client = await ensureClient(clientId, context);
+	const cut = await ensureClientCut(clientId, cutId, context);
+	const status =
+		payload.status ||
+		(payload.paid === true ? "paid" : payload.paid === false ? "normal" : undefined);
+	let appointmentId = cut.agendamento_id;
+	const appointmentPayload = {
+		...(payload.date !== undefined ? { day_key: payload.date } : {}),
+		...(payload.time !== undefined ? { time_slot: payload.time } : {}),
+		...(payload.value !== undefined ? { value: Number(payload.value || 0) } : {}),
+		...(status !== undefined ? { status } : {}),
+		...(payload.payment_method_id !== undefined ?
+			{ payment_method_id: payload.payment_method_id }
+		: 	{}),
+		...(payload.payment_date !== undefined ? { payment_date: payload.payment_date } : {}),
+		...(payload.due_date !== undefined ? { prazo_date: payload.due_date } : {}),
+		...(payload.notes !== undefined ? { observacoes: payload.notes } : {}),
+	};
+	if (appointmentId) {
+		await AppointmentsService.updateAppointment(appointmentId, appointmentPayload, user);
+	} else {
+		const appointment = await AppointmentsService.createAppointment(
+			{
+				client_name: client.name,
+				cliente_id: client.id,
+				barbeiro_id: client.barbeiro_id,
+				day_key: payload.date || cut.date,
+				time_slot: payload.time || cut.time || "09:00",
+				value: payload.value ?? cut.value,
+				status: status || (cut.paid ? "paid" : "normal"),
+				payment_method_id: payload.payment_method_id || undefined,
+				payment_date: payload.payment_date || payload.date || cut.date,
+				prazo_date: payload.due_date || null,
+				observacoes: payload.notes ?? cut.notes,
+			},
+			user,
+		);
+		appointmentId = appointment.id;
+	}
+	await ClientsRepository.updateClientCut(
+		clientId,
+		cutId,
+		{
+			...payload,
+			...(status !== undefined ? { paid: status === "paid" } : {}),
+			agendamento_id: appointmentId,
+		},
+		context,
+	);
 	return ClientsRepository.findFixedClientById(clientId, context);
 };
 
 exports.deleteClientCut = async function (clientId, cutId, user) {
 	const context = getBarbeariaContext(user);
 	await ensureClient(clientId, context);
-	await ensureClientCut(clientId, cutId, context);
+	const cut = await ensureClientCut(clientId, cutId, context);
+	if (cut.agendamento_id) {
+		await AppointmentsService.deleteAppointment(cut.agendamento_id, user);
+	}
 	await ClientsRepository.removeClientCut(clientId, cutId, context);
 	return ClientsRepository.findFixedClientById(clientId, context);
 };

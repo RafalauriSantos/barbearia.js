@@ -290,6 +290,7 @@ describe("AppPage barber avatar row", () => {
 			expect(storeMock.updateAppointment).toHaveBeenCalledWith("appt-owner", {
 				status: "paid",
 				payment_method_id: "method-pix",
+				payment_date: "2026-05-30",
 				prazo_date: null,
 			});
 		});

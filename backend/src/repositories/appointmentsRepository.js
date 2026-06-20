@@ -22,7 +22,8 @@ function firstService(row) {
 function normalizeItemList(items = []) {
 	return (Array.isArray(items) ? items : [])
 		.map((item) => ({
-			id: item.id || item.servico_id || item.produto_id,
+			id: item.servico_id || item.produto_id || item.id,
+			catalog_id: item.servico_id || item.produto_id || item.catalog_id || item.id,
 			name: item.name || item.nome_servico || item.nome_produto,
 			price: Number(item.price ?? item.preco_unitario ?? 0),
 			quantity: Number(item.quantity ?? item.quantidade ?? 1) || 1,
@@ -500,3 +501,5 @@ exports.remove = async function (id, { barbeariaId }) {
 	if (error) throw error;
 	return true;
 };
+
+exports._private = { normalizeItemList };

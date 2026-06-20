@@ -18,6 +18,7 @@ function clearFlowCache() {
 		"../src/services/financialService",
 		"../src/services/authService",
 		"../src/repositories/paymentMethodsRepository",
+		"../src/repositories/supplierPayablesRepository",
 	]) {
 		delete require.cache[require.resolve(modulePath)];
 	}
@@ -44,6 +45,14 @@ function mockReceivablesRepository() {
 	};
 }
 
+function mockSupplierPayablesRepository() {
+	require.cache[require.resolve("../src/repositories/supplierPayablesRepository")] = {
+		exports: {
+			syncFromAppointment: async () => null,
+		},
+	};
+}
+
 t.test("paid appointment created from agenda enters same-day financial summary", async (t) => {
 	const user = {
 		id: "renan-user",
@@ -56,6 +65,7 @@ t.test("paid appointment created from agenda enters same-day financial summary",
 	clearFlowCache();
 	mockPaymentMethodsRepository();
 	mockReceivablesRepository();
+	mockSupplierPayablesRepository();
 
 	require.cache[require.resolve("../src/services/authService")] = {
 		exports: {
@@ -231,6 +241,7 @@ t.test("pending appointment marked as paid enters same-day financial summary", a
 	clearFlowCache();
 	mockPaymentMethodsRepository();
 	mockReceivablesRepository();
+	mockSupplierPayablesRepository();
 
 	require.cache[require.resolve("../src/services/authService")] = {
 		exports: {

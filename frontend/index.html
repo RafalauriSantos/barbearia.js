@@ -286,7 +286,7 @@
 				const apiUrl = "https://kurt-api.onrender.com";
 
 				try {
-					const endpoint = `${apiUrl.replace(/\/+$/, "")}/health`;
+					const endpoint = `${apiUrl.replace(/\/+$/, "")}/health/db`;
 					fetch(endpoint, {
 						cache: "no-store",
 						keepalive: true,

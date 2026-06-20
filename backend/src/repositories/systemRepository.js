@@ -6,6 +6,7 @@ const TABLES = [
 	"cliente_cortes",
 	"lista_espera",
 	"contas_receber",
+	"contas_pagar_fornecedores",
 	"agendamentos",
 	"despesas",
 	"clientes",
@@ -34,7 +35,7 @@ exports.reset = async function () {
 		}
 	}
 
-	for (const table of TABLES.slice(0, 5)) {
+	for (const table of TABLES.slice(0, 6)) {
 		const { error } = await supabase
 			.from(table)
 			.delete()
@@ -42,7 +43,7 @@ exports.reset = async function () {
 		if (error) throw error;
 	}
 
-	for (const table of TABLES.slice(5)) {
+	for (const table of TABLES.slice(6)) {
 		const { error } = await supabase
 			.from(table)
 			.update({ ativo: false })

@@ -32,6 +32,7 @@ function clearAppCache() {
 		"../src/services/profileService",
 		"../src/services/systemService",
 		"../src/services/authService",
+		"../src/repositories/supplierPayablesRepository",
 	]) {
 		delete require.cache[require.resolve(modulePath)];
 	}
@@ -180,6 +181,9 @@ t.test("core CRUD routes respond through layered modules", async (t) => {
 	};
 
 	clearAppCache();
+	require.cache[require.resolve("../src/repositories/supplierPayablesRepository")] = {
+		exports: { syncFromAppointment: async () => null },
+	};
 	const { env } = require("../src/config/env");
 	const { buildApp } = require("../src/index");
 	const app = await buildApp();
@@ -239,7 +243,7 @@ t.test("core CRUD routes respond through layered modules", async (t) => {
 		payload: {
 			date: "2026-04-29",
 			value: 45,
-			paid: true,
+			paid: false,
 		},
 	});
 	t.equal(createdCut.statusCode, 201);

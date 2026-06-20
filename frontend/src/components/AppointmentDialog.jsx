@@ -3,6 +3,7 @@ import {
 	getCachedProducts,
 	getCachedServices,
 	getCachedPaymentMethods,
+	formatDayKey,
 	loadServices,
 	loadProducts,
 	loadPaymentMethods,
@@ -89,6 +90,10 @@ export function AppointmentDialog({
 	const [status, setStatus] = useState(appointment?.status || "normal");
 	const [paymentMethodId, setPaymentMethodId] = useState(
 		appointment?.payment_method_id || appointment?.forma_pagamento_id || "",
+	);
+	const [paymentDate, setPaymentDate] = useState(
+		appointment?.payment_date ||
+			(appointment?.status === "paid" ? appointment?.day_key : formatDayKey(new Date())),
 	);
 	const [prazoDate, setPrazoDate] = useState(appointment?.prazo_date || "");
 	const [autoValue, setAutoValue] = useState(() => {
@@ -286,7 +291,10 @@ export function AppointmentDialog({
 			status,
 			prazo_date: status === "fiado" ? prazoDate || null : null,
 		};
-		if (status === "paid") data.payment_method_id = paymentMethodId;
+		if (status === "paid") {
+			data.payment_method_id = paymentMethodId;
+			data.payment_date = paymentDate || appointmentDate;
+		}
 		if (Number.isFinite(parsedValue)) data.value = parsedValue;
 		if (forcedBarberId) {
 			data.barbeiro_id = forcedBarberId;
@@ -547,12 +555,17 @@ export function AppointmentDialog({
 							<select
 								value={status}
 								onChange={(e) => {
-									setStatus(e.target.value);
+									const nextStatus = e.target.value;
+									setStatus(nextStatus);
 									if (e.target.value !== "fiado") {
 										setPrazoDate("");
 									}
 									if (e.target.value !== "paid") {
 										setPaymentMethodId("");
+									} else {
+										setPaymentDate(
+											appointment ? formatDayKey(new Date()) : appointmentDate,
+										);
 									}
 									setErrorMessage("");
 								}}
@@ -580,7 +593,8 @@ export function AppointmentDialog({
 							</p>
 						)}
 						{status === "paid" && (
-							<div className="mt-3">
+							<div className="mt-3 grid grid-cols-2 gap-3">
+								<div>
 								<label className="mb-1 block font-mono-ui text-[10px] text-foreground-faint">
 									Forma de pagamento
 								</label>
@@ -598,13 +612,26 @@ export function AppointmentDialog({
 										:	"Selecione a forma"}
 									</option>
 									{paymentMethods
-										.filter((method) => method.active !== false)
+									.filter((method) => method.active !== false && method.code !== "fiado")
 										.map((method) => (
 											<option key={method.id} value={method.id}>
 												{method.name}
 											</option>
 										))}
 								</select>
+								</div>
+								<div>
+									<label className="mb-1 block font-mono-ui text-[10px] text-foreground-faint">
+										Data do pagamento
+									</label>
+									<input
+										type="date"
+										value={paymentDate}
+										onChange={(event) => setPaymentDate(event.target.value)}
+										className="w-full rounded-md border border-border bg-secondary px-3 py-3 text-sm text-foreground"
+										disabled={isSubmitting}
+									/>
+								</div>
 							</div>
 						)}
 					</div>

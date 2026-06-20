@@ -349,6 +349,7 @@ function PaymentQuickSheet({
 	const [selectedMethodId, setSelectedMethodId] = useState(
 		initialMethod?.id || "",
 	);
+	const [paymentDate, setPaymentDate] = useState(formatDayKey(new Date()));
 	const selectedMethod =
 		availableMethods.find((method) => method.id === selectedMethodId) ||
 		initialMethod;
@@ -361,6 +362,7 @@ function PaymentQuickSheet({
 
 	useEffect(() => {
 		setSelectedMethodId(initialMethod?.id || "");
+		setPaymentDate(formatDayKey(new Date()));
 	}, [appointment.id, initialMethod?.id]);
 
 	return (
@@ -447,10 +449,22 @@ function PaymentQuickSheet({
 								</p>
 							</div>
 						</div>
+						<label className="mt-3 block">
+							<span className="mb-1 block font-mono-ui text-[10px] text-foreground-faint">
+								Data do pagamento
+							</span>
+							<input
+								type="date"
+								value={paymentDate}
+								onChange={(event) => setPaymentDate(event.target.value)}
+								className="w-full rounded-md border border-border bg-secondary px-3 py-3 text-sm text-foreground"
+								disabled={isSaving}
+							/>
+						</label>
 
 						<button
 							type="button"
-							onClick={() => selectedMethod && onConfirm(selectedMethod)}
+							onClick={() => selectedMethod && onConfirm(selectedMethod, paymentDate)}
 							disabled={isSaving || !selectedMethod}
 							className="mt-4 w-full rounded-lg bg-paid px-4 py-3 font-mono-ui text-xs uppercase text-primary-foreground transition-transform active:scale-[0.99] disabled:opacity-60">
 							{isSaving ? "Salvando..." : "Confirmar pagamento"}
@@ -858,7 +872,7 @@ export default function AppPage() {
 		}
 	};
 
-	const confirmAppointmentPayment = async (method) => {
+	const confirmAppointmentPayment = async (method, paymentDate) => {
 		if (!paymentAppointment || savingStatusId) return;
 		const appointment = paymentAppointment;
 		const previousAppointments = appointments;
@@ -873,6 +887,7 @@ export default function AppPage() {
 			payment_method_id: method.id,
 			payment_method_code: method.code,
 			payment_method_name: method.name,
+			payment_date: paymentDate,
 			forma_pagamento_id: method.id,
 			forma_pagamento: method.code,
 			payment_fee_percent: feePercent,
@@ -894,6 +909,7 @@ export default function AppPage() {
 			const updated = await updateAppointment(appointment.id, {
 				status: "paid",
 				payment_method_id: method.id,
+				payment_date: paymentDate,
 				prazo_date: null,
 			});
 			setAppointments((current) =>

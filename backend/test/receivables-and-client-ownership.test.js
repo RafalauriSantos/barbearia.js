@@ -21,9 +21,14 @@ function mockModule(path, exports) {
 	require.cache[require.resolve(path)] = { exports };
 }
 
-function loadClientsService({ clientsRepository, barbersRepository }) {
+function loadClientsService({
+	clientsRepository,
+	barbersRepository,
+	appointmentsService = {},
+}) {
 	mockModule("../src/repositories/clientsRepository", clientsRepository);
 	mockModule("../src/repositories/barbersRepository", barbersRepository);
+	mockModule("../src/services/appointmentsService", appointmentsService);
 	delete require.cache[require.resolve("../src/services/clientsService")];
 	return require("../src/services/clientsService");
 }
@@ -64,6 +69,113 @@ t.test("barber only lists clients assigned to their own profile", async (t) => {
 		barbeariaId: barberUser.barbearia_id,
 		barbeiroId: barberUser.barbeiro_id,
 	});
+});
+
+t.test("paid fixed-client cut creates one linked paid appointment", async (t) => {
+	let appointmentPayload;
+	let cutPayload;
+	const client = {
+		id: "client-fixed-1",
+		name: "Cliente fixo",
+		barbeiro_id: barberUser.barbeiro_id,
+	};
+	const service = loadClientsService({
+		clientsRepository: {
+			findFixedClientById: async () => client,
+			createClientCut: async (_clientId, payload) => {
+				cutPayload = payload;
+			},
+		},
+		barbersRepository: {},
+		appointmentsService: {
+			createAppointment: async (payload) => {
+				appointmentPayload = payload;
+				return { id: "appointment-fixed-1" };
+			},
+		},
+	});
+
+	await service.createClientCut(
+		client.id,
+		{
+			date: "2026-06-15",
+			time: "09:30",
+			value: 45,
+			status: "paid",
+			payment_method_id: "pay-pix",
+			payment_date: "2026-06-15",
+		},
+		barberUser,
+	);
+
+	t.same(appointmentPayload, {
+		client_name: client.name,
+		cliente_id: client.id,
+		barbeiro_id: client.barbeiro_id,
+		day_key: "2026-06-15",
+		time_slot: "09:30",
+		value: 45,
+		status: "paid",
+		payment_method_id: "pay-pix",
+		payment_date: "2026-06-15",
+		prazo_date: null,
+		observacoes: null,
+	});
+	t.equal(cutPayload.agendamento_id, "appointment-fixed-1");
+	t.equal(cutPayload.paid, true);
+});
+
+t.test("receiving a fixed-client cut updates its linked appointment", async (t) => {
+	let appointmentUpdate;
+	let cutUpdate;
+	const client = {
+		id: "client-fixed-1",
+		name: "Cliente fixo",
+		barbeiro_id: barberUser.barbeiro_id,
+	};
+	const service = loadClientsService({
+		clientsRepository: {
+			findFixedClientById: async () => client,
+			findClientCutById: async () => ({
+				id: "cut-1",
+				agendamento_id: "appointment-fixed-1",
+				date: "2026-06-15",
+				value: 45,
+				paid: false,
+			}),
+			updateClientCut: async (_clientId, _cutId, payload) => {
+				cutUpdate = payload;
+			},
+		},
+		barbersRepository: {},
+		appointmentsService: {
+			updateAppointment: async (id, payload) => {
+				appointmentUpdate = { id, payload };
+			},
+		},
+	});
+
+	await service.updateClientCut(
+		client.id,
+		"cut-1",
+		{
+			status: "paid",
+			payment_method_id: "pay-pix",
+			payment_date: "2026-06-20",
+		},
+		barberUser,
+	);
+
+	t.same(appointmentUpdate, {
+		id: "appointment-fixed-1",
+		payload: {
+			status: "paid",
+			payment_method_id: "pay-pix",
+			payment_date: "2026-06-20",
+		},
+	});
+	t.equal(cutUpdate.agendamento_id, "appointment-fixed-1");
+	t.equal(cutUpdate.paid, true);
 });
 
 t.test("admin can list all clients or filter one barber", async (t) => {

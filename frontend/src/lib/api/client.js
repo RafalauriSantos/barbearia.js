@@ -61,7 +61,7 @@ export function warmUpApi() {
 	warmUpRequest =
 		warmUpRequest ||
 		axios
-			.get(`${API_BASE_URL}/health`, {
+			.get(`${API_BASE_URL}/health/db`, {
 				timeout: API_TIMEOUT_MS,
 				validateStatus: () => true,
 			})

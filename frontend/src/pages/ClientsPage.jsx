@@ -18,8 +18,10 @@ import {
 	formatCurrency,
 	formatDayKey,
 	getCachedFixedClients,
+	getCachedPaymentMethods,
 	getCachedWaitlist,
 	loadFixedClients,
+	loadPaymentMethods,
 	loadWaitlist,
 	saveFixedClient,
 	saveFixedClientCut,
@@ -41,8 +43,12 @@ const emptyClientForm = {
 
 const emptyCutForm = {
 	date: formatDayKey(new Date()),
+	time: "09:00",
 	value: "",
-	paid: false,
+	status: "normal",
+	payment_method_id: "",
+	payment_date: formatDayKey(new Date()),
+	due_date: "",
 	notes: "",
 };
 
@@ -120,7 +126,7 @@ function FixedClientCard({
 	client,
 	onAddCut,
 	onEdit,
-	onToggleCutPaid,
+	onReceiveCut,
 	onDeleteCut,
 	onRemoveClient,
 	onSchedule,
@@ -212,20 +218,20 @@ function FixedClientCard({
 									{formatShortDate(cut.date)}
 								</p>
 								<p className="font-client text-sm text-foreground-faint">
-									{formatCurrency(cut.value)} • {cut.paid ? "pago" : "pendente"}
+									{formatCurrency(cut.value)} • {cut.paid ? "pago" : cut.status === "fiado" ? "fiado" : "pendente"}
 								</p>
 							</div>
 							<div className="flex shrink-0 gap-1">
 								<button
 									type="button"
-									onClick={() => onToggleCutPaid(client, cut)}
-									disabled={isSubmitting}
+									onClick={() => onReceiveCut(client, cut)}
+									disabled={isSubmitting || cut.paid}
 									className={`rounded-md border px-2 py-2 font-mono-ui text-[9px] ${
 										cut.paid ?
 											"border-border text-foreground-faint"
 										:	"border-paid/40 bg-paid/10 text-paid"
 									}`}>
-									{cut.paid ? "Abrir" : "Pago"}
+									{cut.paid ? "Pago" : "Receber"}
 								</button>
 								<button
 									type="button"
@@ -270,6 +276,7 @@ function FixedClientCard({
 export default function ClientsPage() {
 	const cachedFixed = getCachedFixedClients();
 	const cachedWaitlist = getCachedWaitlist();
+	const cachedPaymentMethods = getCachedPaymentMethods();
 	const [activeTab, setActiveTab] = useState("fixed");
 	const [clients, setClients] = useState(cachedFixed || []);
 	const [waitlist, setWaitlist] = useState(cachedWaitlist || []);
@@ -280,9 +287,11 @@ export default function ClientsPage() {
 	const [formError, setFormError] = useState("");
 	const [clientForm, setClientForm] = useState(emptyClientForm);
 	const [cutForm, setCutForm] = useState(emptyCutForm);
+	const [paymentMethods, setPaymentMethods] = useState(cachedPaymentMethods || []);
 	const [waitForm, setWaitForm] = useState(emptyWaitForm);
 	const [editingClientId, setEditingClientId] = useState(null);
 	const [cutClient, setCutClient] = useState(null);
+	const [editingCutId, setEditingCutId] = useState(null);
 	const [scheduleClient, setScheduleClient] = useState(null);
 	const [showClientSheet, setShowClientSheet] = useState(false);
 	const [showWaitSheet, setShowWaitSheet] = useState(false);
@@ -305,12 +314,14 @@ export default function ClientsPage() {
 		setIsRefreshing(hasLoaded);
 		setErrorMessage("");
 		try {
-			const [fixedList, waitingList] = await Promise.all([
+			const [fixedList, waitingList, methods] = await Promise.all([
 				loadFixedClients({ force: true }),
 				loadWaitlist({ force: true }),
+				loadPaymentMethods(),
 			]);
 			setClients(fixedList);
 			setWaitlist(waitingList);
+			setPaymentMethods(methods);
 			hasLoadedRef.current = true;
 		} catch (error) {
 			setErrorMessage(error.message || "Falha ao carregar clientes.");
@@ -332,6 +343,7 @@ export default function ClientsPage() {
 		setShowClientSheet(false);
 		setShowWaitSheet(false);
 		setCutClient(null);
+		setEditingCutId(null);
 		setScheduleClient(null);
 		setEditingClientId(null);
 		setClientForm(emptyClientForm);
@@ -366,8 +378,26 @@ export default function ClientsPage() {
 	};
 
 	const openCutSheet = (client) => {
+		const today = formatDayKey(new Date());
 		setCutClient(client);
-		setCutForm(emptyCutForm);
+		setEditingCutId(null);
+		setCutForm({ ...emptyCutForm, date: today, payment_date: today });
+		setFormError("");
+	};
+
+	const openCutPayment = (client, cut) => {
+		setCutClient(client);
+		setEditingCutId(cut.id);
+		setCutForm({
+			date: cut.date,
+			time: cut.time || "09:00",
+			value: String(cut.value || ""),
+			status: "paid",
+			payment_method_id: cut.payment_method_id || "",
+			payment_date: formatDayKey(new Date()),
+			due_date: cut.due_date || "",
+			notes: cut.notes || "",
+		});
 		setFormError("");
 	};
 
@@ -392,7 +422,6 @@ export default function ClientsPage() {
 			setFormError(validationMessage);
 			return;
 		}
-
 		setIsSubmitting(true);
 		setErrorMessage("");
 		setFormError("");
@@ -435,17 +464,36 @@ export default function ClientsPage() {
 			setFormError(validationMessage);
 			return;
 		}
+		if (cutForm.status === "paid" && !cutForm.payment_method_id) {
+			setFormError("Informe a forma de pagamento.");
+			return;
+		}
+		if (cutForm.status === "fiado" && !cutForm.due_date) {
+			setFormError("Informe a data para cobrar o fiado.");
+			return;
+		}
 
 		setIsSubmitting(true);
 		setErrorMessage("");
 		setFormError("");
 		try {
-			await addFixedClientCut(cutClient.id, {
+			const payload = {
 				date: cutForm.date,
+				time: cutForm.time,
 				value: parseMoneyInput(cutForm.value || "0"),
-				paid: cutForm.paid,
+				status: cutForm.status,
+				payment_method_id:
+					cutForm.status === "paid" ? cutForm.payment_method_id : null,
+				payment_date:
+					cutForm.status === "paid" ? cutForm.payment_date : null,
+				due_date: cutForm.status === "fiado" ? cutForm.due_date : null,
 				notes: cutForm.notes.trim(),
-			});
+			};
+			if (editingCutId) {
+				await saveFixedClientCut(cutClient.id, editingCutId, payload);
+			} else {
+				await addFixedClientCut(cutClient.id, payload);
+			}
 			closeSheets();
 			await reload();
 		} catch (error) {
@@ -482,20 +530,6 @@ export default function ClientsPage() {
 			await reload();
 		} catch (error) {
 			setErrorMessage(error.message || "Falha ao salvar lista de espera.");
-		} finally {
-			setIsSubmitting(false);
-		}
-	};
-
-	const toggleCutPaid = async (client, cut) => {
-		if (isSubmitting) return;
-		setIsSubmitting(true);
-		setErrorMessage("");
-		try {
-			await saveFixedClientCut(client.id, cut.id, { paid: !cut.paid });
-			await reload();
-		} catch (error) {
-			setErrorMessage(error.message || "Falha ao atualizar corte.");
 		} finally {
 			setIsSubmitting(false);
 		}
@@ -642,7 +676,7 @@ export default function ClientsPage() {
 								client={client}
 								onAddCut={openCutSheet}
 								onEdit={openEditClient}
-								onToggleCutPaid={toggleCutPaid}
+								onReceiveCut={openCutPayment}
 								onDeleteCut={removeCut}
 								onRemoveClient={removeClient}
 								onSchedule={setScheduleClient}
@@ -812,7 +846,21 @@ export default function ClientsPage() {
 									disabled={isSubmitting}
 								/>
 							</Field>
-							<Field label="Valor">
+							<Field label="Horario">
+								<TextInput
+									type="time"
+									value={cutForm.time}
+									onChange={(event) =>
+										setCutForm((prev) => ({
+											...prev,
+											time: event.target.value,
+										}))
+									}
+									disabled={isSubmitting}
+								/>
+							</Field>
+						</div>
+						<Field label="Valor">
 								<TextInput
 									inputMode="decimal"
 									value={cutForm.value}
@@ -825,25 +873,62 @@ export default function ClientsPage() {
 									disabled={isSubmitting}
 									placeholder="45,00"
 								/>
-							</Field>
-						</div>
-						<label className="flex items-center justify-between rounded-lg border border-border bg-card px-3 py-3">
-							<span className="font-client text-sm text-foreground">
-								Ja foi pago
-							</span>
-							<input
-								type="checkbox"
-								checked={cutForm.paid}
+						</Field>
+						<Field label="Pagamento">
+							<select
+								value={cutForm.status}
 								onChange={(event) =>
 									setCutForm((prev) => ({
 										...prev,
-										paid: event.target.checked,
+										status: event.target.value,
+										payment_method_id: "",
 									}))
 								}
-								disabled={isSubmitting}
-								className="h-5 w-5 accent-current"
-							/>
-						</label>
+								disabled={isSubmitting || Boolean(editingCutId)}
+								className="w-full rounded-md border border-border bg-secondary px-3 py-3 text-sm text-foreground">
+								<option value="normal">Pendente</option>
+								<option value="paid">Pago</option>
+								<option value="fiado">Fiado</option>
+							</select>
+						</Field>
+						{cutForm.status === "paid" && (
+							<div className="grid grid-cols-2 gap-3">
+								<Field label="Forma">
+									<select
+										value={cutForm.payment_method_id}
+										onChange={(event) =>
+											setCutForm((prev) => ({
+												...prev,
+												payment_method_id: event.target.value,
+											}))
+										}
+										className="w-full rounded-md border border-border bg-secondary px-3 py-3 text-sm text-foreground">
+										<option value="">Selecione</option>
+										{paymentMethods
+											.filter((method) => method.active !== false && method.code !== "fiado")
+											.map((method) => (
+												<option key={method.id} value={method.id}>{method.name}</option>
+											))}
+									</select>
+								</Field>
+								<Field label="Data do pagamento">
+									<TextInput
+										type="date"
+										value={cutForm.payment_date}
+										onChange={(event) => setCutForm((prev) => ({ ...prev, payment_date: event.target.value }))}
+									/>
+								</Field>
+							</div>
+						)}
+						{cutForm.status === "fiado" && (
+							<Field label="Vencimento">
+								<TextInput
+									type="date"
+									value={cutForm.due_date}
+									onChange={(event) => setCutForm((prev) => ({ ...prev, due_date: event.target.value }))}
+								/>
+							</Field>
+						)}
 						<Field label="Observacoes">
 							<TextArea
 								value={cutForm.notes}
@@ -861,7 +946,7 @@ export default function ClientsPage() {
 							type="submit"
 							disabled={isSubmitting}
 							className="w-full rounded-md bg-foreground py-3 font-mono-ui text-sm text-primary-foreground disabled:opacity-60">
-							{isSubmitting ? "Salvando..." : "Registrar corte"}
+							{isSubmitting ? "Salvando..." : editingCutId ? "Confirmar recebimento" : "Registrar corte"}
 						</button>
 					</form>
 				</Sheet>

@@ -133,6 +133,7 @@ CREATE TABLE IF NOT EXISTS public.cliente_cortes (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid (),
     cliente_id uuid NOT NULL REFERENCES public.clientes (id) ON DELETE CASCADE,
     barbearia_id uuid NOT NULL REFERENCES public.barbearias (id) ON DELETE CASCADE,
+    agendamento_id uuid,
     data date NOT NULL,
     pago boolean NOT NULL DEFAULT false,
     valor numeric(10, 2) NOT NULL DEFAULT 0 CHECK (valor >= 0),
@@ -257,6 +258,35 @@ CREATE TABLE IF NOT EXISTS public.agendamento_produtos (
     UNIQUE (agendamento_id, produto_id)
 );
 
+CREATE TABLE IF NOT EXISTS public.contas_pagar_fornecedores (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid (),
+    barbearia_id uuid NOT NULL REFERENCES public.barbearias (id) ON DELETE CASCADE,
+    barbeiro_id uuid REFERENCES public.barbeiros (id) ON DELETE SET NULL,
+    agendamento_id uuid REFERENCES public.agendamentos (id) ON DELETE SET NULL,
+    produto_id uuid REFERENCES public.produtos (id) ON DELETE SET NULL,
+    origem_chave varchar NOT NULL UNIQUE,
+    fornecedor varchar NOT NULL,
+    descricao varchar NOT NULL,
+    valor numeric(10, 2) NOT NULL CHECK (valor >= 0),
+    data_origem date NOT NULL,
+    status varchar NOT NULL DEFAULT 'aberto' CHECK (status IN ('aberto', 'pago', 'cancelado')),
+    data_pagamento date,
+    despesa_id uuid REFERENCES public.despesas (id) ON DELETE SET NULL,
+    criado_em timestamptz NOT NULL DEFAULT now(),
+    atualizado_em timestamptz NOT NULL DEFAULT now()
+);
+
+ALTER TABLE public.despesas ADD COLUMN IF NOT EXISTS conta_fornecedor_id uuid REFERENCES public.contas_pagar_fornecedores (id) ON DELETE SET NULL;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'cliente_cortes_agendamento_id_foreign') THEN
+    ALTER TABLE public.cliente_cortes
+      ADD CONSTRAINT cliente_cortes_agendamento_id_foreign
+      FOREIGN KEY (agendamento_id) REFERENCES public.agendamentos(id) ON DELETE SET NULL;
+  END IF;
+END $$;
+
 CREATE TABLE IF NOT EXISTS public.convites_barbeiros (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid (),
     barbearia_id uuid NOT NULL REFERENCES public.barbearias (id) ON DELETE CASCADE,
@@ -334,6 +364,9 @@ CREATE INDEX IF NOT EXISTS idx_cliente_cortes_cliente_data ON public.cliente_cor
 
 CREATE INDEX IF NOT EXISTS idx_cliente_cortes_barbearia_data ON public.cliente_cortes (barbearia_id, data DESC);
 
+CREATE UNIQUE INDEX IF NOT EXISTS idx_cliente_cortes_agendamento_unique ON public.cliente_cortes (agendamento_id)
+WHERE agendamento_id IS NOT NULL;
+
 CREATE INDEX IF NOT EXISTS idx_lista_espera_barbearia_status ON public.lista_espera (barbearia_id, status);
 
 CREATE INDEX IF NOT EXISTS idx_lista_espera_barbeiro_status ON public.lista_espera (barbeiro_id, status);
@@ -390,11 +423,56 @@ CREATE INDEX IF NOT EXISTS idx_contas_receber_loja_status_data ON public.contas_
 
 CREATE INDEX IF NOT EXISTS idx_contas_receber_barbeiro_status ON public.contas_receber (barbeiro_id, status);
 
+CREATE UNIQUE INDEX IF NOT EXISTS idx_despesas_conta_fornecedor_unique ON public.despesas (conta_fornecedor_id)
+WHERE conta_fornecedor_id IS NOT NULL;
+
+CREATE INDEX IF NOT EXISTS idx_contas_pagar_fornecedor_loja_status_data ON public.contas_pagar_fornecedores (
+    barbearia_id,
+    status,
+    data_origem DESC
+);
+
 CREATE OR REPLACE FUNCTION public.set_atualizado_em()
 RETURNS trigger AS $$
 BEGIN
   NEW.atualizado_em = now();
   RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION public.baixar_conta_fornecedor(
+    p_conta_id uuid,
+    p_barbearia_id uuid,
+    p_data_pagamento date
+) RETURNS uuid AS $$
+DECLARE
+  conta public.contas_pagar_fornecedores%ROWTYPE;
+  nova_despesa_id uuid;
+BEGIN
+  SELECT * INTO conta
+  FROM public.contas_pagar_fornecedores
+  WHERE id = p_conta_id AND barbearia_id = p_barbearia_id
+  FOR UPDATE;
+
+  IF NOT FOUND THEN RAISE EXCEPTION 'SUPPLIER_PAYABLE_NOT_FOUND'; END IF;
+  IF conta.status = 'pago' THEN RETURN conta.despesa_id; END IF;
+  IF conta.status <> 'aberto' THEN RAISE EXCEPTION 'SUPPLIER_PAYABLE_CLOSED'; END IF;
+
+  INSERT INTO public.despesas (
+      barbearia_id, descricao, valor, data, conta_fornecedor_id
+  ) VALUES (
+      conta.barbearia_id,
+      CONCAT('Fornecedor ', conta.fornecedor, ': ', conta.descricao),
+      conta.valor,
+      p_data_pagamento,
+      conta.id
+  ) RETURNING id INTO nova_despesa_id;
+
+  UPDATE public.contas_pagar_fornecedores
+  SET status = 'pago', data_pagamento = p_data_pagamento, despesa_id = nova_despesa_id
+  WHERE id = conta.id;
+
+  RETURN nova_despesa_id;
 END;
 $$ LANGUAGE plpgsql;
 
@@ -457,6 +535,12 @@ BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'trg_contas_receber_atualizado_em') THEN
     CREATE TRIGGER trg_contas_receber_atualizado_em
     BEFORE UPDATE ON public.contas_receber
+    FOR EACH ROW EXECUTE FUNCTION public.set_atualizado_em();
+  END IF;
+
+  IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'trg_contas_pagar_fornecedores_atualizado_em') THEN
+    CREATE TRIGGER trg_contas_pagar_fornecedores_atualizado_em
+    BEFORE UPDATE ON public.contas_pagar_fornecedores
     FOR EACH ROW EXECUTE FUNCTION public.set_atualizado_em();
   END IF;
 END $$;

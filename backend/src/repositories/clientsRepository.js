@@ -27,12 +27,22 @@ function sortCuts(cuts = []) {
 }
 
 function toCutApi(row) {
+	const appointment = row.agendamentos || null;
 	return {
 		id: row.id,
 		client_id: row.cliente_id,
 		date: row.data,
 		paid: Boolean(row.pago),
+		status:
+			appointment?.status_pagamento === "pago" ? "paid"
+			: appointment?.status_pagamento === "fiado" ? "fiado"
+			: "normal",
 		value: toNumber(row.valor),
+		time: appointment?.hora ? String(appointment.hora).slice(0, 5) : null,
+		agendamento_id: row.agendamento_id || null,
+		payment_method_id: appointment?.forma_pagamento_id || null,
+		payment_date: appointment?.data_pagamento || null,
+		due_date: appointment?.prazo_fiado_data || null,
 		notes: row.observacoes || "",
 		created_at: row.criado_em,
 	};
@@ -131,6 +141,9 @@ function toCutDatabase(payload) {
 		...(payload.paid !== undefined ? { pago: payload.paid } : {}),
 		...(payload.value !== undefined ? { valor: Number(payload.value || 0) } : {}),
 		...(payload.notes !== undefined ? { observacoes: payload.notes || null } : {}),
+		...(payload.agendamento_id !== undefined ?
+			{ agendamento_id: payload.agendamento_id || null }
+		: 	{}),
 	};
 }
 
@@ -152,7 +165,7 @@ function toWaitlistDatabase(payload) {
 exports.findFixedClients = async function ({ barbeariaId, barbeiroId }) {
 	let query = supabase
 		.from("clientes")
-		.select("*, cliente_cortes(*), barbeiros(nome), agendamentos(id,data,hora,status_atendimento)")
+		.select("*, cliente_cortes(*,agendamentos(id,hora,status_pagamento,forma_pagamento_id,data_pagamento,prazo_fiado_data)), barbeiros(nome), agendamentos(id,data,hora,status_atendimento)")
 		.eq("barbearia_id", barbeariaId)
 		.eq("ativo", true);
 	if (barbeiroId) query = query.eq("barbeiro_id", barbeiroId);
@@ -164,7 +177,7 @@ exports.findFixedClients = async function ({ barbeariaId, barbeiroId }) {
 exports.findFixedClientById = async function (id, { barbeariaId, barbeiroId }) {
 	let query = supabase
 		.from("clientes")
-		.select("*, cliente_cortes(*), barbeiros(nome), agendamentos(id,data,hora,status_atendimento)")
+		.select("*, cliente_cortes(*,agendamentos(id,hora,status_pagamento,forma_pagamento_id,data_pagamento,prazo_fiado_data)), barbeiros(nome), agendamentos(id,data,hora,status_atendimento)")
 		.eq("id", id)
 		.eq("barbearia_id", barbeariaId);
 	if (barbeiroId) query = query.eq("barbeiro_id", barbeiroId);
@@ -187,7 +200,7 @@ exports.createFixedClient = async function (payload, { barbeariaId, barbeiroId }
 	const { data, error } = await supabase
 		.from("clientes")
 		.insert(row)
-		.select("*, cliente_cortes(*), barbeiros(nome), agendamentos(id,data,hora,status_atendimento)")
+		.select("*, cliente_cortes(*,agendamentos(id,hora,status_pagamento,forma_pagamento_id,data_pagamento,prazo_fiado_data)), barbeiros(nome), agendamentos(id,data,hora,status_atendimento)")
 		.single();
 	if (error) throw error;
 	return toClientApi(data);
@@ -201,7 +214,7 @@ exports.updateFixedClient = async function (id, updates, { barbeariaId, barbeiro
 		.eq("barbearia_id", barbeariaId);
 	if (barbeiroId) query = query.eq("barbeiro_id", barbeiroId);
 	const { data, error } = await query
-		.select("*, cliente_cortes(*), barbeiros(nome), agendamentos(id,data,hora,status_atendimento)")
+		.select("*, cliente_cortes(*,agendamentos(id,hora,status_pagamento,forma_pagamento_id,data_pagamento,prazo_fiado_data)), barbeiros(nome), agendamentos(id,data,hora,status_atendimento)")
 		.single();
 	if (error) throw error;
 	return toClientApi(data);
@@ -227,11 +240,12 @@ exports.createClientCut = async function (clientId, payload, { barbeariaId }) {
 		pago: Boolean(payload.paid),
 		valor: Number(payload.value || 0),
 		observacoes: payload.notes || null,
+		agendamento_id: payload.agendamento_id || null,
 	};
 	const { data, error } = await supabase
 		.from("cliente_cortes")
 		.insert(row)
-		.select()
+		.select("*,agendamentos(id,hora,status_pagamento,forma_pagamento_id,data_pagamento,prazo_fiado_data)")
 		.single();
 	if (error) throw error;
 	return toCutApi(data);
@@ -240,7 +254,7 @@ exports.createClientCut = async function (clientId, payload, { barbeariaId }) {
 exports.findClientCutById = async function (clientId, cutId, { barbeariaId }) {
 	const { data, error } = await supabase
 		.from("cliente_cortes")
-		.select("*")
+		.select("*,agendamentos(id,hora,status_pagamento,forma_pagamento_id,data_pagamento,prazo_fiado_data)")
 		.eq("id", cutId)
 		.eq("cliente_id", clientId)
 		.eq("barbearia_id", barbeariaId)
@@ -261,7 +275,7 @@ exports.updateClientCut = async function (
 		.eq("id", cutId)
 		.eq("cliente_id", clientId)
 		.eq("barbearia_id", barbeariaId)
-		.select()
+		.select("*,agendamentos(id,hora,status_pagamento,forma_pagamento_id,data_pagamento,prazo_fiado_data)")
 		.single();
 	if (error) throw error;
 	return toCutApi(data);

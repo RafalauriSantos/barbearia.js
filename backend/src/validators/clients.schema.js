@@ -22,7 +22,12 @@ const updateFixedClientSchema = createFixedClientSchema.partial().extend({
 
 const createClientCutSchema = z.object({
 	date: z.string().trim().min(1),
+	time: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/).optional(),
 	paid: z.boolean().optional(),
+	status: z.enum(["normal", "paid", "fiado"]).optional(),
+	payment_method_id: z.string().uuid().optional().nullable(),
+	payment_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().nullable(),
+	due_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().nullable(),
 	value: z.coerce.number().nonnegative().max(99999.99).optional(),
 	notes: optionalText,
 });

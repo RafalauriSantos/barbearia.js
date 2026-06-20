@@ -281,6 +281,8 @@ t.test("financial summary calculates consigned product payable and profit", asyn
 	t.equal(productSummary.total_fornecedor_pagar, 60);
 	t.equal(productSummary.total_comissao_barbeiros, 20);
 	t.equal(productSummary.total_lucro_barbearia, 20);
+	t.equal(summary.total_barbeiros, 20);
+	t.equal(summary.total_barbearia, 20);
 	t.same(productSummary.resumo_por_fornecedor[0], {
 		fornecedor: "Fornecedor A",
 		quantidade: 2,
@@ -290,6 +292,45 @@ t.test("financial summary calculates consigned product payable and profit", asyn
 		fornecedor_pagar: 60,
 	});
 	t.equal(productSummary.resumo_por_produto[0].nome, "Pomada");
+});
+
+t.test("product-only sale does not apply service commission to gross revenue", async (t) => {
+	const service = loadFinancialService({
+		financialRepository: {
+			findPaidAppointments: async () => [
+				{
+					id: "appt-gel-1",
+					total: 25,
+					barbeiro_id: "barber-1",
+					barbeiros: {
+						id: "barber-1",
+						nome: "Samuel",
+						comissao_percent: 50,
+					},
+					agendamento_produtos: [
+						{
+							produto_id: "gel-1",
+							nome_produto: "Gel",
+							preco_unitario: 25,
+							quantidade: 1,
+							custo_unitario: 13,
+							comissao_venda_percentual: 0,
+						},
+					],
+				},
+			],
+		},
+		barbersRepository: {
+			findByIdInBarbearia: async () => ({ id: "barber-1" }),
+		},
+	});
+
+	const summary = await service.getSummary({}, adminUser);
+
+	t.equal(summary.total_pago_geral, 25);
+	t.equal(summary.total_barbeiros, 0);
+	t.equal(summary.total_barbearia, 12);
+	t.equal(summary.resumo_produtos.total_custo, 13);
 });
 
 t.test("barber cannot request another barber financial summary", async (t) => {

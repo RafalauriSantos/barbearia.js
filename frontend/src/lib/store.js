@@ -56,6 +56,10 @@ import {
 	listPaymentMethods,
 	updatePaymentMethodById,
 } from "@/lib/api/paymentMethods.api";
+import {
+	listSupplierPayables,
+	paySupplierPayableById,
+} from "@/lib/api/supplierPayables.api";
 
 const DEFAULT_TTL_MS = 60000;
 const PERSISTED_CACHE_MAX_AGE_MS = 1000 * 60 * 60 * 24 * 7;
@@ -292,6 +296,7 @@ const cacheKeys = {
 		makeStableKey(`appointments:${dayKey}`, filters),
 	financialSummary: (params = {}) => makeStableKey("financial:summary", params),
 	receivables: (params = {}) => makeStableKey("receivables", params),
+	supplierPayables: (params = {}) => makeStableKey("supplierPayables", params),
 };
 
 // Chaves usadas para salvar dados no navegador.
@@ -324,6 +329,8 @@ export async function addAppointment(appt) {
 	const created = await createAppointment(appt);
 	invalidateCache("appointments:");
 	invalidateCache("financial:");
+	invalidateCache("receivables:");
+	invalidateCache("supplierPayables:");
 	return created;
 }
 
@@ -332,6 +339,8 @@ export async function updateAppointment(id, updates) {
 	const updated = await updateAppointmentById(id, updates);
 	invalidateCache("appointments:");
 	invalidateCache("financial:");
+	invalidateCache("receivables:");
+	invalidateCache("supplierPayables:");
 	return updated;
 }
 
@@ -340,6 +349,8 @@ export async function deleteAppointment(id) {
 	await deleteAppointmentById(id);
 	invalidateCache("appointments:");
 	invalidateCache("financial:");
+	invalidateCache("receivables:");
+	invalidateCache("supplierPayables:");
 }
 
 // Filtra os agendamentos de um dia e ordena por horario.
@@ -468,6 +479,22 @@ export async function cancelReceivable(id) {
 	const receivable = await cancelReceivableById(id);
 	invalidateReceivables();
 	return receivable;
+}
+
+export async function loadSupplierPayables(params = {}, options = {}) {
+	return loadCached(
+		cacheKeys.supplierPayables(params),
+		() => listSupplierPayables(params),
+		options,
+	);
+}
+
+export async function paySupplierPayable(id, payload) {
+	const payable = await paySupplierPayableById(id, payload);
+	invalidateCache("supplierPayables:");
+	invalidateCache("expenses:");
+	invalidateCache("financial:");
+	return payable;
 }
 // ── Services ──
 
@@ -619,6 +646,13 @@ export async function deleteFixedClient(id) {
 	}
 }
 
+function invalidateClientCutRelations() {
+	invalidateCache("appointments:");
+	invalidateCache("financial:");
+	invalidateCache("receivables:");
+	invalidateCache("supplierPayables:");
+}
+
 export async function addFixedClientCut(clientId, payload) {
 	const client = await createClientCut(clientId, payload);
 	const cached = readCache(cacheKeys.fixedClients);
@@ -630,6 +664,7 @@ export async function addFixedClientCut(clientId, payload) {
 	} else {
 		invalidateCache(cacheKeys.fixedClients);
 	}
+	invalidateClientCutRelations();
 	return client;
 }
 
@@ -644,6 +679,7 @@ export async function saveFixedClientCut(clientId, cutId, payload) {
 	} else {
 		invalidateCache(cacheKeys.fixedClients);
 	}
+	invalidateClientCutRelations();
 	return client;
 }
 
@@ -658,6 +694,7 @@ export async function deleteFixedClientCut(clientId, cutId) {
 	} else {
 		invalidateCache(cacheKeys.fixedClients);
 	}
+	invalidateClientCutRelations();
 	return client;
 }
 
