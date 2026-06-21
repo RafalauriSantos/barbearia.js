@@ -18,6 +18,7 @@ function toApi(row) {
 		fee_percent: Number(row.taxa_percentual || 0),
 		active: row.ativo,
 		order: Number(row.ordem || DEFAULT_ORDER[row.codigo] || 100),
+		barbearia_id: row.barbearia_id,
 	};
 }
 
@@ -32,10 +33,11 @@ function toDatabase(payload) {
 	};
 }
 
-exports.findAll = async function ({ includeInactive = false } = {}) {
+exports.findAll = async function ({ barbeariaId, includeInactive = false } = {}) {
 	let query = supabase
 		.from("formas_pagamento")
-		.select("id,codigo,nome,ativo,taxa_percentual,ordem");
+		.select("id,codigo,nome,ativo,taxa_percentual,ordem,barbearia_id")
+		.eq("barbearia_id", barbeariaId);
 	if (!includeInactive) {
 		query = query.eq("ativo", true);
 	}
@@ -44,7 +46,10 @@ exports.findAll = async function ({ includeInactive = false } = {}) {
 		.order("nome", { ascending: true });
 	if (!error) return (data || []).map(toApi);
 
-	let legacyQuery = supabase.from("formas_pagamento").select("id,codigo,nome,ativo");
+	let legacyQuery = supabase
+		.from("formas_pagamento")
+		.select("id,codigo,nome,ativo,barbearia_id")
+		.eq("barbearia_id", barbeariaId);
 	if (!includeInactive) {
 		legacyQuery = legacyQuery.eq("ativo", true);
 	}
@@ -55,19 +60,21 @@ exports.findAll = async function ({ includeInactive = false } = {}) {
 		.sort((first, second) => first.order - second.order);
 };
 
-exports.findById = async function (id) {
+exports.findById = async function (id, { barbeariaId } = {}) {
 	const { data, error } = await supabase
 		.from("formas_pagamento")
-		.select("id,codigo,nome,ativo,taxa_percentual,ordem")
+		.select("id,codigo,nome,ativo,taxa_percentual,ordem,barbearia_id")
 		.eq("id", id)
+		.eq("barbearia_id", barbeariaId)
 		.single();
 	if (!error) return data ? toApi(data) : null;
 	if (error.code === "PGRST116") return null;
 
 	const legacyResult = await supabase
 		.from("formas_pagamento")
-		.select("id,codigo,nome,ativo")
+		.select("id,codigo,nome,ativo,barbearia_id")
 		.eq("id", id)
+		.eq("barbearia_id", barbeariaId)
 		.single();
 	if (legacyResult.error && legacyResult.error.code !== "PGRST116") {
 		throw legacyResult.error;
@@ -75,11 +82,12 @@ exports.findById = async function (id) {
 	return legacyResult.data ? toApi(legacyResult.data) : null;
 };
 
-exports.update = async function (id, updates) {
+exports.update = async function (id, updates, { barbeariaId } = {}) {
 	const { data, error } = await supabase
 		.from("formas_pagamento")
 		.update(toDatabase(updates))
 		.eq("id", id)
+		.eq("barbearia_id", barbeariaId)
 		.select()
 		.single();
 	if (error) throw error;

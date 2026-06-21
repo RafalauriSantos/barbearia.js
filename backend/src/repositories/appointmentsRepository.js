@@ -1,5 +1,6 @@
 const { randomUUID } = require("crypto");
 const supabase = require("../lib/supabase");
+const { AppError } = require("../lib/errors");
 
 function paymentStatusToApi(status) {
 	if (status === "pago") return "paid";
@@ -400,53 +401,85 @@ exports.findConflict = async function ({
 	return data || null;
 };
 
-exports.create = async function (payload, { barbeariaId, barbeiroId }) {
+function toAtomicItems(items) {
+	return items.map((item) => ({
+		id: item.id,
+		quantity: Number(item.quantity || 1),
+	}));
+}
+
+function mapAtomicError(error) {
+	const message = `${error?.code || ""} ${error?.message || ""} ${
+		error?.details || ""
+	}`;
+	if (message.includes("PRODUCT_STOCK_INSUFFICIENT")) {
+		return new AppError(
+			409,
+			"PRODUCT_STOCK_INSUFFICIENT",
+			"Estoque insuficiente para concluir a venda.",
+		);
+	}
+	if (message.includes("CATALOG_ITEM_INVALID")) {
+		return new AppError(
+			400,
+			"CATALOG_ITEM_INVALID",
+			"Servico ou produto invalido para esta barbearia.",
+		);
+	}
+	if (
+		message.includes("PGRST202") ||
+		message.includes("salvar_agendamento_atomico") ||
+		message.includes("excluir_agendamento_atomico")
+	) {
+		return new AppError(
+			409,
+			"APPOINTMENT_MIGRATION_REQUIRED",
+			"Atualize o banco de dados antes de alterar atendimentos.",
+		);
+	}
+	return error;
+}
+
+async function saveAtomic({ appointment, services, products, userId }) {
+	const { data, error } = await supabase.rpc("salvar_agendamento_atomico", {
+		p_agendamento: appointment,
+		p_servicos: services,
+		p_produtos: products,
+		p_usuario_id: userId || null,
+	});
+	if (error) throw mapAtomicError(error);
+	return data;
+}
+
+exports.create = async function (
+	payload,
+	{ barbeariaId, barbeiroId, userId } = {},
+) {
 	const { items: serviceItems } = normalizeServices(payload);
 	const { items: productItems } = normalizeProducts(payload);
 	const itemsTotal = sumItems(serviceItems) + sumItems(productItems);
 	const manualValue =
 		payload.value !== undefined ? Number(payload.value) : itemsTotal;
-	const payloadWithValue = { ...payload, value: manualValue };
-	const row = {
+	const appointment = {
 		id: payload.id || randomUUID(),
 		barbearia_id: barbeariaId,
 		barbeiro_id: barbeiroId,
-		status_atendimento: "agendado",
+		...toAppointmentDatabase({ ...payload, value: manualValue }),
 		status_pagamento: paymentStatusToDatabase(payload.status),
 		valor_manual: Number(manualValue || 0),
 		total: Number(manualValue || 0),
-		...toAppointmentDatabase(payloadWithValue),
 	};
 
-	const { data, error } = await supabase
-		.from("agendamentos")
-		.insert(row)
-		.select()
-		.single();
-	if (error && isMissingPaymentSnapshotColumn(error)) {
-		const legacyRow = {
-			...toAppointmentDatabase(stripPaymentSnapshotPayload(payload)),
-			barbearia_id: barbeariaId,
-			barbeiro_id: barbeiroId,
-		};
-		const legacyResult = await supabase
-			.from("agendamentos")
-			.insert(legacyRow)
-			.select()
-			.single();
-		if (legacyResult.error) throw legacyResult.error;
-		await upsertAppointmentService(legacyResult.data.id, payload);
-		await upsertAppointmentProducts(legacyResult.data.id, payload);
-		return exports.findById(legacyResult.data.id, { barbeariaId });
-	}
-	if (error) throw error;
-
-	await upsertAppointmentService(data.id, payload);
-	await upsertAppointmentProducts(data.id, payload);
-	return exports.findById(data.id, { barbeariaId });
+	const appointmentId = await saveAtomic({
+		appointment,
+		services: toAtomicItems(serviceItems),
+		products: toAtomicItems(productItems),
+		userId,
+	});
+	return exports.findById(appointmentId, { barbeariaId });
 };
 
-exports.update = async function (id, updates, { barbeariaId }) {
+exports.update = async function (id, updates, { barbeariaId, userId } = {}) {
 	const { provided: servicesProvided, items: serviceItems } =
 		normalizeServices(updates);
 	const { provided: productsProvided, items: productItems } =
@@ -458,47 +491,26 @@ exports.update = async function (id, updates, { barbeariaId }) {
 		shouldUpdateValue ?
 			{ ...updates, value: updates.value ?? itemsTotal }
 		:	updates;
-	const { data, error } = await supabase
-		.from("agendamentos")
-		.update(toAppointmentDatabase(payloadWithValue))
-		.eq("id", id)
-		.eq("barbearia_id", barbeariaId)
-		.select()
-		.single();
-	if (error && isMissingPaymentSnapshotColumn(error)) {
-		const legacyPayload = stripPaymentSnapshotPayload(payloadWithValue);
-		const legacyResult = await supabase
-			.from("agendamentos")
-			.update(toAppointmentDatabase(legacyPayload))
-			.eq("id", id)
-			.eq("barbearia_id", barbeariaId)
-			.select()
-			.single();
-		if (legacyResult.error) throw legacyResult.error;
 
-		await upsertAppointmentService(id, updates);
-		await upsertAppointmentProducts(id, updates);
-		return exports.findById(legacyResult.data.id, { barbeariaId });
-	}
-	if (error) throw error;
-
-	await upsertAppointmentService(id, updates);
-	await upsertAppointmentProducts(id, updates);
-	return exports.findById(data.id, { barbeariaId });
+	const appointmentId = await saveAtomic({
+		appointment: {
+			id,
+			barbearia_id: barbeariaId,
+			...toAppointmentDatabase(payloadWithValue),
+		},
+		services: servicesProvided ? toAtomicItems(serviceItems) : null,
+		products: productsProvided ? toAtomicItems(productItems) : null,
+		userId,
+	});
+	return exports.findById(appointmentId, { barbeariaId });
 };
 
 exports.remove = async function (id, { barbeariaId }) {
-	const previousProductQuantities = await getAppointmentProductQuantities(id);
-	await supabase.from("agendamento_servicos").delete().eq("agendamento_id", id);
-	await supabase.from("agendamento_produtos").delete().eq("agendamento_id", id);
-	await adjustProductStock(previousProductQuantities, new Map());
-
-	const { error } = await supabase
-		.from("agendamentos")
-		.delete()
-		.eq("id", id)
-		.eq("barbearia_id", barbeariaId);
-	if (error) throw error;
+	const { error } = await supabase.rpc("excluir_agendamento_atomico", {
+		p_agendamento_id: id,
+		p_barbearia_id: barbeariaId,
+	});
+	if (error) throw mapAtomicError(error);
 	return true;
 };
 

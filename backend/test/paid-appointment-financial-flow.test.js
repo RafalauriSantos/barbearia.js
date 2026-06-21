@@ -18,6 +18,8 @@ function clearFlowCache() {
 		"../src/services/financialService",
 		"../src/services/authService",
 		"../src/repositories/paymentMethodsRepository",
+		"../src/repositories/servicesRepository",
+		"../src/repositories/productsRepository",
 		"../src/repositories/supplierPayablesRepository",
 	]) {
 		delete require.cache[require.resolve(modulePath)];
@@ -53,6 +55,22 @@ function mockSupplierPayablesRepository() {
 	};
 }
 
+function mockCatalogRepositories() {
+	require.cache[require.resolve("../src/repositories/servicesRepository")] = {
+		exports: {
+			findById: async (id) => ({
+				id,
+				name: "Corte",
+				price: 80,
+				active: true,
+			}),
+		},
+	};
+	require.cache[require.resolve("../src/repositories/productsRepository")] = {
+		exports: { findById: async () => null },
+	};
+}
+
 t.test("paid appointment created from agenda enters same-day financial summary", async (t) => {
 	const user = {
 		id: "renan-user",
@@ -66,6 +84,7 @@ t.test("paid appointment created from agenda enters same-day financial summary",
 	mockPaymentMethodsRepository();
 	mockReceivablesRepository();
 	mockSupplierPayablesRepository();
+	mockCatalogRepositories();
 
 	require.cache[require.resolve("../src/services/authService")] = {
 		exports: {
@@ -242,6 +261,7 @@ t.test("pending appointment marked as paid enters same-day financial summary", a
 	mockPaymentMethodsRepository();
 	mockReceivablesRepository();
 	mockSupplierPayablesRepository();
+	mockCatalogRepositories();
 
 	require.cache[require.resolve("../src/services/authService")] = {
 		exports: {

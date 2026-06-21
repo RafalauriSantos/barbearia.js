@@ -41,3 +41,5 @@ frontend/dist
 frontend/.output
 backend/dist
 .vercel
+frontend/test-results
+frontend/playwright-report

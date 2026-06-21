@@ -171,6 +171,7 @@ function Test-AuthenticatedAppointments {
 		}
 
 		$serviceId = $null
+		$appointmentId = $null
 		try {
 			$serviceName = "Servico Check $([guid]::NewGuid().ToString("N").Substring(0, 8))"
 			$service = Invoke-ApiJson `
@@ -193,6 +194,85 @@ function Test-AuthenticatedAppointments {
 		}
 
 		if ($serviceId) {
+			try {
+				$paymentMethods = Invoke-ApiJson `
+					-Method "GET" `
+					-Url "$apiBaseUrl/payment-methods" `
+					-Headers $headers
+				$pixMethod = $paymentMethods |
+					Where-Object { $_.code -eq "pix" } |
+					Select-Object -First 1
+				$pixId = [string]$pixMethod.id
+
+				if (-not $pixId) {
+					throw "Pix payment method is missing"
+				}
+
+				$today = Get-Date -Format "yyyy-MM-dd"
+				$appointment = Invoke-ApiJson `
+					-Method "POST" `
+					-Url "$apiBaseUrl/agendamentos" `
+					-Headers $headers `
+					-Body @{
+						client_name = "Cliente Check"
+						day_key = $today
+						time_slot = "16:37"
+						status = "paid"
+						payment_method_id = $pixId
+						services = @(@{
+							id = $serviceId
+							name = "Nome adulterado"
+							price = 1
+							quantity = 1
+						})
+						products = @()
+					}
+
+				$appointmentId = [string]$appointment.id
+				$appointmentOk =
+					$appointmentId -and
+					[decimal]$appointment.value -eq 25 -and
+					$appointment.service_name -eq $serviceName -and
+					$appointment.payment_method_code -eq "pix"
+				$appointmentDetails = if ($appointmentOk) {
+					"created $appointmentId with canonical catalog value"
+				} else {
+					"unexpected response"
+				}
+				Add-Check -Name "API atomic paid appointment" -Passed $appointmentOk -Details $appointmentDetails
+
+				$summary = Invoke-ApiJson `
+					-Method "GET" `
+					-Url "$apiBaseUrl/financial/summary?start_date=$today&end_date=$today" `
+					-Headers $headers
+				$financialOk = [decimal]$summary.total_pago_geral -eq 25
+				Add-Check `
+					-Name "API atomic appointment financial summary" `
+					-Passed $financialOk `
+					-Details "gross $($summary.total_pago_geral)"
+			} catch {
+				$message = if ($_.ErrorDetails.Message) {
+					$_.ErrorDetails.Message
+				} elseif ($_.Exception.Response) {
+					"HTTP $([int]$_.Exception.Response.StatusCode)"
+				} else {
+					$_.Exception.Message
+				}
+				Add-Check -Name "API atomic paid appointment" -Passed $false -Details $message
+			} finally {
+				if ($appointmentId) {
+					try {
+						Invoke-ApiJson `
+							-Method "DELETE" `
+							-Url "$apiBaseUrl/agendamentos/$appointmentId" `
+							-Headers $headers | Out-Null
+						Add-Check -Name "API atomic appointment cleanup" -Passed $true -Details "removed $appointmentId"
+					} catch {
+						Add-Check -Name "API atomic appointment cleanup" -Passed $false -Details $_.Exception.Message
+					}
+				}
+			}
+
 			try {
 				Invoke-ApiJson `
 					-Method "DELETE" `

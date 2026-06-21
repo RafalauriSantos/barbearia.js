@@ -4,6 +4,8 @@ function loadService({
 	appointmentsRepository,
 	barbersRepository,
 	paymentMethodsRepository = { findById: async () => null },
+	servicesRepository = { findById: async () => null },
+	productsRepository = { findById: async () => null },
 	clientsRepository = { findFixedClientById: async () => null },
 	receivablesRepository = {
 		upsertFromAppointment: async () => null,
@@ -21,6 +23,8 @@ function loadService({
 		"../src/repositories/paymentMethodsRepository",
 	);
 	const servicePath = require.resolve("../src/services/appointmentsService");
+	const servicesPath = require.resolve("../src/repositories/servicesRepository");
+	const productsPath = require.resolve("../src/repositories/productsRepository");
 	const clientsPath = require.resolve("../src/repositories/clientsRepository");
 	const receivablesPath = require.resolve(
 		"../src/repositories/receivablesRepository",
@@ -34,6 +38,8 @@ function loadService({
 	};
 	require.cache[barbersPath] = { exports: barbersRepository };
 	require.cache[paymentMethodsPath] = { exports: paymentMethodsRepository };
+	require.cache[servicesPath] = { exports: servicesRepository };
+	require.cache[productsPath] = { exports: productsRepository };
 	require.cache[clientsPath] = { exports: clientsRepository };
 	require.cache[receivablesPath] = { exports: receivablesRepository };
 	require.cache[supplierPayablesPath] = { exports: supplierPayablesRepository };
@@ -136,11 +142,12 @@ t.test("barber create ignores payload barber and uses own barber", async (t) => 
 	t.same(capturedContext, {
 		barbeariaId: "shop-1",
 		barbeiroId: "barber-1",
+		userId: "user-barber",
 	});
 });
 
-t.test("fiado appointment creates one linked receivable", async (t) => {
-	let capturedReceivable;
+t.test("fiado appointment delegates financial sync to atomic repository", async (t) => {
+	let capturedContext;
 	const appointment = {
 		id: "appt-fiado-1",
 		barbearia_id: "shop-1",
@@ -153,14 +160,17 @@ t.test("fiado appointment creates one linked receivable", async (t) => {
 	};
 	const service = loadService({
 		appointmentsRepository: {
-			create: async () => appointment,
+			create: async (_payload, context) => {
+				capturedContext = context;
+				return appointment;
+			},
 		},
 		barbersRepository: {
 			findByIdInBarbearia: async () => null,
 		},
 		receivablesRepository: {
-			upsertFromAppointment: async (row, context) => {
-				capturedReceivable = { row, context };
+			upsertFromAppointment: async () => {
+				throw new Error("financial sync must be atomic inside repository");
 			},
 			updateByAppointment: async () => null,
 		},
@@ -178,9 +188,10 @@ t.test("fiado appointment creates one linked receivable", async (t) => {
 	);
 
 	t.equal(result.id, appointment.id);
-	t.same(capturedReceivable, {
-		row: appointment,
-		context: { userId: barberUser.id },
+	t.same(capturedContext, {
+		barbeariaId: "shop-1",
+		barbeiroId: "barber-1",
+		userId: "user-barber",
 	});
 });
 
@@ -235,6 +246,7 @@ t.test("barber cannot update another barber appointment", async (t) => {
 
 t.test("paid appointment stores payment fee snapshot from method", async (t) => {
 	let capturedPayload;
+	let paymentContext;
 	const service = loadService({
 		appointmentsRepository: {
 			findById: async () => ({
@@ -253,11 +265,14 @@ t.test("paid appointment stores payment fee snapshot from method", async (t) => 
 			findByIdInBarbearia: async () => null,
 		},
 		paymentMethodsRepository: {
-			findById: async (id) => ({
-				id,
-				active: true,
-				fee_percent: 1.71,
-			}),
+			findById: async (id, context) => {
+				paymentContext = context;
+				return {
+					id,
+					active: true,
+					fee_percent: 1.71,
+				};
+			},
 		},
 	});
 
@@ -271,6 +286,104 @@ t.test("paid appointment stores payment fee snapshot from method", async (t) => 
 	t.equal(capturedPayload.payment_fee_percent, 1.71);
 	t.equal(capturedPayload.payment_fee_value, 1.71);
 	t.equal(capturedPayload.net_value, 98.29);
+	t.same(paymentContext, { barbeariaId: "shop-1" });
+});
+
+t.test("appointment rejects catalog items outside the authenticated shop", async (t) => {
+	const service = loadService({
+		appointmentsRepository: {
+			create: async () => {
+				throw new Error("create should not run");
+			},
+		},
+		barbersRepository: {
+			findByIdInBarbearia: async () => null,
+		},
+		servicesRepository: {
+			findById: async () => null,
+		},
+	});
+
+	await t.rejects(
+		service.createAppointment(
+			{
+				client_name: "Cliente",
+				day_key: "2026-06-21",
+				time_slot: "10:00",
+				services: [
+					{ id: "foreign-service", name: "Invasao", price: 1, quantity: 1 },
+				],
+			},
+			barberUser,
+		),
+		{ status: 400, code: "CATALOG_ITEM_INVALID" },
+	);
+});
+
+t.test("appointment uses canonical product financial fields from the shop catalog", async (t) => {
+	let capturedPayload;
+	const service = loadService({
+		appointmentsRepository: {
+			create: async (payload) => {
+				capturedPayload = payload;
+				return {
+					id: "appt-product",
+					barbearia_id: "shop-1",
+					...payload,
+				};
+			},
+		},
+		barbersRepository: {
+			findByIdInBarbearia: async () => null,
+		},
+		productsRepository: {
+			findById: async (id, context) => ({
+				id,
+				barbearia_id: context.barbeariaId,
+				name: "Pomada oficial",
+				price: 35,
+				purchase_type: "consignado",
+				cost_price: 18,
+				supplier_name: "Fornecedor oficial",
+				seller_commission_percent: 20,
+				stock_quantity: 5,
+				active: true,
+			}),
+		},
+	});
+
+	await service.createAppointment(
+		{
+			client_name: "Cliente",
+			day_key: "2026-06-21",
+			time_slot: "11:00",
+			products: [
+				{
+					id: "product-1",
+					name: "Produto adulterado",
+					price: 0.01,
+					quantity: 2,
+					purchase_type: "avista",
+					cost_price: 0,
+					seller_commission_percent: 0,
+				},
+			],
+		},
+		barberUser,
+	);
+
+	t.same(capturedPayload.products, [
+		{
+			id: "product-1",
+			name: "Pomada oficial",
+			price: 35,
+			quantity: 2,
+			purchase_type: "consignado",
+			cost_price: 18,
+			supplier_name: "Fornecedor oficial",
+			seller_commission_percent: 20,
+		},
+	]);
 });
 
 t.test("paid appointment requires payment method", async (t) => {
@@ -300,11 +413,12 @@ t.test("paid appointment requires payment method", async (t) => {
 
 t.test("new backdated paid appointment uses appointment date as payment date", async (t) => {
 	let capturedPayload;
-	let syncedAppointment;
+	let capturedContext;
 	const service = loadService({
 		appointmentsRepository: {
-			create: async (payload) => {
+			create: async (payload, context) => {
 				capturedPayload = payload;
+				capturedContext = context;
 				return { id: "appt-backdated", barbearia_id: "shop-1", ...payload };
 			},
 		},
@@ -315,8 +429,8 @@ t.test("new backdated paid appointment uses appointment date as payment date", a
 			findById: async (id) => ({ id, active: true, fee_percent: 0 }),
 		},
 		supplierPayablesRepository: {
-			syncFromAppointment: async (appointment) => {
-				syncedAppointment = appointment;
+			syncFromAppointment: async () => {
+				throw new Error("supplier sync must be atomic inside repository");
 			},
 		},
 	});
@@ -334,7 +448,44 @@ t.test("new backdated paid appointment uses appointment date as payment date", a
 	);
 
 	t.equal(capturedPayload.payment_date, "2026-06-15");
-	t.equal(syncedAppointment.id, "appt-backdated");
+	t.same(capturedContext, {
+		barbeariaId: "shop-1",
+		barbeiroId: "barber-1",
+		userId: "user-barber",
+	});
+});
+
+t.test("appointment delete relies on the atomic repository cleanup", async (t) => {
+	let removeContext;
+	const service = loadService({
+		appointmentsRepository: {
+			findById: async () => ({
+				id: "appt-delete",
+				barbearia_id: "shop-1",
+				barbeiro_id: "barber-1",
+				products: [],
+			}),
+			remove: async (_id, context) => {
+				removeContext = context;
+				return true;
+			},
+		},
+		barbersRepository: {
+			findByIdInBarbearia: async () => null,
+		},
+		supplierPayablesRepository: {
+			syncFromAppointment: async () => {
+				throw new Error("supplier cleanup must be atomic inside repository");
+			},
+		},
+	});
+
+	await service.deleteAppointment("appt-delete", barberUser);
+
+	t.same(removeContext, {
+		barbeariaId: "shop-1",
+		userId: "user-barber",
+	});
 });
 
 t.test("paid appointment item update reuses payment method and recalculates value", async (t) => {
@@ -362,6 +513,26 @@ t.test("paid appointment item update reuses payment method and recalculates valu
 				id,
 				active: true,
 				fee_percent: 0,
+			}),
+		},
+		servicesRepository: {
+			findById: async (id) => ({
+				id,
+				name: "Corte",
+				price: 80,
+				active: true,
+			}),
+		},
+		productsRepository: {
+			findById: async (id) => ({
+				id,
+				name: "Gel",
+				price: 25,
+				purchase_type: "consignado",
+				cost_price: 13,
+				supplier_name: "Gerson",
+				seller_commission_percent: 0,
+				active: true,
 			}),
 		},
 	});
@@ -396,5 +567,6 @@ t.test("paid appointment item update reuses payment method and recalculates valu
 		purchase_type: "consignado",
 		cost_price: 13,
 		supplier_name: "Gerson",
+		seller_commission_percent: 0,
 	});
 });

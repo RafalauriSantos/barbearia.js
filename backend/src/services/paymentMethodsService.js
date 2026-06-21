@@ -30,18 +30,19 @@ function assertAdmin(user) {
 
 exports.listPaymentMethods = async function (user) {
 	assertBarbeariaContext(user);
-	return PaymentMethodsRepository.findAll();
+	return PaymentMethodsRepository.findAll({ barbeariaId: user.barbearia_id });
 };
 
 exports.updatePaymentMethod = async function (id, updates, user) {
 	assertBarbeariaContext(user);
 	assertAdmin(user);
-	const existing = await PaymentMethodsRepository.findById(id);
+	const context = { barbeariaId: user.barbearia_id };
+	const existing = await PaymentMethodsRepository.findById(id, context);
 	if (!existing) {
 		throw new AppError(404, "NOT_FOUND", "Forma de pagamento nao encontrada.");
 	}
 	try {
-		return await PaymentMethodsRepository.update(id, updates);
+		return await PaymentMethodsRepository.update(id, updates, context);
 	} catch (error) {
 		if (isMissingFeeColumn(error)) {
 			throw new AppError(

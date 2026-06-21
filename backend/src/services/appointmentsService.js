@@ -2,8 +2,8 @@ const AppointmentsRepository = require("../repositories/appointmentsRepository")
 const BarbersRepository = require("../repositories/barbersRepository");
 const PaymentMethodsRepository = require("../repositories/paymentMethodsRepository");
 const ClientsRepository = require("../repositories/clientsRepository");
-const ReceivablesRepository = require("../repositories/receivablesRepository");
-const SupplierPayablesRepository = require("../repositories/supplierPayablesRepository");
+const ServicesRepository = require("../repositories/servicesRepository");
+const ProductsRepository = require("../repositories/productsRepository");
 const { AppError } = require("../lib/errors");
 
 function isAdmin(user) {
@@ -38,7 +38,11 @@ function resolveGrossValue(payload, fallbackAppointment) {
 	return Number(fallbackAppointment?.value || 0);
 }
 
-async function withPaymentSnapshot(payload, fallbackAppointment = null) {
+async function withPaymentSnapshot(
+	payload,
+	fallbackAppointment = null,
+	barbeariaId,
+) {
 	const effectiveStatus =
 		payload.status !== undefined ? payload.status : fallbackAppointment?.status;
 	const hasPaymentMethodPayload =
@@ -84,7 +88,10 @@ async function withPaymentSnapshot(payload, fallbackAppointment = null) {
 		);
 	}
 	if (paymentMethodId) {
-		const paymentMethod = await PaymentMethodsRepository.findById(paymentMethodId);
+		const paymentMethod = await PaymentMethodsRepository.findById(
+			paymentMethodId,
+			{ barbeariaId },
+		);
 		if (!paymentMethod || !paymentMethod.active) {
 			throw new AppError(
 				400,
@@ -110,6 +117,87 @@ async function withPaymentSnapshot(payload, fallbackAppointment = null) {
 			(fallbackAppointment ?
 				todayInSaoPaulo()
 			: 	payload.day_key || payload.data || todayInSaoPaulo()),
+	};
+}
+
+async function resolveCatalogItems(items, repository, barbeariaId, type) {
+	return Promise.all(
+		(Array.isArray(items) ? items : []).map(async (item) => {
+			const catalogItem = await repository.findById(item.id, { barbeariaId });
+			if (!catalogItem || catalogItem.active === false) {
+				throw new AppError(
+					400,
+					"CATALOG_ITEM_INVALID",
+					`${type} nao pertence a esta barbearia ou esta inativo.`,
+				);
+			}
+
+			if (type === "Servico") {
+				return {
+					id: catalogItem.id,
+					name: catalogItem.name,
+					price: Number(catalogItem.price || 0),
+					quantity: Number(item.quantity || 1),
+				};
+			}
+
+			return {
+				id: catalogItem.id,
+				name: catalogItem.name,
+				price: Number(catalogItem.price || 0),
+				quantity: Number(item.quantity || 1),
+				purchase_type: catalogItem.purchase_type || "avista",
+				cost_price: Number(catalogItem.cost_price || 0),
+				supplier_name: catalogItem.supplier_name || "",
+				seller_commission_percent: Number(
+					catalogItem.seller_commission_percent || 0,
+				),
+			};
+		}),
+	);
+}
+
+async function withCanonicalCatalog(payload, barbeariaId, existing = null) {
+	const servicesProvided =
+		Array.isArray(payload.services) || payload.service_id !== undefined;
+	const productsProvided = Array.isArray(payload.products);
+	if (!servicesProvided && !productsProvided) return payload;
+
+	let requestedServices = payload.services;
+	if (!Array.isArray(requestedServices) && payload.service_id) {
+		requestedServices = [{ id: payload.service_id, quantity: 1 }];
+	}
+
+	const services =
+		servicesProvided ?
+			await resolveCatalogItems(
+				requestedServices || [],
+				ServicesRepository,
+				barbeariaId,
+				"Servico",
+			)
+		: 	existing?.services || [];
+	const products =
+		productsProvided ?
+			await resolveCatalogItems(
+				payload.products,
+				ProductsRepository,
+				barbeariaId,
+				"Produto",
+			)
+		: 	existing?.products || [];
+
+	return {
+		...payload,
+		services,
+		products,
+		value: undefined,
+		...(services.length === 1 ?
+			{
+				service_id: services[0].id,
+				service_name: services[0].name,
+			}
+		: 	{}),
 	};
 }
 
@@ -155,34 +243,6 @@ async function assertNoScheduleConflict({
 			"Este barbeiro ja possui um agendamento nesse horario.",
 		);
 	}
-}
-
-async function syncReceivable(appointment, userId) {
-	if (appointment.status === "fiado") {
-		await ReceivablesRepository.upsertFromAppointment(appointment, { userId });
-		return;
-	}
-	if (appointment.status === "paid") {
-		await ReceivablesRepository.updateByAppointment(appointment.id, {
-			status: "pago",
-			payment_method_id: appointment.payment_method_id,
-			payment_fee_percent: appointment.payment_fee_percent,
-			payment_fee_value: appointment.payment_fee_value,
-			net_value: appointment.net_value,
-			payment_date: appointment.payment_date || todayInSaoPaulo(),
-		});
-		return;
-	}
-	await ReceivablesRepository.updateByAppointment(appointment.id, {
-		status: "cancelado",
-	});
-}
-
-async function syncFinancialRelations(appointment, userId) {
-	await Promise.all([
-		syncReceivable(appointment, userId),
-		SupplierPayablesRepository.syncFromAppointment(appointment),
-	]);
 }
 
 function assertBarbeariaContext(user) {
@@ -264,19 +324,26 @@ exports.listAppointments = async function (
 
 exports.createAppointment = async function (payload, user) {
 	const barbeiroId = await resolveTargetBarber(user, payload);
-	await assertClientAccess(payload.cliente_id, user, barbeiroId);
+	const canonicalPayload = await withCanonicalCatalog(
+		payload,
+		user.barbearia_id,
+	);
+	await assertClientAccess(canonicalPayload.cliente_id, user, barbeiroId);
 	await assertNoScheduleConflict({
 		barbeariaId: user.barbearia_id,
 		barbeiroId,
-		date: payload.data || payload.day_key,
-		time: payload.hora || payload.time_slot,
+		date: canonicalPayload.data || canonicalPayload.day_key,
+		time: canonicalPayload.hora || canonicalPayload.time_slot,
 	});
-	const payloadWithPayment = await withPaymentSnapshot(payload);
+	const payloadWithPayment = await withPaymentSnapshot(
+		canonicalPayload,
+		null,
+		user.barbearia_id,
+	);
 	const appointment = await AppointmentsRepository.create(
 		{ ...payloadWithPayment, barbeiro_id: barbeiroId },
-		{ barbeariaId: user.barbearia_id, barbeiroId },
+		{ barbeariaId: user.barbearia_id, barbeiroId, userId: user.id },
 	);
-	await syncFinancialRelations(appointment, user.id);
 	return appointment;
 };
 
@@ -303,7 +370,8 @@ exports.updateAppointment = async function (id, updates, user) {
 		await assertBarberBelongsToShop(updates.barbeiro_id, user.barbearia_id);
 	}
 
-	payload = await withPaymentSnapshot(payload, existing);
+	payload = await withCanonicalCatalog(payload, user.barbearia_id, existing);
+	payload = await withPaymentSnapshot(payload, existing, user.barbearia_id);
 	const targetBarberId = payload.barbeiro_id || existing.barbeiro_id;
 	await assertClientAccess(payload.cliente_id ?? existing.cliente_id, user, targetBarberId);
 	await assertNoScheduleConflict({
@@ -316,8 +384,8 @@ exports.updateAppointment = async function (id, updates, user) {
 
 	const appointment = await AppointmentsRepository.update(id, payload, {
 		barbeariaId: user.barbearia_id,
+		userId: user.id,
 	});
-	await syncFinancialRelations(appointment, user.id);
 	return appointment;
 };
 
@@ -339,14 +407,9 @@ exports.deleteAppointment = async function (id, user) {
 		}
 	}
 
-	await SupplierPayablesRepository.syncFromAppointment({
-		...existing,
-		status: "normal",
-		products: [],
-	});
-
 	await AppointmentsRepository.remove(id, {
 		barbeariaId: user.barbearia_id,
+		userId: user.id,
 	});
 	return true;
 };
