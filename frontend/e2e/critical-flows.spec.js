@@ -123,6 +123,7 @@ async function installApi(page) {
 async function dragAppointment(page, deltaX) {
 	const row = page.getByRole("button", { name: /Cliente E2E\. arraste/ });
 	await expect(row).toBeVisible();
+	await expect(row).toBeEnabled();
 	const box = await row.boundingBox();
 	const startX = box.x + box.width / 2;
 	const startY = box.y + box.height / 2;
