@@ -20,20 +20,11 @@ export default defineConfig({
 			use: { ...devices["Pixel 7"] },
 		},
 	],
-	webServer: [
-		{
-			command: "node src/server.js",
-			cwd: "../backend",
-			url: "http://127.0.0.1:3000/health",
-			reuseExistingServer: true,
-			timeout: 120000,
-		},
-		{
-			command: "node node_modules/vite/bin/vite.js --host 127.0.0.1 --port 5173",
-			cwd: ".",
-			url: "http://127.0.0.1:5173",
-			reuseExistingServer: true,
-			timeout: 120000,
-		},
-	],
+	webServer: {
+		command: "node node_modules/vite/bin/vite.js --host 127.0.0.1 --port 5173",
+		cwd: ".",
+		url: "http://127.0.0.1:5173",
+		reuseExistingServer: true,
+		timeout: 120000,
+	},
 });
