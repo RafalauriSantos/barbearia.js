@@ -68,6 +68,15 @@ const CACHE_STORAGE_KEY = "gestor_barbearia_data_cache_v1";
 const cache = new Map();
 let activeCacheScope = "anonymous";
 let hydratedCacheScope = null;
+let cacheGeneration = 0;
+
+class StaleCacheRequestError extends Error {
+	constructor() {
+		super("A resposta pertence a uma sessao anterior.");
+		this.name = "StaleCacheRequestError";
+		this.code = "STALE_CACHE_REQUEST";
+	}
+}
 
 function getStorage() {
 	if (typeof window === "undefined") return null;
@@ -192,6 +201,7 @@ export function configureAppDataCache(user) {
 	}
 
 	activeCacheScope = nextScope;
+	cacheGeneration += 1;
 	cache.clear();
 	hydratePersistentCache();
 }
@@ -248,6 +258,7 @@ function invalidateCache(match) {
 }
 
 export function clearAppDataCache() {
+	cacheGeneration += 1;
 	cache.clear();
 	clearPersistedScope();
 	hydratedCacheScope = null;
@@ -257,6 +268,8 @@ async function loadCached(key, fetcher, options = {}) {
 	hydratePersistentCache();
 	const { force = false, ttlMs = DEFAULT_TTL_MS } = options;
 	const entry = cache.get(key);
+	const requestScope = activeCacheScope;
+	const requestGeneration = cacheGeneration;
 
 	if (!force && hasFreshCache(key, ttlMs)) {
 		return readCache(key);
@@ -267,10 +280,23 @@ async function loadCached(key, fetcher, options = {}) {
 	}
 
 	const request = fetcher()
-		.then((data) => writeCache(key, data))
+		.then((data) => {
+			if (
+				activeCacheScope !== requestScope ||
+				cacheGeneration !== requestGeneration
+			) {
+				throw new StaleCacheRequestError();
+			}
+			return writeCache(key, data);
+		})
 		.catch((error) => {
-			const current = cache.get(key);
-			if (current) current.promise = null;
+			if (
+				activeCacheScope === requestScope &&
+				cacheGeneration === requestGeneration
+			) {
+				const current = cache.get(key);
+				if (current) current.promise = null;
+			}
 			throw error;
 		});
 

@@ -337,6 +337,7 @@ export function AdminDashboard({
 	const [commission, setCommission] = useState("50");
 	const [sendInviteNow, setSendInviteNow] = useState(true);
 	const [isSubmittingBarber, setIsSubmittingBarber] = useState(false);
+	const [invitingBarberId, setInvitingBarberId] = useState("");
 	const [panelMessage, setPanelMessage] = useState("");
 	const [panelError, setPanelError] = useState("");
 	const [lastInviteUrl, setLastInviteUrl] = useState("");
@@ -414,6 +415,7 @@ export function AdminDashboard({
 	};
 
 	const handleInvite = async (barber) => {
+		if (invitingBarberId) return;
 		if (!barber.email) {
 			setPanelError("Informe um email para este barbeiro antes de convidar.");
 			return;
@@ -422,6 +424,7 @@ export function AdminDashboard({
 		setPanelMessage("");
 		setPanelError("");
 		setLastInviteUrl("");
+		setInvitingBarberId(barber.id);
 		try {
 			const result = await sendBarberInvite(barber.id, { email: barber.email });
 			setLastInviteUrl(result.inviteUrl || "");
@@ -430,9 +433,17 @@ export function AdminDashboard({
 					"Convite enviado e link pronto para copiar."
 				:	"Convite enviado.",
 			);
-			await onReload();
+			try {
+				await onReload();
+			} catch {
+				setPanelMessage((message) =>
+					`${message} Atualize a lista para conferir o novo acesso.`,
+				);
+			}
 		} catch (error) {
 			setPanelError(error.message || "Nao foi possivel enviar convite.");
+		} finally {
+			setInvitingBarberId("");
 		}
 	};
 
@@ -754,11 +765,14 @@ export function AdminDashboard({
 													Acesso ativo
 												</span>
 											:	<button
-													type="button"
-													onClick={() => handleInvite(barber)}
-													className="rounded-md border border-border px-3 py-2 font-mono-ui text-[10px] text-foreground-faint">
-													Enviar convite
-												</button>
+												type="button"
+												onClick={() => handleInvite(barber)}
+												disabled={Boolean(invitingBarberId)}
+												className="rounded-md border border-border px-3 py-2 font-mono-ui text-[10px] text-foreground-faint disabled:opacity-50">
+												{invitingBarberId === barber.id ?
+													"Enviando…"
+												: 	"Enviar convite"}
+											</button>
 											}
 										</div>
 									</div>

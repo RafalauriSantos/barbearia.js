@@ -11,6 +11,14 @@ export const API_BASE_URL =
 export const API_TIMEOUT_MS = Number(
 	import.meta.env.VITE_API_TIMEOUT_MS || 75000,
 );
+export const SESSION_EXPIRED_EVENT = "gestor-barbearia:session-expired";
+
+function expireSession() {
+	clearSessionTokens();
+	if (typeof window !== "undefined") {
+		window.dispatchEvent(new Event(SESSION_EXPIRED_EVENT));
+	}
+}
 
 export class AppApiError extends Error {
 	constructor(message, status, details) {
@@ -50,7 +58,7 @@ export const apiClient = axios.create({
 	timeout: API_TIMEOUT_MS,
 });
 
-let refreshRequest = null;
+const refreshRequests = new Map();
 let warmUpRequest = null;
 
 export function warmUpApi() {
@@ -75,6 +83,8 @@ export function warmUpApi() {
 
 apiClient.interceptors.request.use((config) => {
 	const token = getAccessToken();
+	config._sessionAccessToken = token;
+	config._sessionRefreshToken = getRefreshToken();
 	if (token) {
 		config.headers = config.headers || {};
 		config.headers.Authorization = `Bearer ${token}`;
@@ -87,8 +97,18 @@ apiClient.interceptors.response.use(
 	async (error) => {
 		const status = error?.response?.status;
 		const originalRequest = error?.config;
-		const refreshToken = getRefreshToken();
+		const refreshToken = originalRequest?._sessionRefreshToken || "";
+		const requestAccessToken = originalRequest?._sessionAccessToken || "";
+		const currentRefreshToken = getRefreshToken();
+		const sameSession =
+			refreshToken ?
+				refreshToken === currentRefreshToken
+			: 	requestAccessToken === getAccessToken();
 		const isRefreshRequest = originalRequest?.url?.includes("/auth/refresh");
+
+		if (status === 401 && originalRequest && !sameSession) {
+			return Promise.reject(toAppApiError(error));
+		}
 
 		if (
 			status === 401 &&
@@ -100,19 +120,26 @@ apiClient.interceptors.response.use(
 			originalRequest._retry = true;
 
 			try {
-				refreshRequest =
-					refreshRequest ||
-					axios
+				let refreshRequest = refreshRequests.get(refreshToken);
+				if (!refreshRequest) {
+					refreshRequest = axios
 						.post(
 							`${API_BASE_URL}/auth/refresh`,
 							{ refreshToken },
 							{ timeout: API_TIMEOUT_MS },
 						)
 						.finally(() => {
-							refreshRequest = null;
+							if (refreshRequests.get(refreshToken) === refreshRequest) {
+								refreshRequests.delete(refreshToken);
+							}
 						});
+					refreshRequests.set(refreshToken, refreshRequest);
+				}
 
 				const response = await refreshRequest;
+				if (getRefreshToken() !== refreshToken) {
+					return Promise.reject(toAppApiError(error));
+				}
 				const newAccessToken = response.data?.accessToken;
 				if (!newAccessToken) {
 					throw new Error("Refresh response missing accessToken.");
@@ -123,11 +150,17 @@ apiClient.interceptors.response.use(
 				originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
 				return apiClient(originalRequest);
 			} catch (refreshError) {
-				clearSessionTokens();
+				if (getRefreshToken() === refreshToken) {
+					expireSession();
+				}
 				return Promise.reject(
 					toAppApiError(refreshError, "Sessao expirada. Entre novamente."),
 				);
 			}
+		}
+
+		if (status === 401 && sameSession && getAccessToken()) {
+			expireSession();
 		}
 
 		return Promise.reject(toAppApiError(error));

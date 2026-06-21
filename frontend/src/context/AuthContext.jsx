@@ -19,6 +19,7 @@ import {
 	configureAppDataCache,
 	prefetchAppData,
 } from "@/lib/store";
+import { SESSION_EXPIRED_EVENT } from "@/lib/api/client";
 
 const AuthContext = createContext(null);
 const AUTH_USER_SNAPSHOT_KEY = "gestor_barbearia_auth_user_v1";
@@ -70,6 +71,14 @@ export function AuthProvider({ children }) {
 		return Boolean(getAccessToken() && !readUserSnapshot());
 	});
 
+	const clearAuthenticatedState = useCallback(() => {
+		clearAppDataCache();
+		clearSessionTokens();
+		clearUserSnapshot();
+		setUser(null);
+		setIsLoading(false);
+	}, []);
+
 	const loadCurrentUser = useCallback(async () => {
 		const token = getAccessToken();
 		if (!token) {
@@ -100,6 +109,16 @@ export function AuthProvider({ children }) {
 	useEffect(() => {
 		loadCurrentUser();
 	}, [loadCurrentUser]);
+
+	useEffect(() => {
+		window.addEventListener(SESSION_EXPIRED_EVENT, clearAuthenticatedState);
+		return () => {
+			window.removeEventListener(
+				SESSION_EXPIRED_EVENT,
+				clearAuthenticatedState,
+			);
+		};
+	}, [clearAuthenticatedState]);
 
 	const login = useCallback(async ({ email, password }) => {
 		const session = await loginRequest({ email, password });
@@ -151,12 +170,7 @@ export function AuthProvider({ children }) {
 		return currentUser;
 	}, []);
 
-	const logout = useCallback(() => {
-		clearAppDataCache();
-		clearSessionTokens();
-		clearUserSnapshot();
-		setUser(null);
-	}, []);
+	const logout = clearAuthenticatedState;
 
 	const value = useMemo(
 		() => ({

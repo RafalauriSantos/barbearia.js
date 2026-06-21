@@ -118,7 +118,7 @@ async function ensureOwnerWorkspace(user) {
 function resolveDevUserContext() {
 	// Legacy local fallback: only used when the user is not linked to a shop
 	// owner record or a barber profile.
-	if (!env.DEFAULT_BARBEARIA_ID) {
+	if (env.NODE_ENV === "production" || !env.DEFAULT_BARBEARIA_ID) {
 		return {
 			role: "admin",
 			barbearia_id: null,

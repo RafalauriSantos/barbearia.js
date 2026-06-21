@@ -11,8 +11,8 @@ async function getCurrentUser(request) {
 }
 
 exports.list = async (request, reply) => {
-	const user = await getCurrentUser(request);
 	const query = validateListAppointmentsQuery(request.query || {});
+	const user = await getCurrentUser(request);
 	const appointments = await AppointmentsService.listAppointments(
 		query,
 		user,
@@ -21,16 +21,16 @@ exports.list = async (request, reply) => {
 };
 
 exports.create = async (request, reply) => {
-	const user = await getCurrentUser(request);
 	const payload = validateCreateAppointment(request.body);
+	const user = await getCurrentUser(request);
 	const created = await AppointmentsService.createAppointment(payload, user);
 	return reply.code(201).send(created);
 };
 
 exports.update = async (request, reply) => {
-	const user = await getCurrentUser(request);
 	const payload = validateUpdateAppointment(request.body);
-	
+	const user = await getCurrentUser(request);
+
 	const updated = await AppointmentsService.updateAppointment(
 		request.params.id,
 		payload,

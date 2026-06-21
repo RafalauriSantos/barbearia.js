@@ -1,5 +1,22 @@
 const { z } = require("zod");
 
+const dateString = z
+	.string()
+	.regex(/^\d{4}-\d{2}-\d{2}$/, "Use date format YYYY-MM-DD")
+	.refine((value) => {
+		const [year, month, day] = value.split("-").map(Number);
+		const date = new Date(Date.UTC(year, month - 1, day));
+		return (
+			date.getUTCFullYear() === year &&
+			date.getUTCMonth() === month - 1 &&
+			date.getUTCDate() === day
+		);
+	}, "Use a valid calendar date");
+
+const timeString = z
+	.string()
+	.regex(/^([01]\d|2[0-3]):[0-5]\d$/, "Use time format HH:MM");
+
 const itemSchema = z.object({
 	id: z.string().min(1),
 	name: z.string().min(1).optional(),
@@ -13,22 +30,22 @@ const itemSchema = z.object({
 
 const appointmentSchema = z.object({
 	cliente_nome: z.string().min(1).optional(),
-	data: z.string().min(1).optional(),
-	hora: z.string().min(1).optional(),
+	data: dateString.optional(),
+	hora: timeString.optional(),
 	barbearia_id: z.union([z.string(), z.number()]).optional(),
 	barbeiro_id: z.string().min(1).optional(),
 	cliente_id: z.string().uuid().nullable().optional(),
 	client_name: z.string().min(1).optional(),
-	day_key: z.string().min(1).optional(),
-	time_slot: z.string().min(1).optional(),
+	day_key: dateString.optional(),
+	time_slot: timeString.optional(),
 	value: z.coerce.number().nonnegative().optional(),
 	status: z.enum(["normal", "paid", "fiado"]).optional(),
 	service_id: z.string().optional(),
 	service_name: z.string().optional(),
 	services: z.array(itemSchema).optional(),
 	products: z.array(itemSchema).optional(),
-	prazo_date: z.string().nullable().optional(),
-	payment_date: z.string().nullable().optional(),
+	prazo_date: dateString.nullable().optional(),
+	payment_date: dateString.nullable().optional(),
 	barber_name: z.string().optional(),
 	forma_pagamento_id: z.string().uuid().nullable().optional(),
 	payment_method_id: z.string().uuid().nullable().optional(),
@@ -39,8 +56,8 @@ const appointmentSchema = z.object({
 });
 
 const listQuerySchema = z.object({
-	data: z.string().min(1).optional(),
-	day_key: z.string().min(1).optional(),
+	data: dateString.optional(),
+	day_key: dateString.optional(),
 	barbeiro_id: z.string().min(1).optional(),
 	barber_id: z.string().min(1).optional(),
 });
