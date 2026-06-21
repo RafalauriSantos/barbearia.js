@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { readFileSync } from "node:fs";
 
 const user = {
 	id: "user-e2e",
@@ -24,7 +25,7 @@ async function installSession(page) {
 	}, user);
 }
 
-async function installApi(page) {
+async function installApi(page, { expandedTeam = false } = {}) {
 	const state = {
 		appointmentStatus: "normal",
 		inviteCalls: 0,
@@ -62,6 +63,27 @@ async function installApi(page) {
 					barbearia_id: "shop-e2e",
 					comissao_percent: 50,
 				},
+				...(expandedTeam ?
+					[
+						{
+							id: "barber-3",
+							nome: "Renan",
+							email: "renan@example.com",
+							usuario_id: "user-renan",
+							barbearia_id: "shop-e2e",
+							comissao_percent: 50,
+						},
+						{
+							id: "barber-4",
+							nome: "Lucas",
+							email: "lucas@example.com",
+							usuario_id: null,
+							convite_pendente: true,
+							barbearia_id: "shop-e2e",
+							comissao_percent: 45,
+						},
+					]
+				: []),
 			]);
 		}
 		if (path === "/barbers/barber-2/invite" && method === "POST") {
@@ -82,6 +104,32 @@ async function installApi(page) {
 					services: [{ id: "service-1", name: "Corte", price: 50, quantity: 1 }],
 					products: [],
 				},
+				...(expandedTeam ?
+					[
+						{
+							id: "appointment-samuel",
+							client_name: "Rafael Souza",
+							day_key: url.searchParams.get("data"),
+							time_slot: "09:30",
+							value: 50,
+							status: "normal",
+							barbeiro_id: "barber-2",
+							services: [{ id: "service-1", name: "Corte masculino", price: 50, quantity: 1 }],
+							products: [],
+						},
+						{
+							id: "appointment-renan",
+							client_name: "Bruno Lima",
+							day_key: url.searchParams.get("data"),
+							time_slot: "11:00",
+							value: 40,
+							status: "paid",
+							barbeiro_id: "barber-3",
+							services: [{ id: "service-2", name: "Barba", price: 40, quantity: 1 }],
+							products: [],
+						},
+					]
+				: []),
 			]);
 		}
 		if (path === "/agendamentos/appointment-e2e" && method === "PATCH") {
@@ -147,12 +195,58 @@ test("public entry leads to a working authenticated agenda", async ({ page }) =>
 
 test("barber invitation ignores a repeated click while pending", async ({ page }) => {
 	await installSession(page);
-	const state = await installApi(page);
+	const captureTeam = Boolean(process.env.CAPTURE_TEAM_SCREEN);
+	if (captureTeam) {
+		await page.addInitScript(() => {
+			localStorage.setItem("gestor_barbearia_theme", "dark");
+		});
+		await page.clock.setFixedTime(new Date("2026-06-21T08:00:00"));
+	}
+	const state = await installApi(page, { expandedTeam: captureTeam });
+	if (captureTeam) {
+		await page.setViewportSize({ width: 390, height: 844 });
+	}
 	await page.goto("/team");
+	if (captureTeam) {
+		await expect(page.getByText(/barbeiros · .* atendimentos hoje/)).toBeVisible();
+		await page.screenshot({
+			path: "test-results/team-screen-390x844.png",
+			fullPage: false,
+		});
+	}
 	await page.getByLabel("Gerenciar equipe").first().click();
-	await page.getByRole("button", { name: "Enviar convite" }).dblclick();
+	await page.getByRole("button", { name: "Enviar convite" }).first().dblclick();
 	await expect(page.getByText(/Convite enviado e link pronto para copiar/)).toBeVisible();
 	expect(state.inviteCalls).toBe(1);
+
+	if (captureTeam) {
+		const sourceImage = readFileSync(
+			"C:\\Users\\Rafael lauri\\.codex\\generated_images\\019e8ab7-deef-7e21-a026-15c311161326\\exec-57207ac2-2707-48c9-a194-eb023aee6277.png",
+			"base64",
+		);
+		const implementationImage = readFileSync(
+			"test-results/team-screen-390x844.png",
+			"base64",
+		);
+		await page.setViewportSize({ width: 820, height: 900 });
+		await page.setContent(`
+			<style>
+				body { margin: 0; background: #050a08; color: #f5f3eb; font: 14px sans-serif; }
+				main { display: grid; grid-template-columns: 390px 390px; gap: 16px; padding: 12px; }
+				figure { margin: 0; }
+				figcaption { height: 28px; font-weight: 700; }
+				img { display: block; width: 390px; height: 844px; object-fit: cover; object-position: top; }
+			</style>
+			<main>
+				<figure><figcaption>Referencia aprovada</figcaption><img src="data:image/png;base64,${sourceImage}" /></figure>
+				<figure><figcaption>Implementacao 390 x 844</figcaption><img src="data:image/png;base64,${implementationImage}" /></figure>
+			</main>
+		`);
+		await page.screenshot({
+			path: "test-results/team-design-comparison.png",
+			fullPage: true,
+		});
+	}
 });
 
 test("agenda drag marks fiado and confirms a paid method", async ({ page }) => {

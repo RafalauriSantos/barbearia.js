@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { ChevronRight, Copy, Plus, UsersRound, X } from "lucide-react";
 import { AppointmentDialog } from "@/components/AppointmentDialog";
 import { EmptyState, IconButton, Notice } from "@/components/ScreenPrimitives";
 import { addBarber, formatCurrency, sendBarberInvite } from "@/lib/store";
@@ -36,8 +37,8 @@ function getAppointmentSummary(appointment) {
 }
 
 function accessLabel(barber) {
-	if (barber.usuario_id) return "Acesso ativo";
-	if (barber.convite_pendente) return "Convite pendente";
+	if (barber.usuario_id) return "Acesso liberado";
+	if (barber.convite_pendente) return "Acesso pendente";
 	return "Sem acesso";
 }
 
@@ -86,25 +87,6 @@ function groupAppointmentsByBarber(appointments) {
 	return grouped;
 }
 
-function getPaidTotal(rows) {
-	return rows
-		.filter((appointment) => appointment.status === "paid")
-		.reduce((sum, appointment) => sum + Number(appointment.value || 0), 0);
-}
-
-function getPendingTotal(rows) {
-	return rows
-		.filter((appointment) => appointment.status === "fiado")
-		.reduce((sum, appointment) => sum + Number(appointment.value || 0), 0);
-}
-
-function getFreeSlots(rows, slots) {
-	const occupied = new Set(
-		rows.map((appointment) => String(appointment.time_slot || "").slice(0, 5)),
-	);
-	return Math.max(slots.length - occupied.size, 0);
-}
-
 function isTodayKey(dayKey) {
 	const today = new Date();
 	const currentDayKey = `${today.getFullYear()}-${String(
@@ -134,111 +116,87 @@ function getAppointmentsByTime(rows) {
 	return map;
 }
 
-function BarberMetric({ label, value, tone = "default" }) {
-	const tones = {
-		default: "bg-background-deep text-foreground",
-		paid: "bg-paid/10 text-paid",
-		fiado: "bg-fiado/10 text-fiado",
-	};
-
-	return (
-		<div className={`min-w-0 rounded-md px-2 py-2 ${tones[tone]}`}>
-			<p className="truncate font-mono-ui text-[9px] uppercase text-foreground-faint">
-				{label}
-			</p>
-			<p className="mt-1 truncate font-value text-sm leading-none">{value}</p>
-		</div>
-	);
+function getInitials(name) {
+	const parts = String(name || "")
+		.trim()
+		.split(/\s+/)
+		.filter(Boolean);
+	if (parts.length === 0) return "?";
+	if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+	return `${parts[0][0] || ""}${parts[parts.length - 1][0] || ""}`.toUpperCase();
 }
 
-function AppointmentPreview({ appointment }) {
-	return (
-		<div className="rounded-md border border-border bg-background-deep px-3 py-2">
-			<div className="flex items-center justify-between gap-2">
-				<p className="font-mono-ui text-xs text-foreground">
-					{String(appointment.time_slot || "").slice(0, 5)}
-				</p>
-				<span
-					className={`rounded-full border px-2 py-0.5 font-mono-ui text-[9px] ${statusTone(
-						appointment.status,
-					)}`}>
-					{statusLabel(appointment.status)}
-				</span>
-			</div>
-			<p className="mt-1 truncate font-client text-sm text-foreground">
-				{appointment.client_name}
-			</p>
-		</div>
-	);
-}
-
-function BarberCard({ barber, rows, slots, dayKey, onSelect, onAdd }) {
+function TeamBarberRow({ barber, rows, dayKey, onSelect, onAdd }) {
 	const nextAppointment = getNextAppointment(rows, dayKey);
-	const freeSlots = getFreeSlots(rows, slots);
+	const accessDot =
+		barber.usuario_id ? "bg-paid"
+		: barber.convite_pendente ? "bg-fiado"
+		: "bg-overdue";
+	const accessText =
+		barber.usuario_id ? "text-paid"
+		: barber.convite_pendente ? "text-fiado"
+		: "text-overdue";
 
 	return (
-		<article className="rounded-lg border border-border bg-card p-4">
-			<div className="flex items-start justify-between gap-3">
+		<article className="grid min-h-[92px] grid-cols-[40px_minmax(82px,0.95fr)_minmax(64px,1fr)_auto] items-center gap-1.5 px-3 py-3 sm:min-h-[96px] sm:grid-cols-[48px_minmax(110px,0.9fr)_minmax(140px,1.2fr)_auto] sm:gap-4 sm:px-5">
+			<div className="flex h-10 w-10 items-center justify-center rounded-full bg-paid/10 font-logo text-sm text-foreground sm:h-12 sm:w-12 sm:text-base">
+				{getInitials(barber.name)}
+			</div>
+			<div className="contents">
 				<div className="min-w-0">
-					<div className="flex min-w-0 items-center gap-2">
-						<p className="truncate font-logo text-xl leading-tight text-foreground">
-							{barber.name}
-						</p>
-						<span
-							className={`shrink-0 rounded-full border px-2 py-0.5 font-mono-ui text-[9px] ${accessTone(
-								barber,
-							)}`}>
-							{accessLabel(barber)}
-						</span>
-					</div>
-					<p className="mt-1 truncate font-client text-sm text-foreground-faint">
-						{nextAppointment ?
-							`Próximo ${String(nextAppointment.time_slot || "").slice(0, 5)} · ${
-								nextAppointment.client_name
-							}`
-						:	"Sem próximos atendimentos"}
+				<p className="truncate font-client text-[13px] font-semibold text-foreground sm:text-sm">
+						{barber.name}
 					</p>
+				<p className={`mt-1 flex min-w-0 items-center gap-1.5 font-client text-[9px] sm:text-xs ${accessText}`}>
+					<span aria-hidden="true" className={`h-2 w-2 shrink-0 rounded-full ${accessDot}`} />
+					<span className="whitespace-nowrap">{accessLabel(barber)}</span>
+				</p>
+				<p className="mt-1.5 whitespace-nowrap font-client text-[8px] text-foreground-faint sm:text-[10px]">
+					Próximo atendimento
+				</p>
 				</div>
-				<IconButton
-					label={`Adicionar cliente para ${barber.name}`}
-					onClick={() => onAdd(barber.id)}
-					tone="primary">
-					+
-				</IconButton>
+				<div className="min-w-0 border-l border-border pl-2 sm:pl-4">
+					{nextAppointment ?
+						<>
+						<p className="font-value text-[11px] tabular-nums text-foreground sm:text-xs">
+								{String(nextAppointment.time_slot || "").slice(0, 5)}
+							</p>
+						<p className="mt-1 truncate font-client text-[11px] text-foreground sm:text-xs">
+								{nextAppointment.client_name}
+							</p>
+							<p className="mt-1 truncate font-client text-[10px] text-foreground-faint sm:text-xs">
+								{getAppointmentSummary(nextAppointment)}
+							</p>
+						</>
+					:	<>
+						<p className="font-client text-[11px] font-medium text-foreground sm:text-xs">
+								Agenda livre
+							</p>
+							<p className="mt-1 text-xs text-foreground-faint">—</p>
+						</>
+					}
+				</div>
+			<div className="flex items-center gap-0 border-l border-border pl-1 sm:gap-2 sm:pl-3">
+				<span className="hidden whitespace-nowrap font-client text-[10px] text-foreground-faint min-[380px]:block sm:text-xs">
+						{rows.length} hoje
+					</span>
+					<IconButton
+						label={`Adicionar cliente para ${barber.name}`}
+						onClick={() => onAdd(barber.id)}
+						tone="quiet"
+					className="h-8 w-8 text-paid hover:text-paid sm:h-9 sm:w-9">
+						<Plus aria-hidden="true" className="h-5 w-5" strokeWidth={2} />
+					</IconButton>
+					<IconButton
+						label={`Abrir agenda de ${barber.name}`}
+						onClick={() => onSelect(barber.id)}
+						tone="quiet"
+					className="h-8 w-8 text-foreground sm:h-9 sm:w-9">
+						<ChevronRight aria-hidden="true" className="h-5 w-5" strokeWidth={2} />
+					</IconButton>
+				</div>
 			</div>
 
-			<div className="mt-3 grid grid-cols-3 gap-2">
-				<BarberMetric label="Hoje" value={rows.length} />
-				<BarberMetric label="Livres" value={freeSlots} />
-				<BarberMetric
-					label="Recebido"
-					value={formatCurrency(getPaidTotal(rows))}
-					tone="paid"
-				/>
-			</div>
-
-			<div className="mt-3 space-y-2">
-				{rows.length === 0 ?
-					<p className="rounded-md border border-dashed border-border bg-background-deep px-3 py-4 text-center font-mono-ui text-[10px] text-foreground-faint">
-						Agenda livre neste dia
-					</p>
-				:	rows
-						.slice(0, 2)
-						.map((appointment) => (
-							<AppointmentPreview
-								key={appointment.id}
-								appointment={appointment}
-							/>
-						))
-				}
-			</div>
-
-			<button
-				type="button"
-				onClick={() => onSelect(barber.id)}
-				className="mt-3 w-full rounded-md border border-border bg-background-deep px-4 py-3 font-mono-ui text-xs text-foreground transition-colors hover:bg-secondary">
-				Ver agenda do barbeiro
-			</button>
 		</article>
 	);
 }
@@ -325,9 +283,13 @@ export function AdminDashboard({
 	errorMessage,
 	onRetry,
 	onReload,
+	teamSheetOpen: controlledTeamSheetOpen,
+	onTeamSheetOpenChange,
 }) {
 	const [dialogOpen, setDialogOpen] = useState(false);
-	const [teamSheetOpen, setTeamSheetOpen] = useState(false);
+	const [internalTeamSheetOpen, setInternalTeamSheetOpen] = useState(false);
+	const teamSheetOpen = controlledTeamSheetOpen ?? internalTeamSheetOpen;
+	const setTeamSheetOpen = onTeamSheetOpenChange ?? setInternalTeamSheetOpen;
 	const [editingAppt, setEditingAppt] = useState();
 	const [defaultBarberId, setDefaultBarberId] = useState("");
 	const [defaultTimeSlot, setDefaultTimeSlot] = useState("09:00");
@@ -336,6 +298,7 @@ export function AdminDashboard({
 	const [email, setEmail] = useState("");
 	const [commission, setCommission] = useState("50");
 	const [sendInviteNow, setSendInviteNow] = useState(true);
+	const [createFormOpen, setCreateFormOpen] = useState(false);
 	const [isSubmittingBarber, setIsSubmittingBarber] = useState(false);
 	const [invitingBarberId, setInvitingBarberId] = useState("");
 	const [panelMessage, setPanelMessage] = useState("");
@@ -352,11 +315,6 @@ export function AdminDashboard({
 		activeBarberId === "all" ? null : (
 			barbers.find((barber) => barber.id === activeBarberId) || null
 		);
-	const nextTeamAppointment = getNextAppointment(appointments, dayKey);
-	const totalSlots = slots.length * barbers.length;
-	const freeSlots = Math.max(totalSlots - appointments.length, 0);
-	const paidTotal = getPaidTotal(appointments);
-	const pendingTotal = getPendingTotal(appointments);
 
 	useEffect(() => {
 		if (
@@ -400,6 +358,7 @@ export function AdminDashboard({
 			setEmail("");
 			setCommission("50");
 			setSendInviteNow(true);
+			setCreateFormOpen(false);
 			setLastInviteUrl(created.inviteUrl || "");
 			setPanelMessage(
 				created.inviteUrl ?
@@ -479,81 +438,14 @@ export function AdminDashboard({
 					</div>
 				)}
 
-				<section className="px-4 py-3">
-					<div className="flex items-center justify-between gap-3">
-						<div className="min-w-0">
-							<p className="font-mono-ui text-[10px] uppercase text-foreground-faint">
-								Equipe
-							</p>
-							<p className="mt-1 font-client text-sm text-foreground-faint">
-								{barbers.length} barbeiros na equipe
-							</p>
-						</div>
-						<IconButton
-							label="Gerenciar equipe"
-							type="button"
-							onClick={() => setTeamSheetOpen(true)}>
-							∷
-						</IconButton>
+				<section className="px-4 py-4">
+					<div className="flex items-center gap-3 py-1 text-foreground-faint">
+						<UsersRound aria-hidden="true" className="h-5 w-5 shrink-0 text-paid" strokeWidth={2} />
+						<p className="font-client text-sm sm:text-base">
+							{barbers.length} barbeiros · {appointments.length} atendimentos hoje
+						</p>
 					</div>
 
-					<div className="mt-3 grid grid-cols-2 gap-2">
-						<BarberMetric label="Barbeiros" value={barbers.length} />
-						<BarberMetric label="Atendimentos" value={appointments.length} />
-						<BarberMetric label="Livres" value={freeSlots} />
-						<BarberMetric
-							label="Próximo"
-							value={
-								nextTeamAppointment ?
-									String(nextTeamAppointment.time_slot || "").slice(0, 5)
-								:	"--"
-							}
-						/>
-					</div>
-
-					<div className="mt-2 grid grid-cols-2 gap-2">
-						<BarberMetric
-							label="Recebido"
-							value={formatCurrency(paidTotal)}
-							tone="paid"
-						/>
-						<BarberMetric
-							label="A cobrar"
-							value={formatCurrency(pendingTotal)}
-							tone="fiado"
-						/>
-					</div>
-
-					{barbers.length > 0 && (
-						<div className="mt-3 flex gap-2 overflow-x-auto pb-1">
-							<button
-								type="button"
-								onClick={() => setActiveBarberId("all")}
-								className={`shrink-0 rounded-full border px-3 py-2 font-mono-ui text-[10px] ${
-									activeBarberId === "all" ?
-										"border-paid/40 bg-paid/10 text-paid"
-									:	"border-border bg-card text-foreground-faint"
-								}`}>
-								Todos · {appointments.length}
-							</button>
-							{barbers.map((barber) => {
-								const count = (grouped.get(barber.id) || []).length;
-								return (
-									<button
-										type="button"
-										key={barber.id}
-										onClick={() => setActiveBarberId(barber.id)}
-										className={`shrink-0 rounded-full border px-3 py-2 font-mono-ui text-[10px] ${
-											activeBarberId === barber.id ?
-												"border-paid/40 bg-paid/10 text-paid"
-											:	"border-border bg-card text-foreground-faint"
-										}`}>
-										{barber.name} · {count}
-									</button>
-								);
-							})}
-						</div>
-					)}
 				</section>
 
 				{selectedBarber && (
@@ -568,9 +460,9 @@ export function AdminDashboard({
 				)}
 
 				{!selectedBarber && (
-					<section className="grid gap-3 px-4 pb-6 lg:grid-cols-2">
+					<section className="px-4 pb-6">
 						{isLoading && barbers.length === 0 && (
-							<p className="rounded-md border border-border bg-card px-3 py-2 font-mono-ui text-[10px] uppercase text-foreground-faint lg:col-span-2">
+							<p className="rounded-md border border-border bg-card px-3 py-2 font-mono-ui text-[10px] uppercase text-foreground-faint">
 								Atualizando equipe...
 							</p>
 						)}
@@ -587,17 +479,18 @@ export function AdminDashboard({
 									</IconButton>
 								}
 							/>
-						:	barbers.map((barber) => (
-								<BarberCard
-									key={barber.id}
-									barber={barber}
-									rows={grouped.get(barber.id) || []}
-									slots={slots}
-									dayKey={dayKey}
-									onSelect={setActiveBarberId}
-									onAdd={openNewForBarber}
-								/>
-							))
+						:	<div className="divide-y divide-border overflow-hidden rounded-lg border border-border bg-card/30">
+								{barbers.map((barber) => (
+									<TeamBarberRow
+										key={barber.id}
+										barber={barber}
+										rows={grouped.get(barber.id) || []}
+										dayKey={dayKey}
+										onSelect={setActiveBarberId}
+										onAdd={openNewForBarber}
+									/>
+								))}
+							</div>
 						}
 					</section>
 				)}
@@ -623,12 +516,20 @@ export function AdminDashboard({
 								label="Fechar"
 								type="button"
 								onClick={() => setTeamSheetOpen(false)}>
-								×
+								<X aria-hidden="true" className="h-5 w-5" strokeWidth={2} />
 							</IconButton>
 						</div>
 
 						<div className="space-y-3 px-4 py-4">
-							<form
+							{!createFormOpen ?
+								<button
+									type="button"
+									onClick={() => setCreateFormOpen(true)}
+									className="flex w-full items-center justify-center gap-2 rounded-md border border-paid/30 bg-paid/10 px-4 py-3 font-client text-sm font-semibold text-paid transition-colors hover:bg-paid/15">
+									<Plus aria-hidden="true" className="h-4 w-4" strokeWidth={2} />
+									Adicionar barbeiro
+								</button>
+							:	<form
 								onSubmit={handleCreateBarber}
 								className="space-y-3 rounded-lg border border-border bg-card p-4">
 								<div className="flex items-center justify-between gap-3">
@@ -646,10 +547,11 @@ export function AdminDashboard({
 								</div>
 
 								<div>
-									<label className="mb-1 block font-mono-ui text-[10px] text-foreground-faint">
+									<label htmlFor="team-barber-name" className="mb-1 block font-mono-ui text-[10px] text-foreground-faint">
 										Nome
 									</label>
 									<input
+										id="team-barber-name"
 										value={name}
 										onChange={(event) => setName(event.target.value)}
 										className="w-full rounded-md border border-border bg-secondary px-3 py-3 text-sm text-foreground"
@@ -659,10 +561,11 @@ export function AdminDashboard({
 									/>
 								</div>
 								<div>
-									<label className="mb-1 block font-mono-ui text-[10px] text-foreground-faint">
+									<label htmlFor="team-barber-email" className="mb-1 block font-mono-ui text-[10px] text-foreground-faint">
 										Email de acesso
 									</label>
 									<input
+										id="team-barber-email"
 										type="email"
 										value={email}
 										onChange={(event) => setEmail(event.target.value)}
@@ -673,10 +576,11 @@ export function AdminDashboard({
 								</div>
 								<div className="grid grid-cols-[1fr_auto] gap-3">
 									<div>
-										<label className="mb-1 block font-mono-ui text-[10px] text-foreground-faint">
+										<label htmlFor="team-barber-commission" className="mb-1 block font-mono-ui text-[10px] text-foreground-faint">
 											Comissão %
 										</label>
 										<input
+											id="team-barber-commission"
 											type="number"
 											min="0"
 											max="100"
@@ -702,9 +606,10 @@ export function AdminDashboard({
 									type="submit"
 									disabled={isSubmittingBarber}
 									className="w-full rounded-md bg-foreground px-4 py-3 font-mono-ui text-xs text-primary-foreground disabled:opacity-60">
-									{isSubmittingBarber ? "Salvando..." : "Adicionar barbeiro"}
+									{isSubmittingBarber ? "Salvando..." : "Salvar barbeiro"}
 								</button>
 							</form>
+							}
 
 							{(panelMessage || panelError) && (
 								<Notice tone={panelError ? "error" : "success"}>
@@ -724,12 +629,12 @@ export function AdminDashboard({
 											className="min-w-0 rounded-md border border-paid/20 bg-background px-3 py-2 font-mono-ui text-[10px] text-foreground"
 											onFocus={(event) => event.target.select()}
 										/>
-										<button
-											type="button"
+										<IconButton
+											label="Copiar link do convite"
 											onClick={handleCopyInviteLink}
-											className="rounded-md bg-paid px-3 py-2 font-mono-ui text-[10px] text-primary-foreground">
-											Copiar
-										</button>
+											tone="primary">
+											<Copy aria-hidden="true" className="h-4 w-4" strokeWidth={2} />
+										</IconButton>
 									</div>
 									<p className="mt-2 font-client text-xs leading-snug text-foreground-faint">
 										Se o email demorar ou cair no spam, envie este link pelo WhatsApp.
@@ -737,11 +642,11 @@ export function AdminDashboard({
 								</div>
 							)}
 
-							<div className="space-y-2">
+							<div className="divide-y divide-border overflow-hidden rounded-lg border border-border bg-card/40">
 								{barbers.map((barber) => (
 									<div
 										key={barber.id}
-										className="rounded-lg border border-border bg-card p-3">
+										className="px-3 py-3">
 										<div className="flex items-start justify-between gap-3">
 											<div className="min-w-0">
 												<p className="truncate font-client text-sm text-foreground">
@@ -756,24 +661,21 @@ export function AdminDashboard({
 												{accessLabel(barber)}
 											</span>
 										</div>
-										<div className="mt-3 flex items-center justify-between gap-2">
+										<div className="mt-2 flex items-center justify-between gap-2">
 											<p className="font-mono-ui text-[10px] text-foreground-faint">
 												Comissão {barber.comissao_percent}%
 											</p>
-											{barber.usuario_id ?
-												<span className="rounded-md border border-paid/25 bg-paid/10 px-3 py-2 font-mono-ui text-[10px] text-paid">
-													Acesso ativo
-												</span>
-											:	<button
-												type="button"
+											{!barber.usuario_id && (
+												<button
+													type="button"
 												onClick={() => handleInvite(barber)}
 												disabled={Boolean(invitingBarberId)}
 												className="rounded-md border border-border px-3 py-2 font-mono-ui text-[10px] text-foreground-faint disabled:opacity-50">
 												{invitingBarberId === barber.id ?
 													"Enviando…"
 												: 	"Enviar convite"}
-											</button>
-											}
+												</button>
+											)}
 										</div>
 									</div>
 								))}

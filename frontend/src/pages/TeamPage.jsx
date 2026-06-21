@@ -1,15 +1,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { ChevronLeft, ChevronRight, Settings } from "lucide-react";
 import { BottomNav } from "@/components/BottomNav";
 import { AdminDashboard } from "@/components/AdminDashboard";
 import {
-	DateStepper,
 	EmptyState,
 	IconButton,
 	ScreenHeader,
 } from "@/components/ScreenPrimitives";
 import {
-	formatDateDisplay,
 	formatDayKey,
 	getCachedAppointmentsForDay,
 	getCachedBarbers,
@@ -48,6 +47,24 @@ function getOwnerBarberIds(barbers, user) {
 	return ids;
 }
 
+function formatTeamDate(date) {
+	const months = [
+		"janeiro",
+		"fevereiro",
+		"março",
+		"abril",
+		"maio",
+		"junho",
+		"julho",
+		"agosto",
+		"setembro",
+		"outubro",
+		"novembro",
+		"dezembro",
+	];
+	return `${date.getDate()} de ${months[date.getMonth()]}`;
+}
+
 export default function TeamPage() {
 	const navigate = useNavigate();
 	const { user } = useAuth();
@@ -64,6 +81,7 @@ export default function TeamPage() {
 	);
 	const hasLoadedRef = useRef(Boolean(initialAppointments && initialBarbers));
 	const [errorMessage, setErrorMessage] = useState("");
+	const [teamSheetOpen, setTeamSheetOpen] = useState(false);
 	const dayKey = formatDayKey(currentDate);
 	const ownerBarberIds = useMemo(
 		() => getOwnerBarberIds(barbers, user),
@@ -161,22 +179,30 @@ export default function TeamPage() {
 
 	return (
 		<div className="app-shell flex flex-col overflow-hidden bg-background">
-			<ScreenHeader
-				eyebrow="Equipe"
-				title="Gestão"
-				action={
+			<header className="z-50 shrink-0 border-b border-border bg-background/95 px-4 py-6 backdrop-blur">
+				<div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 sm:gap-4">
+					<h1 className="min-w-0 truncate font-logo text-lg leading-none text-foreground sm:text-xl">
+						Equipe
+					</h1>
+					<div className="flex items-center justify-center gap-1.5 sm:gap-3">
+						<IconButton label="Dia anterior" onClick={prevDay} className="h-9 w-9">
+							<ChevronLeft aria-hidden="true" className="h-5 w-5" strokeWidth={2} />
+						</IconButton>
+						<span className="w-[88px] text-center font-client text-[13px] font-semibold text-foreground sm:w-[120px] sm:text-sm">
+							{formatTeamDate(currentDate)}
+						</span>
+						<IconButton label="Próximo dia" onClick={nextDay} className="h-9 w-9">
+							<ChevronRight aria-hidden="true" className="h-5 w-5" strokeWidth={2} />
+						</IconButton>
+					</div>
 					<IconButton
-						label="Configurações"
-						onClick={() => navigate("/settings")}>
-						⚙
+						label="Gerenciar equipe"
+						onClick={() => setTeamSheetOpen(true)}
+						className="h-9 w-9 justify-self-end">
+						<Settings aria-hidden="true" className="h-5 w-5" strokeWidth={2} />
 					</IconButton>
-				}>
-				<DateStepper
-					label={formatDateDisplay(currentDate)}
-					onPrev={prevDay}
-					onNext={nextDay}
-				/>
-			</ScreenHeader>
+				</div>
+			</header>
 
 			<AdminDashboard
 				dayKey={dayKey}
@@ -186,9 +212,11 @@ export default function TeamPage() {
 				errorMessage={errorMessage}
 				onRetry={reloadAll}
 				onReload={reloadAll}
+				teamSheetOpen={teamSheetOpen}
+				onTeamSheetOpenChange={setTeamSheetOpen}
 			/>
 
-			<BottomNav />
+			<BottomNav variant="minimal" />
 		</div>
 	);
 }
