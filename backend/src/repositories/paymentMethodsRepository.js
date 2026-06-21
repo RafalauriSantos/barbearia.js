@@ -7,7 +7,6 @@ const DEFAULT_ORDER = {
 	cartao_credito: 40,
 	credito_parcelado: 50,
 	fiado: 60,
-	outro: 100,
 };
 
 function toApi(row) {

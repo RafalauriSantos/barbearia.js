@@ -334,8 +334,7 @@ VALUES ('dinheiro', 'Dinheiro', 0, 20),
         0,
         50
     ),
-    ('fiado', 'Fiado', 0, 60),
-    ('outro', 'Outro', 0, 100) ON CONFLICT (codigo) DO
+    ('fiado', 'Fiado', 0, 60) ON CONFLICT (codigo) DO
 UPDATE
 SET
     nome = EXCLUDED.nome;
