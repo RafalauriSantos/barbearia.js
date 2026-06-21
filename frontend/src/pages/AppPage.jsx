@@ -399,8 +399,11 @@ function PaymentQuickSheet({
 					</p>
 				:	<>
 						<div className="mt-4 grid grid-cols-2 gap-2">
-							{availableMethods.map((method) => {
+							{availableMethods.map((method, index) => {
 								const isActive = method.id === selectedMethod?.id;
+								const fillsLastRow =
+									availableMethods.length % 2 === 1 &&
+									index === availableMethods.length - 1;
 								return (
 									<button
 										key={method.id}
@@ -411,7 +414,7 @@ function PaymentQuickSheet({
 											isActive ?
 												"border-paid/50 bg-paid/15 text-foreground"
 											:	"border-border bg-card text-foreground-faint hover:border-paid/30"
-										}`}>
+										} ${fillsLastRow ? "col-span-2" : ""}`}>
 										<span className="block truncate font-client text-sm font-semibold">
 											{method.name}
 										</span>

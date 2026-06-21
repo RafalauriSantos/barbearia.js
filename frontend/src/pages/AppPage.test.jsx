@@ -296,6 +296,40 @@ describe("AppPage barber avatar row", () => {
 		});
 	});
 
+	it("expands the last payment method when the grid has an odd count", async () => {
+		storeMock.loadPaymentMethods.mockResolvedValueOnce([
+			{ id: "method-pix", code: "pix", name: "Pix", fee_percent: 0 },
+			{ id: "method-cash", code: "dinheiro", name: "Dinheiro", fee_percent: 0 },
+			{ id: "method-debit", code: "cartao_debito", name: "Cartao de debito", fee_percent: 1 },
+			{ id: "method-credit", code: "cartao_credito", name: "Cartao de credito", fee_percent: 2 },
+			{ id: "method-installments", code: "credito_parcelado", name: "Credito parcelado", fee_percent: 3 },
+		]);
+		storeMock.getAppointmentsForDayWithFilters.mockResolvedValue([
+			{
+				id: "appt-owner",
+				client_name: "Cliente Owner",
+				time_slot: "09:00",
+				value: 100,
+				status: "normal",
+			},
+		]);
+
+		render(
+			<MemoryRouter initialEntries={["/app"]}>
+				<AppPage />
+			</MemoryRouter>,
+		);
+
+		const row = await screen.findByRole("button", { name: /Cliente Owner/i });
+		fireEvent.mouseDown(row, { clientX: 120, clientY: 30, button: 0, buttons: 1 });
+		fireEvent.mouseMove(row, { clientX: 220, clientY: 34, buttons: 1 });
+		fireEvent.mouseUp(row, { clientX: 220, clientY: 34, buttons: 0 });
+
+		expect(await screen.findByText("Receber atendimento")).toBeTruthy();
+		const lastMethod = screen.getByRole("button", { name: /Credito parcelado/i });
+		expect(lastMethod.className).toContain("col-span-2");
+	});
+
 	it("marks a pending appointment as fiado when swiped left", async () => {
 		let status = "normal";
 		storeMock.getAppointmentsForDayWithFilters.mockImplementation(
