@@ -43,11 +43,6 @@ function NavIcon({ name }) {
 				<path d="M7 9h1M16 15h1" {...common} />
 			</svg>
 		),
-		costs: (
-			<svg viewBox="0 0 24 24" aria-hidden="true" className="h-4 w-4">
-				<path d="M5 7h14M7 7l1 13h8l1-13M10 11v5M14 11v5M10 4h4l1 3H9l1-3Z" {...common} />
-			</svg>
-		),
 	};
 	return icons[name] || null;
 }
@@ -58,7 +53,6 @@ const baseTabs = [
 	{ path: "/clients", label: "Clientes", icon: "clients" },
 	{ path: "/services", label: "Serviços", icon: "services" },
 	{ path: "/financial", label: "Caixa", icon: "cash" },
-	{ path: "/expenses", label: "Custos", icon: "costs" },
 ];
 
 // Barra fixa embaixo para trocar de tela.

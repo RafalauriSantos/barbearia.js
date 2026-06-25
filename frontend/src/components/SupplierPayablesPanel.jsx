@@ -9,6 +9,10 @@ import {
 	loadProducts,
 	addSupplierPurchase,
 } from "@/lib/store";
+import { AppApiError } from "@/lib/api/client";
+
+const OFFLINE_ERROR_MESSAGE =
+	"Sem conexao com a internet ou a API esta indisponivel. Tente novamente.";
 
 function formatDate(value) {
 	return value ? value.split("-").reverse().join("/") : "Sem data";
@@ -29,7 +33,6 @@ export function SupplierPayablesPanel({ startDate, endDate, onChanged }) {
 	const [purchaseSupplier, setPurchaseSupplier] = useState("");
 	const [purchaseProduct, setPurchaseProduct] = useState("");
 	const [purchaseQuantity, setPurchaseQuantity] = useState("1");
-	const [purchaseCost, setPurchaseCost] = useState("");
 	const [purchasePaid, setPurchasePaid] = useState(false);
 	const selectedProduct = useMemo(
 		() => products.find((product) => product.id === purchaseProduct) || null,
@@ -47,7 +50,11 @@ export function SupplierPayablesPanel({ startDate, endDate, onChanged }) {
 		try {
 			setRows(await loadSupplierPayables(query, { force: true }));
 		} catch (error) {
-			setErrorMessage(error.message || "Falha ao carregar fornecedores.");
+			setErrorMessage(
+				error instanceof AppApiError && error.kind === "network" ?
+					OFFLINE_ERROR_MESSAGE
+				:	error.message || "Falha ao carregar fornecedores.",
+			);
 		} finally {
 			setIsLoading(false);
 		}
@@ -76,7 +83,11 @@ export function SupplierPayablesPanel({ startDate, endDate, onChanged }) {
 			await reload();
 			onChanged?.();
 		} catch (error) {
-			setErrorMessage(error.message || "Falha ao baixar fornecedor.");
+			setErrorMessage(
+				error instanceof AppApiError && error.kind === "network" ?
+					OFFLINE_ERROR_MESSAGE
+				:	error.message || "Falha ao baixar fornecedor.",
+			);
 		} finally {
 			setIsSaving(false);
 		}
@@ -86,11 +97,8 @@ export function SupplierPayablesPanel({ startDate, endDate, onChanged }) {
 		const id = e.target.value;
 		setPurchaseProduct(id);
 		const prod = products.find((product) => product.id === id);
-		if (prod && prod.cost_price) {
-			setPurchaseCost(prod.cost_price.toString());
-			if (prod.supplier_name && !purchaseSupplier) {
-				setPurchaseSupplier(prod.supplier_name);
-			}
+		if (prod?.supplier_name && !purchaseSupplier) {
+			setPurchaseSupplier(prod.supplier_name);
 		}
 	};
 
@@ -101,26 +109,20 @@ export function SupplierPayablesPanel({ startDate, endDate, onChanged }) {
 		setErrorMessage("");
 
 		const quantity = parseInt(purchaseQuantity, 10);
-		let cost = 0;
-		if (purchaseCost) {
-			// Handle format like "10,50" -> 10.50
-			const costStr = purchaseCost.replace(/\./g, "").replace(",", ".");
-			cost = parseFloat(costStr);
-		}
+		const cost = Number(selectedProduct?.cost_price || 0);
 
 		try {
 			await addSupplierPurchase({
 				produto_id: purchaseProduct,
 				fornecedor: purchaseSupplier,
 				quantidade: quantity,
-				custo_unitario: cost || 0,
+				custo_unitario: cost,
 				foi_pago_a_vista: purchasePaid,
 			});
 			setShowPurchaseForm(false);
 			setPurchaseSupplier("");
 			setPurchaseProduct("");
 			setPurchaseQuantity("1");
-			setPurchaseCost("");
 			setPurchasePaid(false);
 			await reload();
 			onChanged?.();
@@ -131,9 +133,9 @@ export function SupplierPayablesPanel({ startDate, endDate, onChanged }) {
 		}
 	};
 
+	const purchaseUnitCost = Number(selectedProduct?.cost_price || 0);
 	const purchaseTotal = (
-		parseInt(purchaseQuantity || "0", 10) *
-		parseFloat(purchaseCost.replace(/\./g, "").replace(",", ".") || "0")
+		parseInt(purchaseQuantity || "0", 10) * purchaseUnitCost
 	).toFixed(2);
 
 	return (
@@ -310,12 +312,6 @@ export function SupplierPayablesPanel({ startDate, endDate, onChanged }) {
 										</option>
 									))}
 								</select>
-								{selectedProduct && (
-									<p className="mt-2 font-mono-ui text-[10px] text-foreground-faint">
-										Atual: {selectedProduct.name} | estoque{" "}
-										{selectedProduct.stock_quantity}
-									</p>
-								)}
 							</label>
 
 							<label className="block">
@@ -347,49 +343,34 @@ export function SupplierPayablesPanel({ startDate, endDate, onChanged }) {
 										className="w-full rounded-md border border-border bg-secondary px-3 py-3 text-sm text-foreground"
 									/>
 								</label>
-								<label className="block">
-									<span className="mb-1 block font-mono-ui text-[10px] text-foreground-faint">
-										Custo unitário (R$)
-									</span>
-									<input
-										required
-										type="text"
-										inputMode="decimal"
-										placeholder="0,00"
-										value={purchaseCost}
-										onChange={(e) => setPurchaseCost(e.target.value)}
-										className="w-full rounded-md border border-border bg-secondary px-3 py-3 text-sm text-foreground"
-									/>
-								</label>
 							</div>
 
-							<div className="rounded-md bg-card p-3 border border-border">
-								<div className="flex justify-between items-center mb-3">
-									<span className="font-mono-ui text-[10px] text-foreground-faint">
-										VALOR TOTAL:
+							<div className="rounded-md border border-border bg-card p-3">
+								<div className="flex items-center justify-between">
+									<span className="font-mono-ui text-[10px] uppercase text-foreground-faint">
+										Valor total
 									</span>
 									<span className="font-value text-lg text-foreground">
 										R$ {purchaseTotal}
 									</span>
 								</div>
-
-								<label className="block">
-									<span className="mb-2 block font-mono-ui text-[10px] text-foreground-faint">
-										Situação do pagamento
-									</span>
-									<div className="grid grid-cols-2 gap-1 rounded-lg border border-border bg-background-deep p-1">
-										<button
-											type="button"
-											onClick={() => setPurchasePaid(true)}
-											className={`rounded-md py-2.5 font-mono-ui text-xs ${purchasePaid ? "bg-secondary text-paid" : "text-foreground-faint"}`}>
-											Pago à vista
-										</button>
-										<button
-											type="button"
-											onClick={() => setPurchasePaid(false)}
-											className={`rounded-md py-2.5 font-mono-ui text-xs ${!purchasePaid ? "bg-secondary text-fiado" : "text-foreground-faint"}`}>
-											A prazo / Consignado
-										</button>
+								<p className="mt-2 font-client text-xs text-foreground-faint">
+									Calculado com o custo do produto no catálogo.
+								</p>
+								<label className="mt-3 flex items-center gap-3 rounded-md border border-border bg-background-deep px-3 py-3">
+									<input
+										type="checkbox"
+										checked={purchasePaid}
+										onChange={(event) => setPurchasePaid(event.target.checked)}
+										className="h-4 w-4 rounded border-border"
+									/>
+									<div>
+										<p className="font-mono-ui text-[10px] uppercase text-foreground-faint">
+											Compra paga agora
+										</p>
+										<p className="font-client text-xs text-foreground-faint">
+											Marque só se já foi quitada.
+										</p>
 									</div>
 								</label>
 							</div>
