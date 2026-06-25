@@ -2,6 +2,7 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import LoginPage from "./LoginPage";
+import { AppApiError } from "@/lib/api/client";
 
 const authMock = vi.hoisted(() => ({
 	login: vi.fn(),
@@ -69,5 +70,35 @@ describe("LoginPage signup feedback", () => {
 		expect(
 			screen.getByRole("link", { name: "Esqueci minha senha" }),
 		).toBeTruthy();
+	});
+
+	it("shows an offline message when login cannot reach the API", async () => {
+		authMock.login.mockRejectedValueOnce(
+			new AppApiError("Sem conexao", undefined, undefined),
+		);
+
+		const { container } = render(
+			<MemoryRouter>
+				<LoginPage />
+			</MemoryRouter>,
+		);
+
+		const inputs = container.querySelectorAll("input");
+		fireEvent.change(inputs[0], {
+			target: { value: "cliente@example.com" },
+		});
+		fireEvent.change(inputs[1], {
+			target: { value: "SenhaTeste123" },
+		});
+
+		fireEvent.click(container.querySelector('button[type="submit"]'));
+
+		await waitFor(() => {
+			expect(
+				screen.getByText(
+					"Sem conexao com a internet ou a API esta indisponivel. Tente novamente.",
+				),
+			).toBeTruthy();
+		});
 	});
 });

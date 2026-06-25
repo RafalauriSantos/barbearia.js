@@ -1,13 +1,15 @@
 import { useEffect, useState } from "react";
 import { Link, Navigate, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
-import { warmUpApi } from "@/lib/api/client";
+import { AppApiError, warmUpApi } from "@/lib/api/client";
 import { BrandName } from "@/components/BrandName";
 
 const SIGNUP_SUCCESS_MESSAGE =
 	"Conta criada. Enviamos um codigo de 6 digitos para seu email.";
 const PENDING_VERIFICATION_EMAIL_KEY =
 	"gestor_barbearia_pending_verification_email";
+const OFFLINE_ERROR_MESSAGE =
+	"Sem conexao com a internet ou a API esta indisponivel. Tente novamente.";
 
 export default function LoginPage() {
 	const { isAuthenticated, isLoading, login, signup } = useAuth();
@@ -66,6 +68,10 @@ export default function LoginPage() {
 			}
 			navigate(from, { replace: true });
 		} catch (error) {
+			if (error instanceof AppApiError && error.kind === "network") {
+				setErrorMessage(OFFLINE_ERROR_MESSAGE);
+				return;
+			}
 			setErrorMessage(
 				error.message ||
 					(mode === "signup" ?
@@ -218,7 +224,6 @@ export default function LoginPage() {
 							className="block w-full rounded-md border border-border px-6 py-3 text-center font-mono-ui text-xs text-foreground-faint transition-colors hover:text-foreground">
 							Esqueci minha senha
 						</Link>
-
 					</form>
 				</div>
 			</div>

@@ -30,3 +30,12 @@ exports.pay = async function (id, payload, user) {
 	return SupplierPayablesRepository.pay(id, payload.payment_date, context);
 };
 
+exports.createPurchase = async function (payload, user) {
+	const context = contextFor(user);
+	// We need to pass barbeiroId so the receivable belongs to the admin who created it, or null
+	return SupplierPayablesRepository.createPurchase(payload, {
+		barbeariaId: context.barbeariaId,
+		barbeiroId: user.barbeiro_id || null,
+	});
+};
+

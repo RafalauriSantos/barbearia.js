@@ -12,3 +12,13 @@ exports.validateSupplierPayablesQuery = (query) =>
 exports.validatePaySupplierPayable = (body) =>
 	z.object({ payment_date: dateSchema }).parse(body || {});
 
+exports.validateCreatePurchase = (body) =>
+	z.object({
+		produto_id: z.string().uuid(),
+		fornecedor: z.string().min(1),
+		quantidade: z.number().int().positive(),
+		custo_unitario: z.number().nonnegative(),
+		foi_pago_a_vista: z.boolean(),
+		data_compra: dateSchema.optional(),
+	}).parse(body || {});
+

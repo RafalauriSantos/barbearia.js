@@ -10,3 +10,8 @@ export async function paySupplierPayableById(id, payload) {
 	return response.data;
 }
 
+export async function createSupplierPurchase(payload) {
+	const response = await apiClient.post("/supplier-payables", payload);
+	return response.data;
+}
+

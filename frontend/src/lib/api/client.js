@@ -12,6 +12,23 @@ export const API_TIMEOUT_MS = Number(
 	import.meta.env.VITE_API_TIMEOUT_MS || 75000,
 );
 export const SESSION_EXPIRED_EVENT = "gestor-barbearia:session-expired";
+const NETWORK_ERROR_MESSAGE =
+	"Sem conexao com a internet ou a API esta indisponivel. Tente novamente.";
+
+function isNetworkError(error) {
+	if (error?.response) return false;
+	const code = String(error?.code || "").toUpperCase();
+	const message = String(error?.message || "").toLowerCase();
+	return (
+		code === "ERR_NETWORK" ||
+		code === "ERR_INTERNET_DISCONNECTED" ||
+		code === "ECONNREFUSED" ||
+		code === "ENOTFOUND" ||
+		message.includes("network error") ||
+		message.includes("internet disconnected") ||
+		message.includes("failed to fetch")
+	);
+}
 
 function expireSession() {
 	clearSessionTokens();
@@ -26,11 +43,20 @@ export class AppApiError extends Error {
 		this.name = "AppApiError";
 		this.status = status;
 		this.details = details;
+		this.kind = status == null ? "network" : "http";
 	}
 }
 
 function toAppApiError(error, fallbackMessage) {
 	if (error instanceof AppApiError) return error;
+
+	if (isNetworkError(error)) {
+		return new AppApiError(
+			fallbackMessage || NETWORK_ERROR_MESSAGE,
+			undefined,
+			error?.response?.data,
+		);
+	}
 
 	const status = error?.response?.status;
 	const details = error?.response?.data;
@@ -103,7 +129,7 @@ apiClient.interceptors.response.use(
 		const sameSession =
 			refreshToken ?
 				refreshToken === currentRefreshToken
-			: 	requestAccessToken === getAccessToken();
+			:	requestAccessToken === getAccessToken();
 		const isRefreshRequest = originalRequest?.url?.includes("/auth/refresh");
 
 		if (status === 401 && originalRequest && !sameSession) {

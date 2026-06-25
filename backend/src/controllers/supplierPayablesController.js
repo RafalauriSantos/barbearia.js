@@ -30,3 +30,14 @@ exports.pay = async (request, reply) => {
 	);
 };
 
+exports.createPurchase = async (request, reply) => {
+	const user = await currentUser(request);
+	const { validateCreatePurchase } = require("../validators/supplierPayables.schema");
+	return reply.code(201).send(
+		await SupplierPayablesService.createPurchase(
+			validateCreatePurchase(request.body),
+			user,
+		),
+	);
+};
+

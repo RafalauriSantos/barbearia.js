@@ -6,7 +6,11 @@ import {
 	useMemo,
 	useState,
 } from "react";
-import { clearSessionTokens, getAccessToken, setSessionTokens } from "@/lib/auth";
+import {
+	clearSessionTokens,
+	getAccessToken,
+	setSessionTokens,
+} from "@/lib/auth";
 import {
 	login as loginRequest,
 	me as fetchCurrentUser,
@@ -20,6 +24,7 @@ import {
 	prefetchAppData,
 } from "@/lib/store";
 import { SESSION_EXPIRED_EVENT } from "@/lib/api/client";
+import { AppApiError } from "@/lib/api/client";
 
 const AuthContext = createContext(null);
 const AUTH_USER_SNAPSHOT_KEY = "gestor_barbearia_auth_user_v1";
@@ -95,7 +100,11 @@ export function AuthProvider({ children }) {
 			setUser(currentUser);
 			void prefetchAppData(currentUser);
 			return currentUser;
-		} catch {
+		} catch (error) {
+			if (error instanceof AppApiError && error.kind === "network") {
+				setIsLoading(false);
+				return null;
+			}
 			clearAppDataCache();
 			clearSessionTokens();
 			clearUserSnapshot();
@@ -133,12 +142,9 @@ export function AuthProvider({ children }) {
 		return currentUser;
 	}, []);
 
-	const signup = useCallback(
-		async ({ email, password }) => {
-			return registerRequest({ email, password });
-		},
-		[],
-	);
+	const signup = useCallback(async ({ email, password }) => {
+		return registerRequest({ email, password });
+	}, []);
 
 	const verifyEmailCode = useCallback(async ({ email, code }) => {
 		const session = await verifyEmailCodeRequest({ email, code });

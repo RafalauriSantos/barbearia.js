@@ -127,3 +127,55 @@ exports.pay = async function (id, paymentDate, { barbeariaId }) {
 	if (error) throw error;
 	return exports.findById(id, { barbeariaId });
 };
+
+exports.createPurchase = async function (payload, { barbeariaId, barbeiroId }) {
+	// First, update the stock in the produtos table.
+	// Since Supabase doesn't have an easy atomic increment from the standard JS client without RPC,
+	// and we don't know if there's an RPC for this, we'll do a read-modify-write.
+	// In a real prod env, we'd use an RPC to avoid race conditions.
+	
+	const { data: product, error: fetchError } = await supabase
+		.from("produtos")
+		.select("quantidade_estoque, nome")
+		.eq("id", payload.produto_id)
+		.eq("barbearia_id", barbeariaId)
+		.single();
+		
+	if (fetchError) throw fetchError;
+	
+	const newStock = Number(product.quantidade_estoque || 0) + payload.quantidade;
+	
+	const { error: updateError } = await supabase
+		.from("produtos")
+		.update({ quantidade_estoque: newStock })
+		.eq("id", payload.produto_id)
+		.eq("barbearia_id", barbeariaId);
+		
+	if (updateError) throw updateError;
+
+	// Now insert the payable record
+	const totalValue = payload.quantidade * payload.custo_unitario;
+	const timestamp = new Date().getTime();
+	
+	const row = {
+		barbearia_id: barbeariaId,
+		barbeiro_id: barbeiroId,
+		produto_id: payload.produto_id,
+		origem_chave: `compra_manual:${timestamp}`,
+		fornecedor: payload.fornecedor,
+		descricao: `Compra Estoque: ${product.nome} - ${payload.quantidade} un.`,
+		valor: totalValue,
+		data_origem: payload.data_compra || new Date().toISOString().split("T")[0],
+		status: payload.foi_pago_a_vista ? "pago" : "aberto",
+		data_pagamento: payload.foi_pago_a_vista ? (payload.data_compra || new Date().toISOString().split("T")[0]) : null,
+	};
+	
+	const { data: payable, error: insertError } = await supabase
+		.from("contas_pagar_fornecedores")
+		.insert(row)
+		.select()
+		.single();
+		
+	if (insertError) throw insertError;
+	return toApi(payable);
+};

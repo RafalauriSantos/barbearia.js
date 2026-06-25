@@ -53,7 +53,10 @@ describe("API client session isolation", () => {
 
 	it("does not refresh or expire a new session for an old request", async () => {
 		setSession("access-a", "refresh-a");
-		const requestConfig = mocks.handlers.request({ headers: {}, url: "/profile" });
+		const requestConfig = mocks.handlers.request({
+			headers: {},
+			url: "/profile",
+		});
 		setSession("access-b", "refresh-b");
 
 		await expect(
@@ -76,7 +79,10 @@ describe("API client session isolation", () => {
 		const refresh = deferred();
 		mocks.axios.post.mockReturnValue(refresh.promise);
 		setSession("access-a", "refresh-a");
-		const requestConfig = mocks.handlers.request({ headers: {}, url: "/profile" });
+		const requestConfig = mocks.handlers.request({
+			headers: {},
+			url: "/profile",
+		});
 		const pendingResponse = mocks.handlers.responseFailure({
 			response: { status: 401, data: { error: "Unauthorized" } },
 			config: requestConfig,
@@ -97,7 +103,10 @@ describe("API client session isolation", () => {
 			data: { accessToken: "refreshed-access-a" },
 		});
 		setSession("access-a", "refresh-a");
-		const requestConfig = mocks.handlers.request({ headers: {}, url: "/profile" });
+		const requestConfig = mocks.handlers.request({
+			headers: {},
+			url: "/profile",
+		});
 
 		await mocks.handlers.responseFailure({
 			response: { status: 401, data: { error: "Unauthorized" } },
@@ -112,6 +121,32 @@ describe("API client session isolation", () => {
 		expect(mocks.apiClient).toHaveBeenCalledTimes(1);
 		expect(localStorage.getItem("gestor_barbearia_access_token")).toBe(
 			"refreshed-access-a",
+		);
+	});
+
+	it("returns a network-specific error when the API is unreachable", async () => {
+		setSession("access-a", "refresh-a");
+		const requestConfig = mocks.handlers.request({
+			headers: {},
+			url: "/profile",
+		});
+
+		await expect(
+			mocks.handlers.responseFailure({
+				code: "ERR_NETWORK",
+				message: "Network Error",
+				config: requestConfig,
+			}),
+		).rejects.toMatchObject({
+			kind: "network",
+			message:
+				"Sem conexao com a internet ou a API esta indisponivel. Tente novamente.",
+		});
+		expect(localStorage.getItem("gestor_barbearia_access_token")).toBe(
+			"access-a",
+		);
+		expect(localStorage.getItem("gestor_barbearia_refresh_token")).toBe(
+			"refresh-a",
 		);
 	});
 });

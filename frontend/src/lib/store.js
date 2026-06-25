@@ -59,6 +59,7 @@ import {
 import {
 	listSupplierPayables,
 	paySupplierPayableById,
+	createSupplierPurchase,
 } from "@/lib/api/supplierPayables.api";
 
 const DEFAULT_TTL_MS = 60000;
@@ -521,6 +522,13 @@ export async function paySupplierPayable(id, payload) {
 	invalidateCache("expenses:");
 	invalidateCache("financial:");
 	return payable;
+}
+
+export async function addSupplierPurchase(payload) {
+	const purchase = await createSupplierPurchase(payload);
+	invalidateCache("supplierPayables:");
+	invalidateCache("products");
+	return purchase;
 }
 // ── Services ──
 
