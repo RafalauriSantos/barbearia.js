@@ -24,7 +24,9 @@
 				}
 			})();
 		</script>
-		<title>Marque’s Barbearia | Sistema de agenda e caixa para barbearias</title>
+		<title>
+			Marque’s Barbearia | Sistema de agenda e caixa para barbearias
+		</title>
 		<meta
 			name="description"
 			content="Sistema simples para barbearias controlarem agenda, caixa, equipe, produtos, despesas e fiados em um painel operacional." />
@@ -48,7 +50,11 @@
 				background: #060d0b;
 				color: #fff;
 				font-family:
-					Aptos, "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont,
+					Aptos,
+					"Segoe UI",
+					system-ui,
+					-apple-system,
+					BlinkMacSystemFont,
 					sans-serif;
 			}
 			.static-landing * {
@@ -283,7 +289,11 @@
 		</style>
 		<script>
 			(() => {
-				const apiUrl = "https://kurt-api.onrender.com";
+				const envApiUrl = "%VITE_API_URL%";
+				const apiUrl =
+					envApiUrl && !envApiUrl.includes("VITE_API_URL") ?
+						envApiUrl
+					:	"http://localhost:3000";
 
 				try {
 					const endpoint = `${apiUrl.replace(/\/+$/, "")}/health/db`;
@@ -299,8 +309,12 @@
 		<meta property="og:type" content="website" />
 		<meta property="og:site_name" content="Marque’s Barbearia" />
 		<meta property="og:url" content="https://kurt-barbearia.vercel.app/" />
-		<meta property="og:title" content="Marque’s Barbearia | Sistema de agenda e caixa para barbearias" />
-		<meta name="twitter:title" content="Marque’s Barbearia | Sistema de agenda e caixa para barbearias" />
+		<meta
+			property="og:title"
+			content="Marque’s Barbearia | Sistema de agenda e caixa para barbearias" />
+		<meta
+			name="twitter:title"
+			content="Marque’s Barbearia | Sistema de agenda e caixa para barbearias" />
 		<meta
 			property="og:description"
 			content="Controle agendamentos, caixa, equipe, produtos, despesas e fiados em um painel feito para a rotina da barbearia." />
@@ -310,7 +324,9 @@
 		<meta
 			property="og:image"
 			content="https://kurt-barbearia.vercel.app/images/landing-hero-barbershop.webp" />
-		<meta property="og:image:alt" content="Marque’s Barbearia em uso no balcão da barbearia" />
+		<meta
+			property="og:image:alt"
+			content="Marque’s Barbearia em uso no balcão da barbearia" />
 		<meta
 			name="twitter:image"
 			content="https://kurt-barbearia.vercel.app/images/landing-hero-barbershop.webp" />
@@ -342,7 +358,9 @@
 			<main class="static-landing" aria-label="Marque’s Barbearia">
 				<section class="static-hero">
 					<picture>
-						<source srcset="/images/landing-hero-barbershop.webp" type="image/webp" />
+						<source
+							srcset="/images/landing-hero-barbershop.webp"
+							type="image/webp" />
 						<img
 							src="/images/landing-hero-barbershop.png"
 							width="1400"
@@ -354,7 +372,10 @@
 						<a class="static-brand" href="/">
 							<span class="static-mark" aria-hidden="true"></span>
 							<span>
-								<strong class="static-wordmark"><span class="static-marques">Marque’s</span><span class="static-barbearia">Barbearia</span></strong>
+								<strong class="static-wordmark"
+									><span class="static-marques">Marque’s</span
+									><span class="static-barbearia">Barbearia</span></strong
+								>
 								<span class="static-tagline">Operação em tempo real</span>
 							</span>
 						</a>
@@ -362,14 +383,21 @@
 					</nav>
 					<div class="static-content">
 						<div class="static-copy">
-							<div class="static-kicker">Agenda, caixa e equipe no mesmo ritmo</div>
-							<h1 class="static-title static-wordmark"><span class="static-marques">Marque’s</span><span class="static-barbearia">Barbearia</span></h1>
+							<div class="static-kicker">
+								Agenda, caixa e equipe no mesmo ritmo
+							</div>
+							<h1 class="static-title static-wordmark">
+								<span class="static-marques">Marque’s</span
+								><span class="static-barbearia">Barbearia</span>
+							</h1>
 							<p>
-								Um painel operacional para abrir o dia, atender, receber e fechar
-								o caixa sem depender de caderno, WhatsApp e planilha.
+								Um painel operacional para abrir o dia, atender, receber e
+								fechar o caixa sem depender de caderno, WhatsApp e planilha.
 							</p>
 							<div class="static-actions">
-								<a class="static-button static-button-primary" href="/login?mode=signup">
+								<a
+									class="static-button static-button-primary"
+									href="/login?mode=signup">
 									Criar acesso
 								</a>
 								<a class="static-button static-button-secondary" href="/login">
