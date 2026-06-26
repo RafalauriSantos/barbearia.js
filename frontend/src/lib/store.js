@@ -61,6 +61,7 @@ import {
 	paySupplierPayableById,
 	createSupplierPurchase,
 } from "@/lib/api/supplierPayables.api";
+import { AppApiError } from "@/lib/api/client";
 
 const DEFAULT_TTL_MS = 60000;
 const PERSISTED_CACHE_MAX_AGE_MS = 1000 * 60 * 60 * 24 * 7;
@@ -90,13 +91,12 @@ function readPersistedCache() {
 
 	try {
 		const parsed = JSON.parse(storage.getItem(CACHE_STORAGE_KEY) || "");
-		if (!parsed || typeof parsed !== "object") return { version: 1, scopes: {} };
+		if (!parsed || typeof parsed !== "object")
+			return { version: 1, scopes: {} };
 		return {
 			version: 1,
 			scopes:
-				parsed.scopes && typeof parsed.scopes === "object" ?
-					parsed.scopes
-				:	{},
+				parsed.scopes && typeof parsed.scopes === "object" ? parsed.scopes : {},
 		};
 	} catch {
 		return { version: 1, scopes: {} };
@@ -197,7 +197,10 @@ function hydratePersistentCache() {
 
 export function configureAppDataCache(user) {
 	const nextScope = getCacheScopeFromUser(user);
-	if (nextScope === activeCacheScope && hydratedCacheScope === activeCacheScope) {
+	if (
+		nextScope === activeCacheScope &&
+		hydratedCacheScope === activeCacheScope
+	) {
 		return;
 	}
 
@@ -215,7 +218,9 @@ function normalizeCacheValue(value) {
 
 function makeStableKey(prefix, params = {}) {
 	const entries = Object.entries(params)
-		.filter(([, value]) => value !== undefined && value !== null && value !== "")
+		.filter(
+			([, value]) => value !== undefined && value !== null && value !== "",
+		)
 		.sort(([first], [second]) => first.localeCompare(second));
 
 	if (entries.length === 0) return prefix;
@@ -227,7 +232,9 @@ function makeStableKey(prefix, params = {}) {
 function readCache(key) {
 	hydratePersistentCache();
 	const entry = cache.get(key);
-	return entry?.data === undefined ? undefined : normalizeCacheValue(entry.data);
+	return entry?.data === undefined ?
+			undefined
+		:	normalizeCacheValue(entry.data);
 }
 
 function hasFreshCache(key, ttlMs = DEFAULT_TTL_MS) {
@@ -332,6 +339,246 @@ const SVC_KEY = "gestor_barbearia_services";
 const PROD_KEY = "gestor_barbearia_products";
 const EXP_KEY = "gestor_barbearia_expenses";
 const PROFILE_KEY = "gestor_barbearia_profile";
+const OFFLINE_APPOINTMENT_QUEUE_KEY =
+	"gestor_barbearia_offline_appointment_queue_v1";
+const OFFLINE_APPOINTMENT_ID_PREFIX = "offline-appt";
+let offlineSyncPromise = null;
+let offlineSyncListenersRegistered = false;
+
+function isNetworkFailure(error) {
+	return error instanceof AppApiError && error.kind === "network";
+}
+
+function isBrowserOnline() {
+	if (typeof navigator === "undefined") return true;
+	return navigator.onLine !== false;
+}
+
+function readOfflineAppointmentQueue() {
+	const storage = getStorage();
+	if (!storage) return [];
+
+	try {
+		const parsed = JSON.parse(
+			storage.getItem(OFFLINE_APPOINTMENT_QUEUE_KEY) || "[]",
+		);
+		if (!Array.isArray(parsed)) return [];
+		return parsed.filter((item) => {
+			return (
+				item &&
+				typeof item === "object" &&
+				item.type === "create" &&
+				typeof item.scope === "string" &&
+				item.payload &&
+				typeof item.payload === "object"
+			);
+		});
+	} catch {
+		return [];
+	}
+}
+
+function readScopedOfflineAppointmentQueue() {
+	return readOfflineAppointmentQueue().filter(
+		(item) => item.scope === activeCacheScope,
+	);
+}
+
+function writeOfflineAppointmentQueue(queue) {
+	const storage = getStorage();
+	if (!storage) return;
+
+	try {
+		storage.setItem(OFFLINE_APPOINTMENT_QUEUE_KEY, JSON.stringify(queue));
+	} catch {
+		// Mantem a fila em memoria durante a sessao caso a quota falhe.
+	}
+}
+
+function sanitizeOfflineAppointmentPayload(payload = {}) {
+	return {
+		client_name: String(payload.client_name || "").trim(),
+		cliente_id: payload.cliente_id || null,
+		day_key: payload.day_key || "",
+		time_slot: payload.time_slot || "09:00",
+		value: Number(payload.value || 0),
+		status: payload.status || "normal",
+		service_id: payload.service_id,
+		service_name: payload.service_name || "",
+		services: Array.isArray(payload.services) ? payload.services : [],
+		products: Array.isArray(payload.products) ? payload.products : [],
+		prazo_date: payload.prazo_date || null,
+		barber_name: payload.barber_name,
+		barbeiro_id: payload.barbeiro_id || "",
+		payment_method_id: payload.payment_method_id,
+		payment_date: payload.payment_date || null,
+	};
+}
+
+function queueOfflineAppointment(payload) {
+	const queue = readOfflineAppointmentQueue();
+	const queued = {
+		id: `${OFFLINE_APPOINTMENT_ID_PREFIX}-${Date.now()}-${Math.random()
+			.toString(16)
+			.slice(2, 8)}`,
+		type: "create",
+		scope: activeCacheScope,
+		createdAt: Date.now(),
+		payload: sanitizeOfflineAppointmentPayload(payload),
+	};
+	queue.push(queued);
+	writeOfflineAppointmentQueue(queue);
+	return queued;
+}
+
+function toQueuedAppointment(queued) {
+	const payload = queued?.payload || {};
+	return {
+		id: queued.id,
+		client_name: payload.client_name || "",
+		cliente_id: payload.cliente_id || null,
+		day_key: payload.day_key || "",
+		time_slot: payload.time_slot || "09:00",
+		value: Number(payload.value || 0),
+		status: payload.status || "normal",
+		service_id: payload.service_id,
+		service_name: payload.service_name || "",
+		services: Array.isArray(payload.services) ? payload.services : [],
+		products: Array.isArray(payload.products) ? payload.products : [],
+		prazo_date: payload.prazo_date || null,
+		barber_name: payload.barber_name,
+		barbeiro_id: payload.barbeiro_id || "",
+		payment_method_id: payload.payment_method_id,
+		payment_date: payload.payment_date || null,
+		offline_pending: true,
+		offline_created_at: queued.createdAt,
+	};
+}
+
+function matchesAppointmentDayAndFilters(appointment, dayKey, filters = {}) {
+	if (!appointment || appointment.day_key !== dayKey) return false;
+	if (filters.barbeiro_id && appointment.barbeiro_id !== filters.barbeiro_id) {
+		return false;
+	}
+	return true;
+}
+
+function mergeAppointmentsWithOfflineQueue(appointments, dayKey, filters = {}) {
+	const queue = readScopedOfflineAppointmentQueue();
+	const queuedAppointments = queue
+		.map(toQueuedAppointment)
+		.filter((appointment) =>
+			matchesAppointmentDayAndFilters(appointment, dayKey, filters),
+		);
+
+	const hasRemoteList = Array.isArray(appointments);
+	if (!hasRemoteList && queuedAppointments.length === 0) {
+		return appointments;
+	}
+
+	const remoteList = hasRemoteList ? appointments : [];
+	const remoteIds = new Set(remoteList.map((item) => item.id));
+	const merged = [
+		...queuedAppointments.filter((item) => !remoteIds.has(item.id)),
+		...remoteList,
+	];
+
+	return merged.sort((first, second) =>
+		String(first.time_slot || "").localeCompare(String(second.time_slot || "")),
+	);
+}
+
+function updateAppointmentCacheWithQueuedItem(queued) {
+	const queuedAppointment = toQueuedAppointment(queued);
+	const dayKey = queuedAppointment.day_key;
+	if (!dayKey) return;
+
+	const keyWithoutFilters = cacheKeys.appointments(dayKey);
+	const cachedDefault = readCache(keyWithoutFilters);
+	writeCache(
+		keyWithoutFilters,
+		mergeAppointmentsWithOfflineQueue(cachedDefault, dayKey, {}),
+	);
+
+	if (queuedAppointment.barbeiro_id) {
+		const keyWithBarber = cacheKeys.appointments(dayKey, {
+			barbeiro_id: queuedAppointment.barbeiro_id,
+		});
+		const cachedByBarber = readCache(keyWithBarber);
+		writeCache(
+			keyWithBarber,
+			mergeAppointmentsWithOfflineQueue(cachedByBarber, dayKey, {
+				barbeiro_id: queuedAppointment.barbeiro_id,
+			}),
+		);
+	}
+}
+
+function invalidateAppointmentRelations() {
+	invalidateCache("appointments:");
+	invalidateCache("financial:");
+	invalidateCache("receivables:");
+	invalidateCache("supplierPayables:");
+}
+
+export async function syncOfflineAppointments() {
+	if (!isBrowserOnline()) return 0;
+	if (offlineSyncPromise) return offlineSyncPromise;
+
+	offlineSyncPromise = (async () => {
+		const queue = readOfflineAppointmentQueue();
+		const scopedQueue = queue.filter((item) => item.scope === activeCacheScope);
+		const otherScopesQueue = queue.filter(
+			(item) => item.scope !== activeCacheScope,
+		);
+		if (scopedQueue.length === 0) return 0;
+
+		const remaining = [];
+		let syncedCount = 0;
+
+		for (const queued of scopedQueue) {
+			try {
+				await createAppointment(queued.payload);
+				syncedCount += 1;
+			} catch (error) {
+				remaining.push(queued);
+				if (isNetworkFailure(error)) {
+					break;
+				}
+			}
+		}
+
+		writeOfflineAppointmentQueue([...otherScopesQueue, ...remaining]);
+		if (syncedCount > 0) {
+			invalidateAppointmentRelations();
+		}
+
+		return syncedCount;
+	})().finally(() => {
+		offlineSyncPromise = null;
+	});
+
+	return offlineSyncPromise;
+}
+
+function registerOfflineSyncListeners() {
+	if (offlineSyncListenersRegistered || typeof window === "undefined") return;
+	offlineSyncListenersRegistered = true;
+
+	window.addEventListener("online", () => {
+		void syncOfflineAppointments();
+	});
+
+	if (typeof document !== "undefined") {
+		document.addEventListener("visibilitychange", () => {
+			if (document.visibilityState === "visible") {
+				void syncOfflineAppointments();
+			}
+		});
+	}
+}
+
+registerOfflineSyncListeners();
 
 // Carrega os dados basicos de perfil.
 export function getCachedProfile() {
@@ -353,44 +600,52 @@ export async function saveProfile(profile) {
 
 // Envia um novo agendamento para o backend.
 export async function addAppointment(appt) {
-	const created = await createAppointment(appt);
-	invalidateCache("appointments:");
-	invalidateCache("financial:");
-	invalidateCache("receivables:");
-	invalidateCache("supplierPayables:");
-	return created;
+	try {
+		const created = await createAppointment(appt);
+		invalidateAppointmentRelations();
+		return created;
+	} catch (error) {
+		if (!isNetworkFailure(error)) throw error;
+
+		const queued = queueOfflineAppointment(appt);
+		updateAppointmentCacheWithQueuedItem(queued);
+		return toQueuedAppointment(queued);
+	}
 }
 
 // Atualiza um agendamento local pelo id.
 export async function updateAppointment(id, updates) {
 	const updated = await updateAppointmentById(id, updates);
-	invalidateCache("appointments:");
-	invalidateCache("financial:");
-	invalidateCache("receivables:");
-	invalidateCache("supplierPayables:");
+	invalidateAppointmentRelations();
 	return updated;
 }
 
 // Exclui um agendamento local pelo id.
 export async function deleteAppointment(id) {
 	await deleteAppointmentById(id);
-	invalidateCache("appointments:");
-	invalidateCache("financial:");
-	invalidateCache("receivables:");
-	invalidateCache("supplierPayables:");
+	invalidateAppointmentRelations();
 }
 
 // Filtra os agendamentos de um dia e ordena por horario.
 export function getCachedAppointmentsForDay(dayKey, filters = {}) {
-	return readCache(cacheKeys.appointments(dayKey, filters));
+	const cached = readCache(cacheKeys.appointments(dayKey, filters));
+	return mergeAppointmentsWithOfflineQueue(cached, dayKey, filters);
 }
 
 export async function getAppointmentsForDay(dayKey, options = {}) {
-	return loadCached(
-		cacheKeys.appointments(dayKey),
-		() => listAppointmentsByDay(dayKey),
-		options,
-	);
+	void syncOfflineAppointments();
+	try {
+		const appointments = await loadCached(
+			cacheKeys.appointments(dayKey),
+			() => listAppointmentsByDay(dayKey),
+			options,
+		);
+		return mergeAppointmentsWithOfflineQueue(appointments, dayKey, {});
+	} catch (error) {
+		if (!isNetworkFailure(error)) throw error;
+		const cached = readCache(cacheKeys.appointments(dayKey));
+		return mergeAppointmentsWithOfflineQueue(cached, dayKey, {});
+	}
 }
 
 export async function getAppointmentsForDayWithFilters(
@@ -398,11 +653,19 @@ export async function getAppointmentsForDayWithFilters(
 	filters = {},
 	options = {},
 ) {
-	return loadCached(
-		cacheKeys.appointments(dayKey, filters),
-		() => listAppointmentsByDay(dayKey, filters),
-		options,
-	);
+	void syncOfflineAppointments();
+	try {
+		const appointments = await loadCached(
+			cacheKeys.appointments(dayKey, filters),
+			() => listAppointmentsByDay(dayKey, filters),
+			options,
+		);
+		return mergeAppointmentsWithOfflineQueue(appointments, dayKey, filters);
+	} catch (error) {
+		if (!isNetworkFailure(error)) throw error;
+		const cached = readCache(cacheKeys.appointments(dayKey, filters));
+		return mergeAppointmentsWithOfflineQueue(cached, dayKey, filters);
+	}
 }
 
 export function getCachedBarbers() {
@@ -966,4 +1229,5 @@ export async function clearAllData() {
 	storage.removeItem(EXP_KEY);
 	storage.removeItem(PROFILE_KEY);
 	storage.removeItem(CACHE_STORAGE_KEY);
+	storage.removeItem(OFFLINE_APPOINTMENT_QUEUE_KEY);
 }
