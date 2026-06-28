@@ -1,6 +1,10 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import {
+	clearStartupMetrics,
+	getStartupMetricsSnapshot,
+} from "@/lib/startupMetrics";
 import AppPage from "./AppPage";
 
 const storeMock = vi.hoisted(() => ({
@@ -74,6 +78,7 @@ function deferred() {
 
 beforeEach(() => {
 	vi.clearAllMocks();
+	clearStartupMetrics();
 	if (!HTMLElement.prototype.setPointerCapture) {
 		HTMLElement.prototype.setPointerCapture = vi.fn();
 	}
@@ -171,6 +176,11 @@ describe("AppPage barber avatar row", () => {
 		await waitFor(() => {
 			expect(storeMock.getAppointmentsForDayWithFilters).toHaveBeenCalled();
 		});
+		expect(getStartupMetricsSnapshot().marks).toEqual(
+			expect.arrayContaining([
+				expect.objectContaining({ name: "app-page:start" }),
+			]),
+		);
 
 		expect(storeMock.loadServices).not.toHaveBeenCalled();
 		expect(storeMock.loadProducts).not.toHaveBeenCalled();
@@ -187,6 +197,18 @@ describe("AppPage barber avatar row", () => {
 				force: false,
 			});
 		});
+		expect(getStartupMetricsSnapshot().marks).toEqual(
+			expect.arrayContaining([
+				expect.objectContaining({ name: "background:catalog:start" }),
+				expect.objectContaining({ name: "background:catalog:end" }),
+				expect.objectContaining({
+					name: "background:payment-methods:start",
+				}),
+				expect.objectContaining({
+					name: "background:payment-methods:end",
+				}),
+			]),
+		);
 	});
 
 	it("opens on the user agenda and renders only other barbers", async () => {

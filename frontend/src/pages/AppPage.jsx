@@ -25,6 +25,10 @@ import {
 	updateAppointment,
 } from "@/lib/store";
 import { useAuth } from "@/context/AuthContext";
+import {
+	markStartupMetric,
+	measureStartupMetric,
+} from "@/lib/startupMetrics";
 import { useNavigate } from "react-router-dom";
 const SLOT_START_MINUTES = 9 * 60;
 const SLOT_END_MINUTES = 20 * 60;
@@ -562,9 +566,15 @@ export default function AppPage() {
 	);
 	const paymentMethodsLoadedRef = useRef(Boolean(initialCache.paymentMethods));
 	const mountedRef = useRef(true);
+	const appPageStartMarkedRef = useRef(false);
 	const dayKey = formatDayKey(currentDate);
 	const ownBarberId = user?.barbeiro_id || "";
 	const selectedBarberId = activeBarberId || ownBarberId || "";
+
+	if (!appPageStartMarkedRef.current) {
+		appPageStartMarkedRef.current = true;
+		markStartupMetric("app-page:start", { route: "/app" });
+	}
 
 	const barberOptions = useMemo(() => {
 		if (!isAdmin) return [];
@@ -613,6 +623,7 @@ export default function AppPage() {
 		if (catalogLoadedRef.current) return Promise.resolve();
 		if (catalogRequestRef.current) return catalogRequestRef.current;
 
+		markStartupMetric("background:catalog:start");
 		setIsLoadingCatalog(true);
 		catalogRequestRef.current = Promise.all([
 			loadServices({ force: false }),
@@ -624,6 +635,15 @@ export default function AppPage() {
 					setProducts(productList);
 				}
 				catalogLoadedRef.current = true;
+				markStartupMetric("background:catalog:end", {
+					status: "success",
+				});
+				measureStartupMetric(
+					"background:catalog",
+					"background:catalog:start",
+					"background:catalog:end",
+					{ status: "success" },
+				);
 			})
 			.catch(() => {
 				if (
@@ -633,6 +653,15 @@ export default function AppPage() {
 					setServices([]);
 					setProducts([]);
 				}
+				markStartupMetric("background:catalog:end", {
+					status: "error",
+				});
+				measureStartupMetric(
+					"background:catalog",
+					"background:catalog:start",
+					"background:catalog:end",
+					{ status: "error" },
+				);
 			})
 			.finally(() => {
 				catalogRequestRef.current = null;
@@ -648,16 +677,35 @@ export default function AppPage() {
 		if (paymentMethodsLoadedRef.current) return Promise.resolve();
 		if (paymentMethodsRequestRef.current) return paymentMethodsRequestRef.current;
 
+		markStartupMetric("background:payment-methods:start");
 		setIsLoadingPaymentMethods(true);
 		paymentMethodsRequestRef.current = loadPaymentMethods({ force: false })
 			.then((list) => {
 				if (mountedRef.current) setPaymentMethods(list);
 				paymentMethodsLoadedRef.current = true;
+				markStartupMetric("background:payment-methods:end", {
+					status: "success",
+				});
+				measureStartupMetric(
+					"background:payment-methods",
+					"background:payment-methods:start",
+					"background:payment-methods:end",
+					{ status: "success" },
+				);
 			})
 			.catch(() => {
 				if (mountedRef.current && !initialCache.paymentMethods) {
 					setPaymentMethods([]);
 				}
+				markStartupMetric("background:payment-methods:end", {
+					status: "error",
+				});
+				measureStartupMetric(
+					"background:payment-methods",
+					"background:payment-methods:start",
+					"background:payment-methods:end",
+					{ status: "error" },
+				);
 			})
 			.finally(() => {
 				paymentMethodsRequestRef.current = null;
