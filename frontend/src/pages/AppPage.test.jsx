@@ -158,7 +158,7 @@ describe("AppPage barber avatar row", () => {
 			expect(storeMock.getAppointmentsForDayWithFilters).toHaveBeenCalledWith(
 				"2026-05-30",
 				{ barbeiro_id: "barber-owner" },
-				{ force: true },
+				{ force: false },
 			);
 		});
 
@@ -386,6 +386,74 @@ describe("AppPage barber avatar row", () => {
 				status: "fiado",
 				prazo_date: null,
 			});
+		});
+	});
+
+	it("keeps forced refreshes for operational status updates", async () => {
+		let status = "normal";
+		storeMock.getAppointmentsForDayWithFilters.mockImplementation(
+			async (_dayKey, filters = {}) => {
+				if (filters.barbeiro_id !== "barber-owner") return [];
+				return [
+					{
+						id: "appt-owner",
+						client_name: "Cliente Owner",
+						time_slot: "09:00",
+						value: 100,
+						status,
+					},
+				];
+			},
+		);
+		storeMock.updateAppointment.mockImplementation(async (_id, updates) => {
+			status = updates.status;
+			return {
+				id: "appt-owner",
+				client_name: "Cliente Owner",
+				time_slot: "09:00",
+				value: 100,
+				status,
+			};
+		});
+
+		render(
+			<MemoryRouter initialEntries={["/app"]}>
+				<AppPage />
+			</MemoryRouter>,
+		);
+
+		const row = await screen.findByRole("button", { name: /Cliente Owner/i });
+		storeMock.getAppointmentsForDayWithFilters.mockClear();
+		storeMock.getDaySummaryFromAppointments.mockClear();
+
+		fireEvent.mouseDown(row, {
+			clientX: 220,
+			clientY: 30,
+			button: 0,
+			buttons: 1,
+		});
+		fireEvent.mouseMove(row, {
+			clientX: 120,
+			clientY: 34,
+			buttons: 1,
+		});
+		fireEvent.mouseUp(row, {
+			clientX: 120,
+			clientY: 34,
+			buttons: 0,
+		});
+
+		await waitFor(() => {
+			expect(storeMock.getAppointmentsForDayWithFilters).toHaveBeenCalledWith(
+				"2026-05-30",
+				{ barbeiro_id: "barber-owner" },
+				{ force: true },
+			);
+			expect(storeMock.getDaySummaryFromAppointments).toHaveBeenCalledWith(
+				"2026-05-30",
+				expect.any(Array),
+				{ force: true },
+			);
 		});
 	});
 });

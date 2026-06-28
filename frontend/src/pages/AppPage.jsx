@@ -516,6 +516,7 @@ export default function AppPage() {
 	);
 	const [isLoading, setIsLoading] = useState(!initialCache.appointments);
 	const hasLoadedRef = useRef(Boolean(initialCache.appointments));
+	const startupReloadRef = useRef(true);
 	const [errorMessage, setErrorMessage] = useState("");
 	const [feedbackMessage, setFeedbackMessage] = useState("");
 	const [dialogOpen, setDialogOpen] = useState(false);
@@ -583,7 +584,7 @@ export default function AppPage() {
 	}, [appointments]);
 
 	useEffect(() => {
-		loadProfile({ force: Boolean(initialCache.profile) })
+		loadProfile({ force: false })
 			.then((data) => setProfile(data || {}))
 			.catch(() => {
 				if (!initialCache.profile) setProfile({});
@@ -592,7 +593,7 @@ export default function AppPage() {
 
 	useEffect(() => {
 		if (!isAdmin) return;
-		loadBarbers({ force: Boolean(initialCache.barbers) })
+		loadBarbers({ force: false })
 			.then((list) => {
 				setBarbers(list);
 				setActiveBarberId((current) => {
@@ -612,18 +613,18 @@ export default function AppPage() {
 			});
 	}, [initialCache.barbers, isAdmin, user]);
 
-	const reload = useCallback(async () => {
+	const reload = useCallback(async ({ force = true } = {}) => {
 		const hasLoaded = hasLoadedRef.current;
 		setIsLoading(!hasLoaded);
 		setErrorMessage("");
 		try {
 			const params = selectedBarberId ? { barbeiro_id: selectedBarberId } : {};
 			const list = await getAppointmentsForDayWithFilters(dayKey, params, {
-				force: true,
+				force,
 			});
 			setAppointments(list);
 			const nextSummary = await getDaySummaryFromAppointments(dayKey, list, {
-				force: true,
+				force,
 			});
 			setSummary(nextSummary);
 		} catch (error) {
@@ -641,7 +642,9 @@ export default function AppPage() {
 	}, [dayKey, selectedBarberId]);
 
 	useEffect(() => {
-		reload();
+		const force = !startupReloadRef.current;
+		startupReloadRef.current = false;
+		reload({ force });
 	}, [reload]);
 
 	useEffect(() => {
@@ -649,8 +652,8 @@ export default function AppPage() {
 		async function fetchCatalog() {
 			try {
 				const [serviceList, productList] = await Promise.all([
-					loadServices({ force: Boolean(initialCache.services) }),
-					loadProducts({ force: Boolean(initialCache.products) }),
+					loadServices({ force: false }),
+					loadProducts({ force: false }),
 				]);
 				if (mounted) {
 					setServices(serviceList);
@@ -679,7 +682,7 @@ export default function AppPage() {
 
 	useEffect(() => {
 		let mounted = true;
-		loadPaymentMethods({ force: Boolean(initialCache.paymentMethods) })
+		loadPaymentMethods({ force: false })
 			.then((list) => {
 				if (mounted) setPaymentMethods(list);
 			})
