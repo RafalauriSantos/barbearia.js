@@ -50,6 +50,15 @@ const EMPTY_SUMMARY = {
 	overdue: 0,
 };
 
+function scheduleIdleTask(callback) {
+	if (typeof window !== "undefined" && "requestIdleCallback" in window) {
+		const id = window.requestIdleCallback(callback, { timeout: 1500 });
+		return () => window.cancelIdleCallback?.(id);
+	}
+	const id = window.setTimeout(callback, 0);
+	return () => window.clearTimeout(id);
+}
+
 function toTimeLabel(totalMinutes) {
 	const hours = Math.floor(totalMinutes / 60);
 	const minutes = totalMinutes % 60;
@@ -517,6 +526,9 @@ export default function AppPage() {
 	const [isLoading, setIsLoading] = useState(!initialCache.appointments);
 	const hasLoadedRef = useRef(Boolean(initialCache.appointments));
 	const startupReloadRef = useRef(true);
+	const [dashboardReady, setDashboardReady] = useState(
+		Boolean(initialCache.appointments),
+	);
 	const [errorMessage, setErrorMessage] = useState("");
 	const [feedbackMessage, setFeedbackMessage] = useState("");
 	const [dialogOpen, setDialogOpen] = useState(false);
@@ -543,9 +555,17 @@ export default function AppPage() {
 	const [activeBarberId, setActiveBarberId] = useState("");
 	const [savingStatusId, setSavingStatusId] = useState("");
 	const [paymentAppointment, setPaymentAppointment] = useState(null);
+	const catalogRequestRef = useRef(null);
+	const paymentMethodsRequestRef = useRef(null);
+	const catalogLoadedRef = useRef(
+		Boolean(initialCache.services && initialCache.products),
+	);
+	const paymentMethodsLoadedRef = useRef(Boolean(initialCache.paymentMethods));
+	const mountedRef = useRef(true);
 	const dayKey = formatDayKey(currentDate);
 	const ownBarberId = user?.barbeiro_id || "";
 	const selectedBarberId = activeBarberId || ownBarberId || "";
+
 	const barberOptions = useMemo(() => {
 		if (!isAdmin) return [];
 		return barbers
@@ -582,6 +602,70 @@ export default function AppPage() {
 			),
 		);
 	}, [appointments]);
+
+	useEffect(() => {
+		return () => {
+			mountedRef.current = false;
+		};
+	}, []);
+
+	const ensureCatalogLoaded = useCallback(() => {
+		if (catalogLoadedRef.current) return Promise.resolve();
+		if (catalogRequestRef.current) return catalogRequestRef.current;
+
+		setIsLoadingCatalog(true);
+		catalogRequestRef.current = Promise.all([
+			loadServices({ force: false }),
+			loadProducts({ force: false }),
+		])
+			.then(([serviceList, productList]) => {
+				if (mountedRef.current) {
+					setServices(serviceList);
+					setProducts(productList);
+				}
+				catalogLoadedRef.current = true;
+			})
+			.catch(() => {
+				if (
+					mountedRef.current &&
+					!(initialCache.services && initialCache.products)
+				) {
+					setServices([]);
+					setProducts([]);
+				}
+			})
+			.finally(() => {
+				catalogRequestRef.current = null;
+				if (mountedRef.current) {
+					setIsLoadingCatalog(false);
+				}
+			});
+
+		return catalogRequestRef.current;
+	}, [initialCache.products, initialCache.services]);
+
+	const ensurePaymentMethodsLoaded = useCallback(() => {
+		if (paymentMethodsLoadedRef.current) return Promise.resolve();
+		if (paymentMethodsRequestRef.current) return paymentMethodsRequestRef.current;
+
+		setIsLoadingPaymentMethods(true);
+		paymentMethodsRequestRef.current = loadPaymentMethods({ force: false })
+			.then((list) => {
+				if (mountedRef.current) setPaymentMethods(list);
+				paymentMethodsLoadedRef.current = true;
+			})
+			.catch(() => {
+				if (mountedRef.current && !initialCache.paymentMethods) {
+					setPaymentMethods([]);
+				}
+			})
+			.finally(() => {
+				paymentMethodsRequestRef.current = null;
+				if (mountedRef.current) setIsLoadingPaymentMethods(false);
+			});
+
+		return paymentMethodsRequestRef.current;
+	}, [initialCache.paymentMethods]);
 
 	useEffect(() => {
 		loadProfile({ force: false })
@@ -638,6 +722,7 @@ export default function AppPage() {
 		} finally {
 			setIsLoading(false);
 			hasLoadedRef.current = true;
+			setDashboardReady(true);
 		}
 	}, [dayKey, selectedBarberId]);
 
@@ -648,55 +733,12 @@ export default function AppPage() {
 	}, [reload]);
 
 	useEffect(() => {
-		let mounted = true;
-		async function fetchCatalog() {
-			try {
-				const [serviceList, productList] = await Promise.all([
-					loadServices({ force: false }),
-					loadProducts({ force: false }),
-				]);
-				if (mounted) {
-					setServices(serviceList);
-					setProducts(productList);
-				}
-			} catch {
-				if (
-					mounted &&
-					!(initialCache.services && initialCache.products)
-				) {
-					setServices([]);
-					setProducts([]);
-				}
-			} finally {
-				if (mounted) {
-					setIsLoadingCatalog(false);
-				}
-			}
-		}
-
-		fetchCatalog();
-		return () => {
-			mounted = false;
-		};
-	}, [initialCache.products, initialCache.services]);
-
-	useEffect(() => {
-		let mounted = true;
-		loadPaymentMethods({ force: false })
-			.then((list) => {
-				if (mounted) setPaymentMethods(list);
-			})
-			.catch(() => {
-				if (mounted && !initialCache.paymentMethods) setPaymentMethods([]);
-			})
-			.finally(() => {
-				if (mounted) setIsLoadingPaymentMethods(false);
-			});
-
-		return () => {
-			mounted = false;
-		};
-	}, [initialCache.paymentMethods]);
+		if (!dashboardReady) return undefined;
+		return scheduleIdleTask(() => {
+			void ensureCatalogLoaded();
+			void ensurePaymentMethodsLoaded();
+		});
+	}, [dashboardReady, ensureCatalogLoaded, ensurePaymentMethodsLoaded]);
 
 	const prevDay = () => {
 		const next = new Date(currentDate);
@@ -729,6 +771,7 @@ export default function AppPage() {
 	};
 
 	const openQuickItems = (appointment) => {
+		void ensureCatalogLoaded();
 		const servicesDraft =
 			Array.isArray(appointment.services) ? appointment.services : [];
 		const productsDraft =
@@ -844,6 +887,7 @@ export default function AppPage() {
 
 	const changeAppointmentStatusBySwipe = async (appointment, status) => {
 		if (status === "paid") {
+			void ensurePaymentMethodsLoaded();
 			setPaymentAppointment(appointment);
 			setFeedbackMessage("");
 			return;

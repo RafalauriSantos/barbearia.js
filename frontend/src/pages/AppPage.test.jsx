@@ -62,6 +62,16 @@ function makeSummary(list) {
 	);
 }
 
+function deferred() {
+	let resolve;
+	let reject;
+	const promise = new Promise((promiseResolve, promiseReject) => {
+		resolve = promiseResolve;
+		reject = promiseReject;
+	});
+	return { promise, resolve, reject };
+}
+
 beforeEach(() => {
 	vi.clearAllMocks();
 	if (!HTMLElement.prototype.setPointerCapture) {
@@ -145,6 +155,40 @@ beforeEach(() => {
 });
 
 describe("AppPage barber avatar row", () => {
+	it("keeps catalog and payment methods out of the critical dashboard load", async () => {
+		const appointmentsRequest = deferred();
+		storeMock.getAppointmentsForDayWithFilters.mockReturnValue(
+			appointmentsRequest.promise,
+		);
+		storeMock.getDaySummaryFromAppointments.mockResolvedValue(makeSummary([]));
+
+		render(
+			<MemoryRouter initialEntries={["/app"]}>
+				<AppPage />
+			</MemoryRouter>,
+		);
+
+		await waitFor(() => {
+			expect(storeMock.getAppointmentsForDayWithFilters).toHaveBeenCalled();
+		});
+
+		expect(storeMock.loadServices).not.toHaveBeenCalled();
+		expect(storeMock.loadProducts).not.toHaveBeenCalled();
+		expect(storeMock.loadPaymentMethods).not.toHaveBeenCalled();
+
+		appointmentsRequest.resolve([]);
+		await waitFor(() => {
+			expect(storeMock.getDaySummaryFromAppointments).toHaveBeenCalled();
+		});
+		await waitFor(() => {
+			expect(storeMock.loadServices).toHaveBeenCalledWith({ force: false });
+			expect(storeMock.loadProducts).toHaveBeenCalledWith({ force: false });
+			expect(storeMock.loadPaymentMethods).toHaveBeenCalledWith({
+				force: false,
+			});
+		});
+	});
+
 	it("opens on the user agenda and renders only other barbers", async () => {
 		render(
 			<MemoryRouter initialEntries={["/app"]}>
