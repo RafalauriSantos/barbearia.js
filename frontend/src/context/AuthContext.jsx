@@ -21,7 +21,6 @@ import {
 import {
 	clearAppDataCache,
 	configureAppDataCache,
-	prefetchAppData,
 } from "@/lib/store";
 import { SESSION_EXPIRED_EVENT } from "@/lib/api/client";
 import { AppApiError } from "@/lib/api/client";
@@ -98,7 +97,6 @@ export function AuthProvider({ children }) {
 			configureAppDataCache(currentUser);
 			writeUserSnapshot(currentUser);
 			setUser(currentUser);
-			void prefetchAppData(currentUser);
 			return currentUser;
 		} catch (error) {
 			if (error instanceof AppApiError && error.kind === "network") {
@@ -138,7 +136,6 @@ export function AuthProvider({ children }) {
 		configureAppDataCache(currentUser);
 		writeUserSnapshot(currentUser);
 		setUser(currentUser);
-		void prefetchAppData(currentUser);
 		return currentUser;
 	}, []);
 
@@ -159,7 +156,6 @@ export function AuthProvider({ children }) {
 		configureAppDataCache(currentUser);
 		writeUserSnapshot(currentUser);
 		setUser(currentUser);
-		void prefetchAppData(currentUser);
 		return { ...session, user: currentUser };
 	}, []);
 
@@ -172,7 +168,6 @@ export function AuthProvider({ children }) {
 		configureAppDataCache(currentUser);
 		writeUserSnapshot(currentUser);
 		setUser(currentUser);
-		void prefetchAppData(currentUser);
 		return currentUser;
 	}, []);
 

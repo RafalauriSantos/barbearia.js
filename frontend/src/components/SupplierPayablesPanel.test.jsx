@@ -3,19 +3,27 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { SupplierPayablesPanel } from "./SupplierPayablesPanel";
 
 const storeMock = vi.hoisted(() => ({
+	addSupplierPurchase: vi.fn(),
+	getCachedProducts: vi.fn(),
+	loadProducts: vi.fn(),
 	loadSupplierPayables: vi.fn(),
 	paySupplierPayable: vi.fn(),
 }));
 
 vi.mock("@/lib/store", () => ({
+	addSupplierPurchase: storeMock.addSupplierPurchase,
 	formatCurrency: (value) => `R$ ${Number(value || 0).toFixed(2)}`,
 	formatDayKey: () => "2026-06-20",
+	getCachedProducts: storeMock.getCachedProducts,
+	loadProducts: storeMock.loadProducts,
 	loadSupplierPayables: storeMock.loadSupplierPayables,
 	paySupplierPayable: storeMock.paySupplierPayable,
 }));
 
 beforeEach(() => {
 	vi.clearAllMocks();
+	storeMock.getCachedProducts.mockReturnValue([]);
+	storeMock.loadProducts.mockResolvedValue([]);
 	storeMock.loadSupplierPayables.mockResolvedValue([
 		{
 			id: "payable-1",

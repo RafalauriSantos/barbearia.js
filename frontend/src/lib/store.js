@@ -1153,22 +1153,8 @@ export async function getDaySummaryFromAppointments(
 	return buildDaySummary(appointments, expenses);
 }
 
-export function prefetchAppData(user, options = {}) {
-	const dayKey = options.dayKey || formatDayKey(new Date());
-	const ownBarberId = user?.barbeiro_id || "";
-	const appointmentFilters = ownBarberId ? { barbeiro_id: ownBarberId } : {};
-
-	return Promise.allSettled([
-		loadProfile(),
-		loadServices(),
-		loadProducts(),
-		loadFixedClients(),
-		loadWaitlist(),
-		loadExpenses(dayKey),
-		loadFinancialSummary({ start_date: dayKey, end_date: dayKey }),
-		getAppointmentsForDayWithFilters(dayKey, appointmentFilters),
-		user?.role === "admin" ? loadBarbers() : Promise.resolve([]),
-	]);
+export function prefetchAppData() {
+	return Promise.allSettled([]);
 }
 // ── Formatting ──
 

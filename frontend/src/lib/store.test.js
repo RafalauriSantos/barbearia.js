@@ -5,6 +5,40 @@ vi.mock("@/lib/api/services.api", async (importOriginal) => {
 	return { ...original, listServices: vi.fn() };
 });
 
+vi.mock("@/lib/api/products.api", async (importOriginal) => {
+	const original = await importOriginal();
+	return { ...original, listProducts: vi.fn() };
+});
+
+vi.mock("@/lib/api/clients.api", async (importOriginal) => {
+	const original = await importOriginal();
+	return {
+		...original,
+		listFixedClients: vi.fn(),
+		listWaitlist: vi.fn(),
+	};
+});
+
+vi.mock("@/lib/api/expenses.api", async (importOriginal) => {
+	const original = await importOriginal();
+	return { ...original, listExpensesByDay: vi.fn() };
+});
+
+vi.mock("@/lib/api/profile.api", async (importOriginal) => {
+	const original = await importOriginal();
+	return { ...original, getProfile: vi.fn() };
+});
+
+vi.mock("@/lib/api/barbers.api", async (importOriginal) => {
+	const original = await importOriginal();
+	return { ...original, listBarbers: vi.fn() };
+});
+
+vi.mock("@/lib/api/financial.api", async (importOriginal) => {
+	const original = await importOriginal();
+	return { ...original, getFinancialSummary: vi.fn() };
+});
+
 vi.mock("@/lib/api/appointments.api", async (importOriginal) => {
 	const original = await importOriginal();
 	return {
@@ -15,6 +49,12 @@ vi.mock("@/lib/api/appointments.api", async (importOriginal) => {
 });
 
 import { listServices } from "@/lib/api/services.api";
+import { listProducts } from "@/lib/api/products.api";
+import { listFixedClients, listWaitlist } from "@/lib/api/clients.api";
+import { listExpensesByDay } from "@/lib/api/expenses.api";
+import { getProfile } from "@/lib/api/profile.api";
+import { listBarbers } from "@/lib/api/barbers.api";
+import { getFinancialSummary } from "@/lib/api/financial.api";
 import {
 	createAppointment,
 	listAppointmentsByDay,
@@ -27,6 +67,7 @@ import {
 	getAppointmentsForDayWithFilters,
 	getCachedServices,
 	loadServices,
+	prefetchAppData,
 } from "@/lib/store";
 
 function deferred() {
@@ -149,5 +190,28 @@ describe("scoped application cache", () => {
 		expect(list).toHaveLength(1);
 		expect(list[0].offline_pending).toBe(true);
 		expect(list[0].client_name).toBe("Cliente Offline");
+	});
+
+	it("does not prefetch screen-owned data from the auth context startup", async () => {
+		configureAppDataCache({
+			id: "user-a",
+			barbearia_id: "shop-a",
+			barbeiro_id: "barber-a",
+		});
+
+		await prefetchAppData(
+			{ role: "admin", barbeiro_id: "barber-a" },
+			{ dayKey: "2026-06-25" },
+		);
+
+		expect(getProfile).not.toHaveBeenCalled();
+		expect(listServices).not.toHaveBeenCalled();
+		expect(listProducts).not.toHaveBeenCalled();
+		expect(listFixedClients).not.toHaveBeenCalled();
+		expect(listWaitlist).not.toHaveBeenCalled();
+		expect(listExpensesByDay).not.toHaveBeenCalled();
+		expect(getFinancialSummary).not.toHaveBeenCalled();
+		expect(listAppointmentsByDay).not.toHaveBeenCalled();
+		expect(listBarbers).not.toHaveBeenCalled();
 	});
 });
