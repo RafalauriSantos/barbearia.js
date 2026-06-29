@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 
@@ -56,7 +57,7 @@ const baseTabs = [
 ];
 
 // Barra fixa embaixo para trocar de tela.
-export function BottomNav({ variant = "default" }) {
+export const BottomNav = memo(function BottomNav({ variant = "default" }) {
 	const location = useLocation();
 	const navigate = useNavigate();
 	const { user } = useAuth();
@@ -117,4 +118,4 @@ export function BottomNav({ variant = "default" }) {
 			</div>
 		</nav>
 	);
-}
+});
