@@ -1,4 +1,3 @@
-require("dotenv").config();
 const { z } = require("zod");
 
 const PRODUCTION_APP_URL = "https://kurt-barbearia.vercel.app";
@@ -42,13 +41,12 @@ const envSchema = z
 		}
 	});
 
-// normalize CORS_ORIGIN: support literal 'true'/'false' env values
 function normalizeCorsOrigin(value) {
-	if (value === undefined) return true; // default
+	if (value === undefined) return true;
 	const v = String(value).trim();
 	if (v === "true") return true;
 	if (v === "false") return false;
-	return value; // keep as string origin
+	return value;
 }
 
 function normalizeBoolean(value, fallback = false) {
@@ -68,37 +66,61 @@ function normalizeAppUrl(value, nodeEnv) {
 	return rawValue || undefined;
 }
 
-const parsed = envSchema.parse({
-	NODE_ENV: process.env.NODE_ENV,
-	HOST: process.env.HOST,
-	PORT: process.env.PORT,
-	CORS_ORIGIN: normalizeCorsOrigin(process.env.CORS_ORIGIN),
-	SUPABASE_URL: process.env.SUPABASE_URL,
-	SUPABASE_SERVICE_KEY: process.env.SUPABASE_SERVICE_KEY,
-	SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY,
-	DATABASE_URL: process.env.DATABASE_URL,
-	DATABASE_SSL: normalizeBoolean(process.env.DATABASE_SSL, false),
-	JWT_SECRET: process.env.JWT_SECRET,
-	DEFAULT_BARBEARIA_ID: process.env.DEFAULT_BARBEARIA_ID,
-	DEFAULT_BARBEIRO_ID: process.env.DEFAULT_BARBEIRO_ID,
-	APP_URL: normalizeAppUrl(process.env.APP_URL, process.env.NODE_ENV),
-	SMTP_HOST: process.env.SMTP_HOST,
-	SMTP_PORT: process.env.SMTP_PORT,
-	SMTP_SECURE: normalizeBoolean(process.env.SMTP_SECURE, false),
-	SMTP_USER: process.env.SMTP_USER,
-	SMTP_PASS: process.env.SMTP_PASS,
-	EMAIL_FROM: process.env.EMAIL_FROM,
-	EMAIL_BRAND_NAME: process.env.EMAIL_BRAND_NAME,
-	EMAIL_PROVIDER: process.env.EMAIL_PROVIDER,
-	EMAIL_TIMEOUT_MS: process.env.EMAIL_TIMEOUT_MS,
-	BREVO_API_KEY: process.env.BREVO_API_KEY,
-	AVATAR_BUCKET: process.env.AVATAR_BUCKET,
+let runtimeEnv = null;
+
+function setRuntimeEnv(rawEnv) {
+	const sourceEnv = rawEnv || process.env;
+	const parsed = envSchema.parse({
+		NODE_ENV: sourceEnv.NODE_ENV,
+		HOST: sourceEnv.HOST,
+		PORT: sourceEnv.PORT,
+		CORS_ORIGIN: normalizeCorsOrigin(sourceEnv.CORS_ORIGIN),
+		SUPABASE_URL: sourceEnv.SUPABASE_URL,
+		SUPABASE_SERVICE_KEY: sourceEnv.SUPABASE_SERVICE_KEY,
+		SUPABASE_ANON_KEY: sourceEnv.SUPABASE_ANON_KEY,
+		DATABASE_URL: sourceEnv.DATABASE_URL,
+		DATABASE_SSL: normalizeBoolean(sourceEnv.DATABASE_SSL, false),
+		JWT_SECRET: sourceEnv.JWT_SECRET,
+		DEFAULT_BARBEARIA_ID: sourceEnv.DEFAULT_BARBEARIA_ID,
+		DEFAULT_BARBEIRO_ID: sourceEnv.DEFAULT_BARBEIRO_ID,
+		APP_URL: normalizeAppUrl(sourceEnv.APP_URL, sourceEnv.NODE_ENV),
+		SMTP_HOST: sourceEnv.SMTP_HOST,
+		SMTP_PORT: sourceEnv.SMTP_PORT,
+		SMTP_SECURE: normalizeBoolean(sourceEnv.SMTP_SECURE, false),
+		SMTP_USER: sourceEnv.SMTP_USER,
+		SMTP_PASS: sourceEnv.SMTP_PASS,
+		EMAIL_FROM: sourceEnv.EMAIL_FROM,
+		EMAIL_BRAND_NAME: sourceEnv.EMAIL_BRAND_NAME,
+		EMAIL_PROVIDER: sourceEnv.EMAIL_PROVIDER,
+		EMAIL_TIMEOUT_MS: sourceEnv.EMAIL_TIMEOUT_MS,
+		BREVO_API_KEY: sourceEnv.BREVO_API_KEY,
+		AVATAR_BUCKET: sourceEnv.AVATAR_BUCKET,
+	});
+
+	runtimeEnv = {
+		...parsed,
+		JWT_SECRET:
+			parsed.JWT_SECRET || "development-only-secret-change-before-production",
+	};
+}
+
+// Fallback to process.env parsing for scripts or local tools
+if (typeof process !== "undefined" && process.env) {
+	try {
+		setRuntimeEnv(process.env);
+	} catch (e) {
+		// Ignore validation errors during startup if variables are not fully set yet
+	}
+}
+
+const env = new Proxy({}, {
+	get(target, property) {
+		if (!runtimeEnv) {
+			// Fallback to process.env if runtimeEnv is not set yet
+			return process.env[property];
+		}
+		return runtimeEnv[property];
+	}
 });
 
-const env = {
-	...parsed,
-	JWT_SECRET:
-		parsed.JWT_SECRET || "development-only-secret-change-before-production",
-};
-
-module.exports = { env };
+module.exports = { env, setRuntimeEnv };

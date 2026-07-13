@@ -1,4 +1,4 @@
-const argon2 = require("argon2");
+const bcrypt = require("bcryptjs");
 const crypto = require("crypto");
 const jwt = require("jsonwebtoken");
 const { env } = require("../config/env");
@@ -150,9 +150,7 @@ exports.acceptInvite = async function (token, payload) {
 				"Informe uma senha para criar o acesso.",
 			);
 		}
-		const password_hash = await argon2.hash(payload.password, {
-			type: argon2.argon2id,
-		});
+		const password_hash = await bcrypt.hash(payload.password, 10);
 		user = await AuthRepository.create({
 			email,
 			password_hash,

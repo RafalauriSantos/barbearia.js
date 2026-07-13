@@ -43,3 +43,5 @@ backend/dist
 .vercel
 frontend/test-results
 frontend/playwright-report
+.dev.vars
+.wrangler/

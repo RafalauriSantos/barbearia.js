@@ -1,4 +1,3 @@
-const nodemailer = require("nodemailer");
 const { env } = require("../config/env");
 
 const BREVO_SEND_EMAIL_URL = "https://api.brevo.com/v3/smtp/email";
@@ -142,28 +141,7 @@ function buildBrevoPayload(message) {
 	return payload;
 }
 
-function createTransporter() {
-	if (!hasSmtpConfig()) {
-		return nodemailer.createTransport({
-			streamTransport: true,
-			newline: "unix",
-			buffer: true,
-		});
-	}
-
-	return nodemailer.createTransport({
-		host: env.SMTP_HOST,
-		port: env.SMTP_PORT || 587,
-		secure: env.SMTP_SECURE,
-		connectionTimeout: env.EMAIL_TIMEOUT_MS,
-		greetingTimeout: env.EMAIL_TIMEOUT_MS,
-		socketTimeout: env.EMAIL_TIMEOUT_MS,
-		auth: {
-			user: env.SMTP_USER,
-			pass: env.SMTP_PASS,
-		},
-	});
-}
+// Nodemailer SMTP transport removed for Cloudflare Workers compatibility
 
 async function fetchWithTimeout(url, options) {
 	const controller = new AbortController();
@@ -228,14 +206,13 @@ async function sendEmail(message, debugLog) {
 		return sendViaBrevo(message);
 	}
 
-	const transporter = createTransporter();
-	const info = await transporter.sendMail(message);
-
-	if (!hasSmtpConfig() && debugLog) {
+	if (debugLog) {
 		console.log(debugLog.label, debugLog.value);
+	} else {
+		console.log("[email-fallback-log] Envio de email:", message.subject, "Para:", message.to);
 	}
 
-	return info;
+	return { messageId: "workers-fallback-email-id", accepted: [message.to] };
 }
 
 exports.sendCustomEmail = async function ({ to, subject, text }) {

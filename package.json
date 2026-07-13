@@ -1,0 +1,21 @@
+{
+  "name": "barbearia-workers",
+  "version": "1.0.0",
+  "main": "src/index.js",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "test": "vitest run tests/"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.105.1",
+    "bcryptjs": "^2.4.3",
+    "hono": "^4.0.0",
+    "jsonwebtoken": "^9.0.3",
+    "worker-password-auth": "^1.0.0"
+  },
+  "devDependencies": {
+    "vitest": "^4.1.10",
+    "wrangler": "^3.0.0"
+  }
+}
