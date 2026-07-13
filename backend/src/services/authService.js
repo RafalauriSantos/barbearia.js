@@ -29,7 +29,7 @@ function hashVerificationCode(code) {
 		.digest("hex");
 }
 
-exports.register = async function ({ email, password }) {
+exports.register = async function ({ email, password }, runtimeEnv) {
 	const AuthRepository = getRepo();
 	const existing = await AuthRepository.findByEmail(email);
 	if (existing)
@@ -51,7 +51,7 @@ exports.register = async function ({ email, password }) {
 	await EmailService.sendVerificationCodeEmail({
 		to: user.email,
 		code,
-	});
+	}, runtimeEnv);
 
 	return {
 		user,
@@ -146,7 +146,7 @@ exports.verifyEmailCode = async function ({ email, code }) {
 	return { user: updated, verifiedNow: true };
 };
 
-exports.resendEmailCode = async function ({ email }) {
+exports.resendEmailCode = async function ({ email }, runtimeEnv) {
 	const AuthRepository = getRepo();
 	const verificationRepo = getVerificationRepo();
 	const user = await AuthRepository.findByEmail(email);
@@ -166,12 +166,12 @@ exports.resendEmailCode = async function ({ email }) {
 	await EmailService.sendVerificationCodeEmail({
 		to: user.email,
 		code,
-	});
+	}, runtimeEnv);
 
 	return { ok: true };
 };
 
-exports.requestPasswordReset = async function ({ email }) {
+exports.requestPasswordReset = async function ({ email }, runtimeEnv) {
 	const AuthRepository = getRepo();
 	const passwordResetRepo = getPasswordResetRepo();
 	const user = await AuthRepository.findByEmail(email);
@@ -188,7 +188,7 @@ exports.requestPasswordReset = async function ({ email }) {
 	await EmailService.sendPasswordResetCodeEmail({
 		to: user.email,
 		code,
-	});
+	}, runtimeEnv);
 
 	return {
 		ok: true,

@@ -37,7 +37,7 @@ function createSession(user) {
 
 exports.register = async (request, reply) => {
 	const payload = validateRegister(request.body);
-	const { user, verificationCode } = await AuthService.register(payload);
+	const { user, verificationCode } = await AuthService.register(payload, request.env);
 	return reply.code(201).send({
 		user: toPublicUser(user),
 		email_verification_required: true,
@@ -103,14 +103,23 @@ exports.verifyEmailCode = async (request, reply) => {
 
 exports.resendEmailCode = async (request, reply) => {
 	const payload = validateResendCode(request.body);
-	const result = await AuthService.resendEmailCode(payload);
+	const result = await AuthService.resendEmailCode(payload, request.env);
 	return reply.send(result);
 };
 
 exports.forgotPassword = async (request, reply) => {
-	const payload = validateForgotPassword(request.body);
-	const result = await AuthService.requestPasswordReset(payload);
-	return reply.send(result);
+	try {
+		const payload = validateForgotPassword(request.body);
+		const result = await AuthService.requestPasswordReset(payload, request.env);
+		return reply.send(result);
+	} catch (error) {
+		console.error("[ForgotPassword] Erro no fluxo de recuperacao de senha:", error);
+		return reply.status(500).send({
+			error: "Erro ao processar a recuperacao de senha. Por favor, tente novamente mais tarde.",
+			code: "EMAIL_SEND_FAILED",
+			details: error.message
+		});
+	}
 };
 
 exports.resetPassword = async (request, reply) => {

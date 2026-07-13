@@ -60,20 +60,32 @@ function buildEmailTemplate({ title, body, cta, code }) {
 	`;
 }
 
-function hasSmtpConfig() {
-	return Boolean(env.SMTP_HOST && env.SMTP_USER && env.SMTP_PASS);
+function getEnvValue(key, runtimeEnv) {
+	if (runtimeEnv && runtimeEnv[key] !== undefined) {
+		return runtimeEnv[key];
+	}
+	return env[key];
 }
 
-function hasBrevoConfig() {
-	return Boolean(env.BREVO_API_KEY);
+function hasSmtpConfig(runtimeEnv) {
+	return Boolean(
+		getEnvValue("SMTP_HOST", runtimeEnv) &&
+		getEnvValue("SMTP_USER", runtimeEnv) &&
+		getEnvValue("SMTP_PASS", runtimeEnv)
+	);
 }
 
-function getEmailProvider() {
-	if (env.EMAIL_PROVIDER) {
-		return env.EMAIL_PROVIDER;
+function hasBrevoConfig(runtimeEnv) {
+	return Boolean(getEnvValue("BREVO_API_KEY", runtimeEnv));
+}
+
+function getEmailProvider(runtimeEnv) {
+	const provider = getEnvValue("EMAIL_PROVIDER", runtimeEnv);
+	if (provider) {
+		return provider;
 	}
 
-	return hasBrevoConfig() ? "brevo" : "smtp";
+	return hasBrevoConfig(runtimeEnv) ? "brevo" : "smtp";
 }
 
 function parseEmailAddress(value) {
@@ -97,23 +109,23 @@ function parseRecipients(value) {
 	return values.map(parseEmailAddress).filter((recipient) => recipient.email);
 }
 
-function getBrandName(shopName) {
-	return String(shopName || env.EMAIL_BRAND_NAME || DEFAULT_BRAND_NAME).trim();
+function getBrandName(shopName, runtimeEnv) {
+	return String(shopName || getEnvValue("EMAIL_BRAND_NAME", runtimeEnv) || DEFAULT_BRAND_NAME).trim();
 }
 
-function getSenderAddress() {
-	const sender = parseEmailAddress(env.EMAIL_FROM);
-	const brandName = getBrandName();
+function getSenderAddress(runtimeEnv) {
+	const sender = parseEmailAddress(getEnvValue("EMAIL_FROM", runtimeEnv));
+	const brandName = getBrandName(undefined, runtimeEnv);
 
 	if (!sender.email) {
-		return env.EMAIL_FROM;
+		return getEnvValue("EMAIL_FROM", runtimeEnv);
 	}
 
 	return `${brandName} <${sender.email}>`;
 }
 
-function buildBrevoPayload(message) {
-	const sender = parseEmailAddress(message.from || env.EMAIL_FROM);
+function buildBrevoPayload(message, runtimeEnv) {
+	const sender = parseEmailAddress(message.from || getEnvValue("EMAIL_FROM", runtimeEnv));
 	const recipients = parseRecipients(message.to);
 
 	if (!sender.email) {
@@ -143,16 +155,17 @@ function buildBrevoPayload(message) {
 
 // Nodemailer SMTP transport removed for Cloudflare Workers compatibility
 
-async function fetchWithTimeout(url, options) {
+async function fetchWithTimeout(url, options, runtimeEnv) {
 	const controller = new AbortController();
-	const timeout = setTimeout(() => controller.abort(), env.EMAIL_TIMEOUT_MS);
+	const timeoutMs = Number(getEnvValue("EMAIL_TIMEOUT_MS", runtimeEnv)) || 10000;
+	const timeout = setTimeout(() => controller.abort(), timeoutMs);
 
 	try {
 		return await fetch(url, { ...options, signal: controller.signal });
 	} catch (error) {
 		if (error.name === "AbortError") {
 			throw new Error(
-				`Brevo email API timed out after ${env.EMAIL_TIMEOUT_MS}ms`,
+				`Brevo email API timed out after ${timeoutMs}ms`,
 			);
 		}
 
@@ -162,48 +175,68 @@ async function fetchWithTimeout(url, options) {
 	}
 }
 
-async function sendViaBrevo(message) {
+async function sendViaBrevo(message, runtimeEnv) {
 	if (typeof fetch !== "function") {
 		throw new Error("Brevo email API requires Node.js 18+ with global fetch");
 	}
 
-	if (!hasBrevoConfig()) {
+	if (!hasBrevoConfig(runtimeEnv)) {
 		throw new Error("BREVO_API_KEY is required when EMAIL_PROVIDER=brevo");
 	}
 
-	const payload = buildBrevoPayload(message);
+	const payload = buildBrevoPayload(message, runtimeEnv);
+	const apiKey = getEnvValue("BREVO_API_KEY", runtimeEnv);
 
-	const response = await fetchWithTimeout(BREVO_SEND_EMAIL_URL, {
-		method: "POST",
-		headers: {
-			accept: "application/json",
-			"api-key": env.BREVO_API_KEY,
-			"content-type": "application/json",
-		},
-		body: JSON.stringify(payload),
-	});
+	console.log(`[Brevo Email] Iniciando envio para: ${JSON.stringify(payload.to.map(r => r.email))} - Assunto: "${payload.subject}"`);
+
+	let response;
+	try {
+		response = await fetchWithTimeout(BREVO_SEND_EMAIL_URL, {
+			method: "POST",
+			headers: {
+				accept: "application/json",
+				"api-key": apiKey,
+				"content-type": "application/json",
+			},
+			body: JSON.stringify(payload),
+		}, runtimeEnv);
+	} catch (fetchError) {
+		console.error("[Brevo Email] Erro de rede ou timeout no fetch:", fetchError.message || fetchError);
+		throw fetchError;
+	}
 
 	const body = await response.text();
-	let parsedBody = body;
+	console.log(`[Brevo Email] Resposta HTTP Status: ${response.status}`);
 
+	if (!response.ok) {
+		console.error(`[Brevo Email] Erro retornado pela API da Brevo: ${body}`);
+		throw new Error(
+			`Brevo email API failed with status ${response.status}: ${body}`,
+		);
+	}
+
+	console.log(`[Brevo Email] E-mail enviado com sucesso. Resposta: ${body}`);
+
+	let parsedBody = body;
 	try {
 		parsedBody = body ? JSON.parse(body) : {};
 	} catch {
 		// Keep Brevo's original response text when it is not JSON.
 	}
 
-	if (!response.ok) {
-		throw new Error(
-			`Brevo email API failed with status ${response.status}: ${body}`,
-		);
-	}
-
 	return parsedBody;
 }
 
-async function sendEmail(message, debugLog) {
-	if (getEmailProvider() === "brevo") {
-		return sendViaBrevo(message);
+async function sendEmail(message, debugLog, runtimeEnv) {
+	const provider = getEmailProvider(runtimeEnv);
+	if (provider === "brevo") {
+		return sendViaBrevo(message, runtimeEnv);
+	}
+
+	if (getEnvValue("NODE_ENV", runtimeEnv) === "production") {
+		const errMessage = `Erro: Provedor de e-mail '${provider}' nao configurado ou invalido para producao. BREVO_API_KEY disponivel: ${hasBrevoConfig(runtimeEnv)}`;
+		console.error(`[Email Service] ${errMessage}`);
+		throw new Error(errMessage);
 	}
 
 	if (debugLog) {
@@ -215,9 +248,9 @@ async function sendEmail(message, debugLog) {
 	return { messageId: "workers-fallback-email-id", accepted: [message.to] };
 }
 
-exports.sendCustomEmail = async function ({ to, subject, text }) {
+exports.sendCustomEmail = async function ({ to, subject, text }, runtimeEnv) {
 	const message = {
-		from: getSenderAddress(),
+		from: getSenderAddress(runtimeEnv),
 		to,
 		subject,
 		text,
@@ -227,13 +260,13 @@ exports.sendCustomEmail = async function ({ to, subject, text }) {
 		}),
 	};
 
-	return sendEmail(message, { label: "[custom-email]", value: text });
+	return sendEmail(message, { label: "[custom-email]", value: text }, runtimeEnv);
 };
 
-exports.sendVerificationCodeEmail = async function ({ to, code, shopName }) {
-	const brandName = getBrandName(shopName);
+exports.sendVerificationCodeEmail = async function ({ to, code, shopName }, runtimeEnv) {
+	const brandName = getBrandName(shopName, runtimeEnv);
 	const message = {
-		from: getSenderAddress(),
+		from: getSenderAddress(runtimeEnv),
 		to,
 		subject: `Codigo de confirmacao - ${brandName}`,
 		text: [
@@ -254,13 +287,13 @@ exports.sendVerificationCodeEmail = async function ({ to, code, shopName }) {
 	return sendEmail(message, {
 		label: "[email-verification-code]",
 		value: code,
-	});
+	}, runtimeEnv);
 };
 
-exports.sendPasswordResetCodeEmail = async function ({ to, code, shopName }) {
-	const brandName = getBrandName(shopName);
+exports.sendPasswordResetCodeEmail = async function ({ to, code, shopName }, runtimeEnv) {
+	const brandName = getBrandName(shopName, runtimeEnv);
 	const message = {
-		from: getSenderAddress(),
+		from: getSenderAddress(runtimeEnv),
 		to,
 		subject: `Codigo para redefinir senha - ${brandName}`,
 		text: [
@@ -281,17 +314,17 @@ exports.sendPasswordResetCodeEmail = async function ({ to, code, shopName }) {
 	return sendEmail(message, {
 		label: "[password-reset-code]",
 		value: code,
-	});
+	}, runtimeEnv);
 };
 
 exports.sendVerificationEmail = async function ({
 	to,
 	verificationUrl,
 	shopName,
-}) {
-	const brandName = getBrandName(shopName);
+}, runtimeEnv) {
+	const brandName = getBrandName(shopName, runtimeEnv);
 	const message = {
-		from: getSenderAddress(),
+		from: getSenderAddress(runtimeEnv),
 		to,
 		subject: `Confirme seu acesso ao ${brandName}`,
 		text: [
@@ -312,7 +345,7 @@ exports.sendVerificationEmail = async function ({
 	return sendEmail(message, {
 		label: "[email-verification]",
 		value: verificationUrl,
-	});
+	}, runtimeEnv);
 };
 
 exports.sendBarberInviteEmail = async function ({
@@ -320,10 +353,10 @@ exports.sendBarberInviteEmail = async function ({
 	barberName,
 	shopName,
 	inviteUrl,
-}) {
-	const brandName = getBrandName(shopName);
+}, runtimeEnv) {
+	const brandName = getBrandName(shopName, runtimeEnv);
 	const message = {
-		from: getSenderAddress(),
+		from: getSenderAddress(runtimeEnv),
 		to,
 		subject: `Convite para acessar ${brandName}`,
 		text: [
@@ -342,7 +375,7 @@ exports.sendBarberInviteEmail = async function ({
 		}),
 	};
 
-	return sendEmail(message, { label: "[barber-invite]", value: inviteUrl });
+	return sendEmail(message, { label: "[barber-invite]", value: inviteUrl }, runtimeEnv);
 };
 
 exports._private = {

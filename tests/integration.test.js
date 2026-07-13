@@ -128,4 +128,32 @@ describe('Bateria de Testes de Integração da API', () => {
     expect(body).toHaveProperty('error');
     expect(body.error).toContain('Authorization header');
   });
+
+  it('Teste 5: Recuperação de Senha (POST /auth/forgot-password) - Falha no envio de email detectada', async () => {
+    const payload = {
+      email: "test-login@example.com"
+    };
+
+    // Override the environment to force brevo provider and dummy key to ensure a failure is thrown
+    const badKeyEnv = {
+      ...mockEnv,
+      BREVO_API_KEY: "invalid_key_for_testing_failures",
+      EMAIL_PROVIDER: "brevo"
+    };
+
+    const res = await app.request('/auth/forgot-password', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(payload)
+    }, badKeyEnv);
+
+    // It must return 500 since we've added error propagation and try/catch instead of failing silently
+    expect(res.status).toBe(500);
+    const body = await res.json();
+    expect(body).toHaveProperty('error');
+    expect(body).toHaveProperty('code');
+    expect(body.code).toBe('EMAIL_SEND_FAILED');
+  });
 });

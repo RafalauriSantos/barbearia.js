@@ -70,7 +70,7 @@ function createSession(user) {
 	return { accessToken, refreshToken };
 }
 
-exports.createBarberInvite = async function (barbeiroId, payload, user) {
+exports.createBarberInvite = async function (barbeiroId, payload, user, runtimeEnv) {
 	if (!user?.barbearia_id || user.role !== "admin") {
 		throw new AppError(
 			403,
@@ -114,7 +114,7 @@ exports.createBarberInvite = async function (barbeiroId, payload, user) {
 		barberName: barber.nome || barber.name,
 		shopName: invite.barbearia?.nome,
 		inviteUrl,
-	});
+	}, runtimeEnv);
 
 	return {
 		invite: toPublicInvite(invite),

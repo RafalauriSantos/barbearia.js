@@ -40,7 +40,7 @@ exports.sendTestEmail = async (request, reply) => {
 		to,
 		subject,
 		text,
-	});
+	}, request.env);
 
 	return reply.send({
 		ok: true,

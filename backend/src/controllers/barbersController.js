@@ -38,6 +38,7 @@ exports.invite = async (request, reply) => {
 		request.params.id,
 		payload,
 		user,
+		request.env,
 	);
 	return reply.code(201).send(invite);
 };

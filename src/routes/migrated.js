@@ -22,6 +22,7 @@ export function adaptController(controllerFn) {
       query: c.req.query(),
       params: c.req.param(),
       body: undefined,
+      env: c.env,
     };
     
     if (['POST', 'PUT', 'PATCH'].includes(c.req.method)) {
@@ -50,14 +51,35 @@ export function adaptController(controllerFn) {
       }
     };
     
-    const result = await controllerFn(request, reply);
-    const finalData = sentData !== undefined ? sentData : result;
-    
-    if (statusCode === 204 || finalData === null || finalData === undefined) {
-      return c.body(null, statusCode || 204);
+    try {
+      const result = await controllerFn(request, reply);
+      const finalData = sentData !== undefined ? sentData : result;
+      
+      if (statusCode === 204 || finalData === null || finalData === undefined) {
+        return c.body(null, statusCode || 204);
+      }
+      
+      return c.json(finalData, statusCode);
+    } catch (err) {
+      if (err instanceof AppError) {
+        return c.json({ error: err.message, code: err.code }, err.status);
+      }
+      if (err instanceof ZodError) {
+        return c.json({
+          error: "Validation error",
+          code: "VALIDATION_ERROR",
+          issues: err.issues.map((issue) => ({
+            path: issue.path.join("."),
+            message: issue.message,
+          })),
+        }, 400);
+      }
+      console.error("adaptController Error:", err);
+      return c.json(
+        { error: err.message || "Internal Server Error", code: "INTERNAL_ERROR" },
+        500
+      );
     }
-    
-    return c.json(finalData, statusCode);
   };
 }
 
