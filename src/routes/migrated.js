@@ -1,5 +1,6 @@
 import { Hono } from 'hono';
 import { authMiddleware } from '../middlewares/auth.js';
+import { cacheMiddleware } from '../middlewares/cache.middleware.js';
 import { AppError } from '../../backend/src/lib/errors.js';
 import { ZodError } from 'zod';
 
@@ -119,7 +120,7 @@ router.get('/payment-methods', authMiddleware, adaptController(paymentMethodsCon
 router.patch('/payment-methods/:id', authMiddleware, adaptController(paymentMethodsController.update));
 
 // Products
-router.get('/products', authMiddleware, adaptController(productsController.list));
+router.get('/products', authMiddleware, cacheMiddleware, adaptController(productsController.list));
 router.post('/products', authMiddleware, adaptController(productsController.create));
 router.put('/products/:id', authMiddleware, adaptController(productsController.update));
 router.delete('/products/:id', authMiddleware, adaptController(productsController.remove));

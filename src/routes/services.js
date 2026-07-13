@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import { getSupabase } from '../index.js';
 import { authMiddleware } from '../middlewares/auth.js';
+import { cacheMiddleware } from '../middlewares/cache.middleware.js';
 
 const router = new Hono();
 
@@ -32,7 +33,7 @@ async function getBarbeariaId(supabase, userId, env) {
   return null;
 }
 
-router.get('/', authMiddleware, async (c) => {
+router.get('/', authMiddleware, cacheMiddleware, async (c) => {
   const supabase = getSupabase(c);
   const user = c.get('user'); // Token payload: { userId: user.id }
   const userId = user?.userId;
