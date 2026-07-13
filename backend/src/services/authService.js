@@ -55,7 +55,8 @@ exports.register = async function ({ email, password }, runtimeEnv) {
 
 	return {
 		user,
-		verificationCode: env.NODE_ENV === "production" ? undefined : code,
+		verificationCode:
+			(runtimeEnv?.NODE_ENV || env.NODE_ENV) === "production" ? undefined : code,
 	};
 };
 
@@ -192,7 +193,8 @@ exports.requestPasswordReset = async function ({ email }, runtimeEnv) {
 
 	return {
 		ok: true,
-		resetCode: env.NODE_ENV === "production" ? undefined : code,
+		resetCode:
+			(runtimeEnv?.NODE_ENV || env.NODE_ENV) === "production" ? undefined : code,
 	};
 };
 

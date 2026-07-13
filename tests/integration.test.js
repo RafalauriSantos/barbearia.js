@@ -156,4 +156,158 @@ describe('Bateria de Testes de Integração da API', () => {
     expect(body).toHaveProperty('code');
     expect(body.code).toBe('EMAIL_SEND_FAILED');
   });
+
+  it('Teste 6: Esqueci a Senha - Sucesso local (modo dev com resetCode retornado)', async () => {
+    const payload = {
+      email: "test-login@example.com"
+    };
+
+    const devEnv = {
+      ...mockEnv,
+      NODE_ENV: "development",
+      EMAIL_PROVIDER: "smtp"
+    };
+
+    const res = await app.request('/auth/forgot-password', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(payload)
+    }, devEnv);
+
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body).toHaveProperty('ok');
+    expect(body.ok).toBe(true);
+    expect(body).toHaveProperty('resetCode');
+    expect(body.resetCode).toHaveLength(6);
+  });
+
+  it('Teste 7: Esqueci a Senha - Sucesso produção (resetCode ocultado)', async () => {
+    const payload = {
+      email: "test-login@example.com"
+    };
+
+    const originalFetch = global.fetch;
+    global.fetch = async (url, options) => {
+      if (typeof url === 'string' && url.includes('api.brevo.com')) {
+        return {
+          ok: true,
+          status: 201,
+          text: async () => JSON.stringify({ messageId: "message-prod-1" })
+        };
+      }
+      return originalFetch(url, options);
+    };
+
+    const prodEnv = {
+      ...mockEnv,
+      NODE_ENV: "production",
+      EMAIL_PROVIDER: "brevo",
+      BREVO_API_KEY: "valid_dummy_key"
+    };
+
+    try {
+      const res = await app.request('/auth/forgot-password', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(payload)
+      }, prodEnv);
+
+      expect(res.status).toBe(200);
+      const body = await res.json();
+      expect(body).toHaveProperty('ok');
+      expect(body.ok).toBe(true);
+      expect(body).not.toHaveProperty('resetCode');
+    } finally {
+      global.fetch = originalFetch;
+    }
+  });
+
+  it('Teste 8: Fluxo Completo de Redefinição de Senha (Esqueci -> Redefinir -> Novo Login)', async () => {
+    const email = "test-login@example.com";
+    const newPassword = "newsupersecretpassword";
+
+    // 1. Forgot password request (in dev mode to capture resetCode)
+    const devEnv = {
+      ...mockEnv,
+      NODE_ENV: "development",
+      EMAIL_PROVIDER: "smtp"
+    };
+
+    const forgotRes = await app.request('/auth/forgot-password', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ email })
+    }, devEnv);
+
+    expect(forgotRes.status).toBe(200);
+    const forgotBody = await forgotRes.json();
+    const code = forgotBody.resetCode;
+    expect(code).toBeDefined();
+
+    // 2. Reset password request with the code
+    const resetRes = await app.request('/auth/reset-password', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ email, code, password: newPassword })
+    }, devEnv);
+
+    expect(resetRes.status).toBe(200);
+    const resetBody = await resetRes.json();
+    expect(resetBody).toHaveProperty('ok');
+    expect(resetBody.ok).toBe(true);
+
+    // 3. Try login with new password (should succeed)
+    const loginRes = await app.request('/auth/login', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ email, password: newPassword })
+    }, devEnv);
+
+    expect(loginRes.status).toBe(200);
+    const loginBody = await loginRes.json();
+    expect(loginBody).toHaveProperty('accessToken');
+
+    // 4. Try login with old password (should fail)
+    const badLoginRes = await app.request('/auth/login', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ email, password: "supersecret" }) // old password
+    }, devEnv);
+
+    expect(badLoginRes.status).toBe(401);
+
+    // 5. Cleanup: Restore password to "supersecret" to prevent side-effects on other test runs
+    const cleanForgotRes = await app.request('/auth/forgot-password', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ email })
+    }, devEnv);
+    expect(cleanForgotRes.status).toBe(200);
+    const cleanForgotBody = await cleanForgotRes.json();
+    const cleanCode = cleanForgotBody.resetCode;
+
+    const restoreRes = await app.request('/auth/reset-password', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ email, code: cleanCode, password: "supersecret" })
+    }, devEnv);
+    expect(restoreRes.status).toBe(200);
+  });
 });

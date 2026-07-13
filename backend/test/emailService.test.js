@@ -203,3 +203,57 @@ t.test("without Brevo or SMTP, email is logged with stream transport", async (t)
 
 	t.same(logs, [["[password-reset-code]", "654321"]]);
 });
+
+t.test("runtimeEnv parameter overrides process.env configurations", async (t) => {
+	const originalFetch = global.fetch;
+	let capturedHeaders;
+
+	global.fetch = async (url, options) => {
+		capturedHeaders = options.headers;
+		return {
+			ok: true,
+			status: 201,
+			text: async () => JSON.stringify({ messageId: "message-runtime-1" }),
+		};
+	};
+
+	t.teardown(() => {
+		global.fetch = originalFetch;
+	});
+
+	const emailService = loadEmailService({
+		EMAIL_PROVIDER: "smtp",
+		BREVO_API_KEY: "default-key"
+	});
+
+	const customRuntimeEnv = {
+		EMAIL_PROVIDER: "brevo",
+		BREVO_API_KEY: "runtime-key",
+		EMAIL_FROM: "Sender <test@example.com>"
+	};
+
+	const result = await emailService.sendCustomEmail({
+		to: "rafael@example.com",
+		subject: "Teste Override",
+		text: "Mensagem"
+	}, customRuntimeEnv);
+
+	t.equal(capturedHeaders["api-key"], "runtime-key");
+	t.same(result, { messageId: "message-runtime-1" });
+});
+
+t.test("throws error in production if email provider is not brevo", async (t) => {
+	const emailService = loadEmailService({
+		NODE_ENV: "production",
+		EMAIL_PROVIDER: "smtp"
+	});
+
+	await t.rejects(
+		emailService.sendCustomEmail({
+			to: "rafael@example.com",
+			subject: "Teste",
+			text: "Mensagem"
+		}),
+		/Provedor de e-mail 'smtp' nao configurado ou invalido para producao/
+	);
+});
