@@ -6,7 +6,7 @@ compatibility_flags = [ "nodejs_compat" ]
 [vars]
 NODE_ENV = "production"
 EMAIL_PROVIDER = "brevo"
-EMAIL_FROM = "Marque’s Barbearia <no-reply@localhost>"
+EMAIL_FROM = "Marque’s Barbearia <ledger0pro@gmail.com>"
 EMAIL_BRAND_NAME = "Marque’s Barbearia"
 SUPABASE_URL = "https://zniehugopmvoutxnpgox.supabase.co"
 
