@@ -1,69 +1,74 @@
-# Projeto TCC
+# Projeto TCC (Migração Edge Architecture)
 
-Projeto full stack para gestao de barbearia: agenda diaria, servicos, produtos, despesas e resumo financeiro. Foco em fluxo operacional, dados persistidos e integracao real com Postgres/Supabase.
+Projeto full stack para gestão de barbearia: agenda diária, serviços, produtos, despesas e resumo financeiro. Foco em fluxo operacional, dados persistidos e integração real com Postgres/Supabase.
+
+Recentemente, a infraestrutura passou por uma migração arquitetural profunda (do Fastify/Render para o Hono/Cloudflare), saindo de servidores em nuvem tradicionais para uma **arquitetura de Borda (Edge Computing)** com latência zero e suporte offline avançado.
 
 ## O que este projeto entrega
 
-- Agenda com criacao, edicao e exclusao de agendamentos
-- Cadastro, login, verificacao por codigo e recuperacao de senha
-- Catalogo de servicos e produtos
-- Despesas e resumo financeiro diario
-- Equipe, convites e separacao de dados por barbearia
+- Agenda com criação, edição e exclusão de agendamentos
+- Cadastro, login, verificação por código e recuperação de senha
+- Catálogo de serviços e produtos
+- Despesas e resumo financeiro diário
+- Equipe, convites e separação de dados por barbearia
 - Foto de perfil dos barbeiros na agenda, com editor de enquadramento
-- Cache persistente, prefetch e abertura com sessao cacheada para reduzir carregamentos visiveis
-- Backend com API REST e validacao de ambiente
+- **Novo:** Motor de sincronização offline (PWA) resiliente, com fila de requisições retidas no `localStorage`.
+- **Novo:** Cache persistente aprimorado com abertura de sessão usando dados em cache para mascarar o tempo de rede.
 
 ## App publicado
 
-- Frontend: https://kurt-barbearia.vercel.app
-- Backend/API: https://kurt-api.onrender.com
+- Frontend (Pages): https://barbearia-app.pages.dev
+- Backend/API (Workers): https://barbearia-workers.agenddar.workers.dev
 
-Observacao: o backend esta no plano Free do Render. A primeira chamada depois de
-inatividade pode demorar alguns segundos enquanto o servico acorda.
+> **Observação de Performance:** A aplicação agora roda globalmente na borda (Edge) da Cloudflare. **O antigo problema de "cold start" (demora ao acordar o servidor) do Render foi completamente eliminado.** A API responde em milissegundos.
 
-## Destaques tecnicos
+## Destaques técnicos
 
-- Backend em camadas (routes/controllers/services/repositories)
-- Integracao com Supabase/Postgres via Knex
-- Frontend React com rotas protegidas e cliente HTTP centralizado
-- Cache persistente/prefetch no frontend para agenda, catalogo, despesas, financeiro, equipe e perfil
-- Scripts de raiz para subir, testar e validar
+- Aplicação do **Padrão Adapter** para migrar controladores Node.js (Fastify) para o runtime V8 da Cloudflare (Hono), mantendo as regras de negócio isoladas.
+- Backend estruturado em camadas iterativas (routes/controllers/services/repositories).
+- Integração com Supabase/Postgres via Connection Pooling para suportar o ambiente Serverless.
+- Frontend React com rotas protegidas (`AuthGate`) e cliente HTTP centralizado com interceptores dinâmicos.
+- Suíte de testes de integração E2E extremamente rápida (Vitest) rodando requisições em memória.
+- Scripts de raiz para limpar, compilar, testar e publicar a aplicação.
 
 ## Stack
 
-- Backend: Node.js + Fastify + Knex + Postgres (Supabase)
-- Frontend: React + Vite
+- **Backend:** Cloudflare Workers + Hono + Knex + Postgres (Supabase) + Zod
+- **Frontend:** React + Vite + Cloudflare Pages + React Router v6
+- **Testes:** Vitest
 
-## Decisoes de arquitetura
+## Decisões de arquitetura
 
-- Separacao em camadas no backend para manter dominio e infraestrutura isolados
-- Knex como camada de acesso ao banco para queries, migrations e seeds
-- Supabase usado como Postgres gerenciado, com foco em SQL direto
-- Cliente HTTP centralizado no frontend para padronizar erros e autenticao
+- **Edge Computing:** Hospedagem descentralizada na Cloudflare para unificar CDN estática e execução de API com máxima proximidade do usuário final.
+- **Micro-tarefas e Níveis:** Migração de arquitetura realizada de forma estruturada e sequencial, garantindo estabilidade antes de avançar para a próxima fase técnica.
+- **Criptografia Híbrida:** Adaptação da segurança de senhas na borda mantendo o suporte ao Argon2id legado e implementando Bcryptjs via WebAssembly/APIs nativas.
+- **Gerenciamento de Estado Customizado:** Utilização de um motor próprio de cache em memória (`Map`) e `localStorage` no frontend, evitando bibliotecas pesadas de terceiros (como Redux) para focar na resiliência offline do PWA.
+- **Comunicação de E-mails:** Uso exclusivo da API HTTP da Brevo (`fetch`) no Edge, descartando o Nodemailer, pois portas SMTP são bloqueadas na arquitetura de borda.
 
-## Estrutura do repositorio
+## Estrutura do repositório
 
-- backend/ - API, rotas e integracao com banco
-- frontend/ - app web
-- docs/ - roadmap principal e guia de deploy
-- scripts/ - scripts de desenvolvimento
+- `backend/` - API Hono, rotas, testes automatizados e integração com banco
+- `frontend/` - App web (PWA)
+- `tests/` - Suíte de testes automatizados (Vitest)
+- `docs/` - Roadmap principal e guias de arquitetura
+- `scripts/` - Scripts de desenvolvimento
 
 ## Como rodar (local)
 
-Requisitos: Node.js LTS e conta no Supabase.
+Requisitos: Node.js 20+, conta no Supabase e conta na Cloudflare (para o Wrangler).
 
-### Backend
+### Backend (Wrangler)
 
-1. Copie o .env:
-   - [backend/.env.example](backend/.env.example) -> [backend/.env](backend/.env)
+1. Copie o arquivo de segredos de desenvolvimento:
+   - `backend/.dev.vars.example` -> `backend/.dev.vars`
 
-2. Preencha as variaveis principais:
+2. Preencha as variáveis principais:
    - `SUPABASE_URL`
    - `SUPABASE_SERVICE_KEY`
    - `DATABASE_URL`
    - `JWT_SECRET`
-   - `DEFAULT_BARBEARIA_ID`
-   - `AVATAR_BUCKET` (opcional; padrao: `barber-avatars`)
+   - `BREVO_API_KEY`
+   - `EMAIL_FROM`, `EMAIL_BRAND_NAME`, `EMAIL_PROVIDER=brevo`
 
 3. Instale e rode:
 
@@ -71,82 +76,3 @@ Requisitos: Node.js LTS e conta no Supabase.
 cd backend
 npm install
 npm run dev
-```
-
-### Frontend
-
-1. Crie o .env:
-   - [frontend/.env.example](frontend/.env.example) -> [frontend/.env](frontend/.env)
-   - `VITE_API_URL` aponta para o backend
-   - `VITE_API_TIMEOUT_MS` pode ficar em `75000` para tolerar cold start do Render Free
-
-2. Instale e rode:
-
-```bash
-cd frontend
-npm install
-npm run dev
-```
-
-## Endpoints principais
-
-- `GET/POST/PUT/DELETE /services`
-- `GET/POST/PUT/DELETE /products`
-- `GET/POST/PUT/DELETE /expenses`
-- `GET/POST/PUT/DELETE /agendamentos`
-- `GET/PUT /profile`
-- `DELETE /reset`
-
-## Testes
-
-Gate completo local:
-
-```bash
-.\validar-tudo.cmd
-```
-
-Quando tudo passa, esse comando tambem sobe backend/frontend, executa os smoke tests e abre o app no navegador.
-
-Backend:
-
-```bash
-cd backend
-npm run test
-```
-
-Frontend:
-
-```bash
-cd frontend
-npm run lint
-npm run test
-npm run build
-```
-
-Smoke test com backend e frontend ja rodando:
-
-```bash
-.\testar-tudo.cmd
-```
-
-## Scripts de raiz
-
-- `rodar-tudo.cmd` - sobe backend e frontend
-- `fechar-portas.cmd` - para backend e frontend locais
-- `testar-tudo.cmd` - executa smoke tests contra servidores ja rodando
-- `validar-tudo.cmd` - roda backend tests, frontend lint, frontend tests e build; se passar, sobe e abre o app
-
-## Documentacao
-
-- [docs/ROADMAP_DESENVOLVIMENTO_TCC.md](docs/ROADMAP_DESENVOLVIMENTO_TCC.md) - fonte unica de verdade do status, backlog e criterios de pronto
-- [docs/DEPLOY_RENDER_VERCEL.md](docs/DEPLOY_RENDER_VERCEL.md) - guia de deploy separado em Render + Vercel
-
-## Observacoes
-
-- O backend usa `SUPABASE_SERVICE_KEY` para operacoes administrativas e seed.
-- CORS e `APP_URL` podem ser ajustados no .env do backend.
-- O frontend aplica viewport dinamico por `visualViewport`, fallback `100svh` e safe area no iOS Safari.
-- O frontend mantem cache persistente por usuario dos dados operacionais, abre com dados salvos quando possivel e atualiza em segundo plano para reduzir loading entre abas.
-- A foto do barbeiro aceita imagens de origem ate 20MB, abre um editor de enquadramento e comprime a versao final antes de enviar para a API.
-- Em producao gratuita no Render, o envio de email deve usar Brevo API
-  (`EMAIL_PROVIDER=brevo`) em vez de SMTP.
