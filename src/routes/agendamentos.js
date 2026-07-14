@@ -1,5 +1,6 @@
 import { Hono } from 'hono';
 import { authMiddleware } from '../middlewares/auth.js';
+import { rateLimitMiddleware } from '../middlewares/rateLimit.middleware.js';
 import AppointmentsService from '../../backend/src/services/appointmentsService.js';
 import AuthService from '../../backend/src/services/authService.js';
 import { AppError } from '../../backend/src/lib/errors.js';
@@ -44,7 +45,7 @@ router.get('/', authMiddleware, async (c) => {
 });
 
 // POST /agendamentos
-router.post('/', authMiddleware, async (c) => {
+router.post('/', authMiddleware, rateLimitMiddleware, async (c) => {
   const userPayload = c.get('user');
   const fullUser = await AuthService.getCurrentUser(userPayload.userId);
   
@@ -68,11 +69,11 @@ const handleUpdate = async (c) => {
   return c.json(updated);
 };
 
-router.put('/:id', authMiddleware, handleUpdate);
-router.patch('/:id', authMiddleware, handleUpdate);
+router.put('/:id', authMiddleware, rateLimitMiddleware, handleUpdate);
+router.patch('/:id', authMiddleware, rateLimitMiddleware, handleUpdate);
 
 // DELETE /agendamentos/:id
-router.delete('/:id', authMiddleware, async (c) => {
+router.delete('/:id', authMiddleware, rateLimitMiddleware, async (c) => {
   const { id } = c.req.param();
   const userPayload = c.get('user');
   const fullUser = await AuthService.getCurrentUser(userPayload.userId);

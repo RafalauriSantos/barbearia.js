@@ -6,6 +6,7 @@ import { authMiddleware } from '../middlewares/auth.js';
 import { verifyPassword } from 'worker-password-auth';
 import authController from '../../backend/src/controllers/authController.js';
 import { adaptController } from './migrated.js';
+import { rateLimitMiddleware } from '../middlewares/rateLimit.middleware.js';
 
 const router = new Hono();
 
@@ -63,7 +64,7 @@ async function resolveUserContext(user, supabase, env) {
   };
 }
 
-router.post('/login', async (c) => {
+router.post('/login', rateLimitMiddleware, async (c) => {
   const supabase = getSupabase(c);
   
   let body;
@@ -182,7 +183,7 @@ router.get('/me', authMiddleware, async (c) => {
 });
 
 // POST /auth/refresh
-router.post('/refresh', async (c) => {
+router.post('/refresh', rateLimitMiddleware, async (c) => {
   let body;
   try {
     body = await c.req.json();
@@ -216,11 +217,11 @@ router.post('/refresh', async (c) => {
 });
 
 // Mapeamento das rotas restantes do authController
-router.post('/register', adaptController(authController.register));
-router.post('/verify-email', adaptController(authController.verifyEmail));
-router.post('/verify-code', adaptController(authController.verifyEmailCode));
-router.post('/resend-code', adaptController(authController.resendEmailCode));
-router.post('/forgot-password', adaptController(authController.forgotPassword));
-router.post('/reset-password', adaptController(authController.resetPassword));
+router.post('/register', rateLimitMiddleware, adaptController(authController.register));
+router.post('/verify-email', rateLimitMiddleware, adaptController(authController.verifyEmail));
+router.post('/verify-code', rateLimitMiddleware, adaptController(authController.verifyEmailCode));
+router.post('/resend-code', rateLimitMiddleware, adaptController(authController.resendEmailCode));
+router.post('/forgot-password', rateLimitMiddleware, adaptController(authController.forgotPassword));
+router.post('/reset-password', rateLimitMiddleware, adaptController(authController.resetPassword));
 
 export default router;

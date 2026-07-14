@@ -2,6 +2,7 @@ import { Hono } from 'hono';
 import { authMiddleware } from '../middlewares/auth.js';
 import { cacheMiddleware } from '../middlewares/cache.middleware.js';
 import { clearStaticCache } from '../utils/cache.util.js';
+import { rateLimitMiddleware } from '../middlewares/rateLimit.middleware.js';
 import { AppError } from '../../backend/src/lib/errors.js';
 import { ZodError } from 'zod';
 
@@ -123,7 +124,7 @@ router.patch('/payment-methods/:id', authMiddleware, adaptController(paymentMeth
 // Products
 router.get('/products', authMiddleware, cacheMiddleware, adaptController(productsController.list));
 
-router.post('/products', authMiddleware, async (c) => {
+router.post('/products', authMiddleware, rateLimitMiddleware, async (c) => {
   const res = await adaptController(productsController.create)(c);
   if (res.status === 201) {
     await clearStaticCache(c, '/products');
@@ -131,7 +132,7 @@ router.post('/products', authMiddleware, async (c) => {
   return res;
 });
 
-router.put('/products/:id', authMiddleware, async (c) => {
+router.put('/products/:id', authMiddleware, rateLimitMiddleware, async (c) => {
   const res = await adaptController(productsController.update)(c);
   if (res.status === 200) {
     await clearStaticCache(c, '/products');
@@ -139,7 +140,7 @@ router.put('/products/:id', authMiddleware, async (c) => {
   return res;
 });
 
-router.delete('/products/:id', authMiddleware, async (c) => {
+router.delete('/products/:id', authMiddleware, rateLimitMiddleware, async (c) => {
   const res = await adaptController(productsController.remove)(c);
   if (res.status === 204) {
     await clearStaticCache(c, '/products');
