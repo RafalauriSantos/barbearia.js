@@ -2,6 +2,9 @@ import { Hono } from 'hono';
 import { getSupabase } from '../index.js';
 import { authMiddleware } from '../middlewares/auth.js';
 import { cacheMiddleware } from '../middlewares/cache.middleware.js';
+import { adaptController } from './migrated.js';
+import servicesController from '../../backend/src/controllers/servicesController.js';
+import { clearStaticCache } from '../utils/cache.util.js';
 
 const router = new Hono();
 
@@ -75,6 +78,30 @@ router.get('/', authMiddleware, cacheMiddleware, async (c) => {
   } catch (err) {
     return c.json({ error: err.message }, 500);
   }
+});
+
+router.post('/', authMiddleware, async (c) => {
+  const res = await adaptController(servicesController.create)(c);
+  if (res.status === 201) {
+    await clearStaticCache(c, '/services');
+  }
+  return res;
+});
+
+router.put('/:id', authMiddleware, async (c) => {
+  const res = await adaptController(servicesController.update)(c);
+  if (res.status === 200) {
+    await clearStaticCache(c, '/services');
+  }
+  return res;
+});
+
+router.delete('/:id', authMiddleware, async (c) => {
+  const res = await adaptController(servicesController.remove)(c);
+  if (res.status === 204) {
+    await clearStaticCache(c, '/services');
+  }
+  return res;
 });
 
 export default router;
