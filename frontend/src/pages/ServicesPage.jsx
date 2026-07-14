@@ -203,33 +203,60 @@ export default function ServicesPage() {
 			return;
 		}
 
-		setIsSubmitting(true);
-		setErrorMessage("");
-		setFormError("");
-
 		// Salva alteracoes do item em edicao.
 		const data = buildPayload();
-		try {
-			if (tab === "services") {
-				await updateService(editingId, data);
-			} else {
-				await updateProduct(editingId, data);
-			}
-			await reloadData();
+
+		if (tab === "services") {
+			const previousServices = [...services];
+			const originalService = services.find((s) => s.id === editingId);
+			const updatedService = {
+				...originalService,
+				name: name,
+				price: parseMoneyInput(price),
+			};
+
+			// 1. Atualizacao otimista imediata do estado local
+			setServices(services.map((s) => (s.id === editingId ? updatedService : s)));
+
+			// 2. Limpar campos e fechar o modal/form instantaneamente (0ms de latência percebida)
 			setEditingId(null);
 			setName("");
 			setPrice("");
-			setPurchaseType("avista");
-			setCostPrice("");
-			setSupplierName("");
-			setSellerCommissionPercent("");
-			setStockQuantity("");
 			setFormError("");
 			setShowForm(false);
-		} catch (error) {
-			setErrorMessage(error.message || "Falha ao atualizar item.");
-		} finally {
-			setIsSubmitting(false);
+			setErrorMessage("");
+
+			// 3. Disparar a chamada da API em background
+			try {
+				await updateService(editingId, data);
+				await reloadData();
+			} catch (error) {
+				// Reversao (rollback) em caso de erro
+				setServices(previousServices);
+				setErrorMessage(error.message || "Falha ao salvar o serviço. Sincronização falhou.");
+			}
+		} else {
+			setIsSubmitting(true);
+			setErrorMessage("");
+			setFormError("");
+			try {
+				await updateProduct(editingId, data);
+				await reloadData();
+				setEditingId(null);
+				setName("");
+				setPrice("");
+				setPurchaseType("avista");
+				setCostPrice("");
+				setSupplierName("");
+				setSellerCommissionPercent("");
+				setStockQuantity("");
+				setFormError("");
+				setShowForm(false);
+			} catch (error) {
+				setErrorMessage(error.message || "Falha ao atualizar item.");
+			} finally {
+				setIsSubmitting(false);
+			}
 		}
 	};
 	const handleDelete = async (id) => {
