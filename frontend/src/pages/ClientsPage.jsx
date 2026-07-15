@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useFocusTrap } from "@/lib/useFocusTrap";
 import { BottomNav } from "@/components/BottomNav";
 import { AppointmentDialog } from "@/components/AppointmentDialog";
 import {
@@ -68,7 +69,7 @@ function formatShortDate(dayKey) {
 function Field({ label, children }) {
 	return (
 		<label className="block">
-			<span className="mb-1 block font-mono-ui text-[10px] text-foreground-faint">
+			<span className="mb-1 block font-client text-xs font-semibold text-foreground-faint">
 				{label}
 			</span>
 			{children}
@@ -96,16 +97,19 @@ function TextArea(props) {
 }
 
 function Sheet({ title, eyebrow, onClose, children }) {
+	const containerRef = useFocusTrap(onClose);
 	return (
 		<div
 			className="fixed inset-0 z-[100] flex items-end justify-center bg-black/70 backdrop-blur-sm"
 			onClick={onClose}>
 			<div
-				className="max-h-[92dvh] w-full max-w-[520px] overflow-y-auto rounded-t-lg border-x border-t border-border bg-background px-4 pb-6 pt-4"
+				ref={containerRef}
+				tabIndex="-1"
+				className="max-h-[92dvh] w-full max-w-[520px] overflow-y-auto rounded-t-lg border-x border-t border-border bg-background px-4 pb-6 pt-4 outline-none"
 				onClick={(event) => event.stopPropagation()}>
 				<div className="flex items-center justify-between gap-3">
 					<div>
-						<p className="font-mono-ui text-[10px] uppercase text-foreground-faint">
+						<p className="font-client text-xs font-semibold text-foreground-faint">
 							{eyebrow}
 						</p>
 						<h2 className="mt-1 font-logo text-lg text-foreground">
@@ -150,7 +154,7 @@ function FixedClientCard({
 						{client.phone || "Sem telefone"} • a cada {client.interval_days} dias
 					</p>
 					{client.barber_name && (
-						<p className="mt-1 truncate font-mono-ui text-[9px] uppercase text-paid">
+						<p className="mt-1 truncate font-client text-[10px] font-semibold text-paid">
 							{client.barber_name}
 						</p>
 					)}
@@ -159,14 +163,14 @@ function FixedClientCard({
 					type="button"
 					onClick={() => onAddCut(client)}
 					disabled={isSubmitting}
-					className="shrink-0 rounded-md bg-foreground px-3 py-2 font-mono-ui text-[10px] text-primary-foreground disabled:opacity-60">
+					className="shrink-0 rounded-md bg-foreground px-4 py-2 min-h-11 flex items-center justify-center font-client text-xs font-bold text-primary-foreground disabled:opacity-60">
 					Corte
 				</button>
 			</div>
 
 			<div className="mt-4 grid grid-cols-3 gap-2">
 				<div className="rounded-md bg-background-deep p-2">
-					<p className="font-mono-ui text-[9px] uppercase text-foreground-faint">
+					<p className="font-client text-[10px] font-semibold text-foreground-faint">
 						Pacote
 					</p>
 					<p className="mt-1 font-value text-lg text-foreground">
@@ -174,7 +178,7 @@ function FixedClientCard({
 					</p>
 				</div>
 				<div className="rounded-md bg-background-deep p-2">
-					<p className="font-mono-ui text-[9px] uppercase text-foreground-faint">
+					<p className="font-client text-[10px] font-semibold text-foreground-faint">
 						A receber
 					</p>
 					<p className="mt-1 font-value text-lg text-fiado">
@@ -182,8 +186,8 @@ function FixedClientCard({
 					</p>
 				</div>
 				<div className="rounded-md bg-background-deep p-2">
-					<p className="font-mono-ui text-[9px] uppercase text-foreground-faint">
-						Proximo
+					<p className="font-client text-[10px] font-semibold text-foreground-faint">
+						Próximo
 					</p>
 					<p className="mt-1 font-value text-lg text-foreground">
 						{client.next_appointment ?
@@ -637,7 +641,7 @@ export default function ClientsPage() {
 				)}
 
 				{isRefreshing && (
-					<p className="mb-3 rounded-md border border-border bg-card px-3 py-2 font-mono-ui text-[10px] uppercase text-foreground-faint">
+					<p className="mb-3 rounded-md border border-border bg-card px-3 py-2 font-client text-xs text-foreground-faint">
 						Atualizando clientes...
 					</p>
 				)}

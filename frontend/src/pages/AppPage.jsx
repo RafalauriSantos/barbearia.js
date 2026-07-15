@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useFocusTrap } from "@/lib/useFocusTrap";
 import { AppointmentDialog } from "@/components/AppointmentDialog";
 import { AppointmentsList } from "@/components/AppointmentsList";
 import { BottomNav } from "@/components/BottomNav";
@@ -137,7 +138,6 @@ function getDefaultTimeSlot() {
 	);
 	return toTimeLabel(clampedMinutes);
 }
-
 function PaymentQuickSheet({
 	appointment,
 	methods,
@@ -166,6 +166,8 @@ function PaymentQuickSheet({
 	const netValue =
 		Math.round((Math.max(gross - feeValue, 0) + Number.EPSILON) * 100) / 100;
 
+	const containerRef = useFocusTrap(onClose);
+
 	useEffect(() => {
 		setSelectedMethodId(initialMethod?.id || "");
 		setPaymentDate(formatDayKey(new Date()));
@@ -176,11 +178,13 @@ function PaymentQuickSheet({
 			className="fixed inset-0 z-[110] flex items-end justify-center bg-black/70 backdrop-blur-sm"
 			onClick={onClose}>
 			<div
-				className="w-full max-w-[480px] rounded-t-lg border-x border-t border-border bg-background p-4 shadow-[0_-20px_80px_rgba(0,0,0,0.45)]"
+				ref={containerRef}
+				tabIndex="-1"
+				className="w-full max-w-[480px] rounded-t-lg border-x border-t border-border bg-background p-4 shadow-[0_-20px_80px_rgba(0,0,0,0.45)] outline-none"
 				onClick={(event) => event.stopPropagation()}>
 				<div className="flex items-start justify-between gap-3">
 					<div className="min-w-0">
-						<p className="font-mono-ui text-[10px] uppercase text-paid">
+						<p className="font-client text-xs font-semibold text-paid">
 							Receber atendimento
 						</p>
 						<h2 className="mt-1 truncate font-logo text-lg text-foreground">
@@ -194,13 +198,13 @@ function PaymentQuickSheet({
 						type="button"
 						onClick={onClose}
 						disabled={isSaving}
-						className="h-9 w-9 shrink-0 rounded-md border border-border bg-card text-foreground-faint">
+						className="h-11 w-11 flex items-center justify-center text-lg shrink-0 rounded-md border border-border bg-card text-foreground-faint">
 						×
 					</button>
 				</div>
 
 				{isLoading && availableMethods.length === 0 ?
-					<p className="mt-4 rounded-md border border-border bg-card px-3 py-3 font-mono-ui text-[10px] uppercase text-foreground-faint">
+					<p className="mt-4 rounded-md border border-border bg-card px-3 py-3 font-client text-xs text-foreground-faint">
 						Carregando formas...
 					</p>
 				:	<>
@@ -234,7 +238,7 @@ function PaymentQuickSheet({
 
 						<div className="mt-4 grid grid-cols-3 gap-2">
 							<div className="rounded-md bg-background-deep px-3 py-2">
-								<p className="font-mono-ui text-[9px] uppercase text-foreground-faint">
+								<p className="font-client text-[10px] font-semibold text-foreground-faint">
 									Bruto
 								</p>
 								<p className="mt-1 font-value text-base text-foreground">
@@ -242,7 +246,7 @@ function PaymentQuickSheet({
 								</p>
 							</div>
 							<div className="rounded-md bg-background-deep px-3 py-2">
-								<p className="font-mono-ui text-[9px] uppercase text-foreground-faint">
+								<p className="font-client text-[10px] font-semibold text-foreground-faint">
 									Taxa
 								</p>
 								<p className="mt-1 font-value text-base text-fiado">
@@ -250,8 +254,8 @@ function PaymentQuickSheet({
 								</p>
 							</div>
 							<div className="rounded-md bg-background-deep px-3 py-2">
-								<p className="font-mono-ui text-[9px] uppercase text-foreground-faint">
-									Liquido
+								<p className="font-client text-[10px] font-semibold text-foreground-faint">
+									Líquido
 								</p>
 								<p className="mt-1 font-value text-base text-paid">
 									{formatCurrency(netValue)}
@@ -259,7 +263,7 @@ function PaymentQuickSheet({
 							</div>
 						</div>
 						<label className="mt-3 block">
-							<span className="mb-1 block font-mono-ui text-[10px] text-foreground-faint">
+							<span className="mb-1 block font-client text-xs font-semibold text-foreground-faint">
 								Data do pagamento
 							</span>
 							<input
@@ -275,7 +279,7 @@ function PaymentQuickSheet({
 							type="button"
 							onClick={() => selectedMethod && onConfirm(selectedMethod, paymentDate)}
 							disabled={isSaving || !selectedMethod}
-							className="mt-4 w-full rounded-lg bg-paid px-4 py-3 font-mono-ui text-xs uppercase text-primary-foreground transition-transform active:scale-[0.99] disabled:opacity-60">
+							className="mt-4 w-full rounded-lg bg-paid px-4 py-3 font-client text-xs font-bold uppercase text-primary-foreground transition-transform active:scale-[0.99] disabled:opacity-60">
 							{isSaving ? "Salvando..." : "Confirmar pagamento"}
 						</button>
 					</>
@@ -332,6 +336,7 @@ export default function AppPage() {
 	const [editingAppt, setEditingAppt] = useState();
 	const [defaultTimeSlot, setDefaultTimeSlot] = useState("09:00");
 	const [selectedAppointment, setSelectedAppointment] = useState(null);
+	const selectedAppointmentRef = useFocusTrap(() => setSelectedAppointment(null), !!selectedAppointment);
 	const [services, setServices] = useState(initialCache.services || []);
 	const [products, setProducts] = useState(initialCache.products || []);
 	const [paymentMethods, setPaymentMethods] = useState(
@@ -923,7 +928,7 @@ export default function AppPage() {
 
 				<div className="mt-3 grid grid-cols-3 gap-2">
 					<div className="flex items-center justify-center gap-2 rounded-full border border-border bg-card px-2 py-1">
-						<span className="font-mono-ui text-[8px] uppercase text-foreground-faint">
+						<span className="font-client text-[10px] font-semibold text-foreground-faint">
 							Recebido
 						</span>
 						<span className="font-value text-[11px] text-[#4ade80]">
@@ -931,7 +936,7 @@ export default function AppPage() {
 						</span>
 					</div>
 					<div className="flex items-center justify-center gap-2 rounded-full border border-border bg-card px-2 py-1">
-						<span className="font-mono-ui text-[8px] uppercase text-foreground-faint">
+						<span className="font-client text-[10px] font-semibold text-foreground-faint">
 							A cobrar
 						</span>
 						<span className="font-value text-[11px] text-[#facc15]">
@@ -939,7 +944,7 @@ export default function AppPage() {
 						</span>
 					</div>
 					<div className="flex items-center justify-center gap-2 rounded-full border border-border bg-card px-2 py-1">
-						<span className="font-mono-ui text-[8px] uppercase text-foreground-faint">
+						<span className="font-client text-[10px] font-semibold text-foreground-faint">
 							Clientes
 						</span>
 						<span className="font-value text-[11px] text-foreground">
@@ -962,7 +967,7 @@ export default function AppPage() {
 							{formatDateDisplay(currentDate)}
 						</span>
 						{todaySelected && (
-							<span className="rounded-full bg-paid px-2 py-0.5 font-mono-ui text-[9px] uppercase text-primary-foreground">
+							<span className="rounded-full bg-paid px-2 py-0.5 font-client text-[10px] font-bold text-primary-foreground">
 								hoje
 							</span>
 						)}
@@ -1017,9 +1022,11 @@ export default function AppPage() {
 					className="fixed inset-0 z-[100] flex items-end justify-center bg-black/70 px-0 backdrop-blur-sm"
 					onClick={() => setSelectedAppointment(null)}>
 					<div
-						className="w-full max-w-[480px] rounded-t-lg border-x border-t border-border bg-background p-4"
+						ref={selectedAppointmentRef}
+						tabIndex="-1"
+						className="w-full max-w-[480px] rounded-t-lg border-x border-t border-border bg-background p-4 outline-none"
 						onClick={(event) => event.stopPropagation()}>
-						<p className="font-mono-ui text-[10px] uppercase text-foreground-faint">
+						<p className="font-client text-xs font-semibold text-foreground-faint">
 							{selectedAppointment.time_slot}
 						</p>
 						<h2 className="mt-1 truncate font-logo text-lg text-foreground">
@@ -1038,14 +1045,14 @@ export default function AppPage() {
 						<div className="mt-4 space-y-3">
 							{itemError && <Notice tone="error">{itemError}</Notice>}
 							<div className="rounded-md border border-border bg-card px-3 py-3">
-								<p className="font-mono-ui text-[10px] uppercase text-foreground-faint">
+								<p className="font-client text-xs font-semibold text-foreground-faint">
 									Itens do atendimento
 								</p>
 								{(
 									itemDraft.services.length === 0 &&
 									itemDraft.products.length === 0
 								) ?
-									<p className="mt-2 font-mono-ui text-[10px] text-foreground-faint">
+									<p className="mt-2 font-client text-xs text-foreground-faint">
 										Sem itens adicionados.
 									</p>
 								:	<div className="mt-2 space-y-2">
@@ -1108,31 +1115,31 @@ export default function AppPage() {
 									</div>
 								}
 								<div className="mt-3 flex flex-wrap items-center gap-2">
-									<span className="font-mono-ui text-[10px] text-foreground-faint">
+									<span className="font-client text-xs text-foreground-faint">
 										Total itens: {formatCurrency(draftTotal)}
 									</span>
 									<button
 										type="button"
 										onClick={() => setAutoValueForDraft(true)}
-										className="rounded-md border border-border px-2 py-1 font-mono-ui text-[9px] text-foreground-faint">
+										className="rounded-md border border-border px-2 py-1 font-client text-xs text-foreground-faint">
 										Usar total dos itens
 									</button>
 								</div>
 							</div>
 
 							<div className="rounded-md border border-border bg-card px-3 py-3">
-								<p className="font-mono-ui text-[10px] uppercase text-foreground-faint">
+								<p className="font-client text-xs font-semibold text-foreground-faint">
 									Adicionar itens
 								</p>
 								{isLoadingCatalog ?
 									<LoadingCard label="Carregando catálogo" rows={2} />
 								:	<div className="mt-2 space-y-3">
 										<div>
-											<p className="mb-2 font-mono-ui text-[9px] uppercase text-foreground-faint">
+											<p className="mb-2 font-client text-[10px] font-semibold text-foreground-faint">
 												Serviços
 											</p>
 											{services.length === 0 ?
-												<p className="font-mono-ui text-[10px] text-foreground-faint">
+												<p className="font-client text-xs text-foreground-faint">
 													Nenhum serviço cadastrado.
 												</p>
 											:	<div className="flex flex-wrap gap-2">
@@ -1149,11 +1156,11 @@ export default function AppPage() {
 											}
 										</div>
 										<div>
-											<p className="mb-2 font-mono-ui text-[9px] uppercase text-foreground-faint">
+											<p className="mb-2 font-client text-[10px] font-semibold text-foreground-faint">
 												Produtos
 											</p>
 											{products.length === 0 ?
-												<p className="font-mono-ui text-[10px] text-foreground-faint">
+												<p className="font-client text-xs text-foreground-faint">
 													Nenhum produto cadastrado.
 												</p>
 											:	<div className="flex flex-wrap gap-2">
