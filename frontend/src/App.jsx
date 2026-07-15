@@ -24,7 +24,7 @@ const VerifyCodePage = lazy(() => import("./pages/VerifyCodePage"));
 const ForgotPasswordPage = lazy(() => import("./pages/ForgotPasswordPage"));
 const AcceptInvitePage = lazy(() => import("./pages/AcceptInvitePage"));
 
-const SITE_URL = "https://kurt-barbearia.vercel.app";
+const SITE_URL = "https://barbearia-app.pages.dev";
 const LANDING_TITLE = `${APP_NAME} | Sistema de agenda e caixa para barbearias`;
 const LANDING_DESCRIPTION =
 	"Sistema simples para barbearias controlarem agenda, caixa, equipe, produtos, despesas e fiados em um painel operacional.";
