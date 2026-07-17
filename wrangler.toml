@@ -10,3 +10,18 @@ EMAIL_FROM = "Marque’s Barbearia <rafa69lauri@gmail.com>"
 EMAIL_BRAND_NAME = "Marque’s Barbearia"
 SUPABASE_URL = "https://zniehugopmvoutxnpgox.supabase.co"
 
+[observability]
+enabled = false
+head_sampling_rate = 1
+
+[observability.logs]
+enabled = true
+head_sampling_rate = 1
+persist = true
+invocation_logs = true
+
+[observability.traces]
+enabled = false
+persist = true
+head_sampling_rate = 1
+
