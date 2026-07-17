@@ -38,12 +38,13 @@ function expireSession() {
 }
 
 export class AppApiError extends Error {
-	constructor(message, status, details) {
+	constructor(message, status, details, retryAfter) {
 		super(message);
 		this.name = "AppApiError";
 		this.status = status;
 		this.details = details;
 		this.kind = status == null ? "network" : "http";
+		this.retryAfter = retryAfter ? Number(retryAfter) : undefined;
 	}
 }
 
@@ -60,6 +61,9 @@ function toAppApiError(error, fallbackMessage) {
 
 	const status = error?.response?.status;
 	const details = error?.response?.data;
+	const headers = error?.response?.headers || {};
+	const retryAfter = headers["retry-after"] || details?.retryAfter || (details?.details && details.details.retryAfter);
+	
 	const isTimeout =
 		error?.code === "ECONNABORTED" ||
 		String(error?.message || "")
@@ -76,7 +80,7 @@ function toAppApiError(error, fallbackMessage) {
 		error?.message ||
 		"Nao foi possivel concluir a requisicao.";
 
-	return new AppApiError(message, status, details);
+	return new AppApiError(message, status, details, retryAfter);
 }
 
 export const apiClient = axios.create({

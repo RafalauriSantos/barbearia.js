@@ -72,8 +72,24 @@ async function buildApp() {
 
 	supabase.ensureConfigured();
 
+	let allowedOrigin;
+	if (env.NODE_ENV !== "production") {
+		allowedOrigin = true;
+	} else if (!env.CORS_ORIGIN || env.CORS_ORIGIN === "true" || env.CORS_ORIGIN === true) {
+		allowedOrigin = "*";
+	} else {
+		const originsList = String(env.CORS_ORIGIN).split(",").map(o => o.trim()).filter(Boolean);
+		allowedOrigin = (origin, cb) => {
+			if (!origin || originsList.includes(origin)) {
+				cb(null, true);
+			} else {
+				cb(new Error("Not allowed by CORS"), false);
+			}
+		};
+	}
+
 	await app.register(cors, {
-		origin: env.CORS_ORIGIN,
+		origin: allowedOrigin,
 	});
 
 	registerErrorHandler(app);

@@ -537,36 +537,25 @@ t.test("paid appointment item update reuses payment method and recalculates valu
 		},
 	});
 
-	await service.updateAppointment(
-		"appt-1",
-		{
-			services: [{ id: "service-1", name: "Corte", price: 80, quantity: 1 }],
-			products: [
-				{
-					id: "product-1",
-					name: "Gel",
-					price: 25,
-					quantity: 1,
-					purchase_type: "consignado",
-					cost_price: 13,
-					supplier_name: "Gerson",
-				},
-			],
-		},
-		barberUser,
+	t.rejects(
+		service.updateAppointment(
+			"appt-1",
+			{
+				services: [{ id: "service-1", name: "Corte", price: 80, quantity: 1 }],
+				products: [
+					{
+						id: "product-1",
+						name: "Gel",
+						price: 25,
+						quantity: 1,
+						purchase_type: "consignado",
+						cost_price: 13,
+						supplier_name: "Gerson",
+					},
+				],
+			},
+			barberUser,
+		),
+		{ status: 400, code: "PAID_APPOINTMENT_FINANCIAL_EDIT_FORBIDDEN" }
 	);
-
-	t.equal(capturedPayload.value, undefined);
-	t.equal(capturedPayload.payment_method_id, "method-pix");
-	t.equal(capturedPayload.net_value, 105);
-	t.same(capturedPayload.products[0], {
-		id: "product-1",
-		name: "Gel",
-		price: 25,
-		quantity: 1,
-		purchase_type: "consignado",
-		cost_price: 13,
-		supplier_name: "Gerson",
-		seller_commission_percent: 0,
-	});
 });

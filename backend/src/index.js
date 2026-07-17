@@ -24,9 +24,21 @@ app.use("*", async (c, next) => {
 
 // Dynamic CORS configuration using the env Proxy
 app.use("*", async (c, next) => {
-	const origin = c.env ? c.env.CORS_ORIGIN : null;
+	const originEnv = c.env ? c.env.CORS_ORIGIN : null;
+	const nodeEnv = c.env ? c.env.NODE_ENV : "development";
+	
+	let allowedOrigin;
+	if (nodeEnv !== "production") {
+		allowedOrigin = (origin) => origin || "*";
+	} else if (!originEnv || originEnv === "true" || originEnv === true) {
+		allowedOrigin = "*";
+	} else {
+		const originsList = String(originEnv).split(",").map(o => o.trim()).filter(Boolean);
+		allowedOrigin = (origin) => originsList.includes(origin) ? origin : null;
+	}
+
 	const corsMiddleware = cors({
-		origin: origin === "true" || origin === true ? "*" : (origin || "*"),
+		origin: allowedOrigin,
 		allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
 		allowHeaders: ["Content-Type", "Authorization"],
 	});
@@ -66,6 +78,7 @@ function adaptRoute(fastifyHandler, options = {}) {
 			params: c.req.param(),
 			query: c.req.query(),
 			method: c.req.method,
+			ip: c.req.header("CF-Connecting-IP") || c.req.header("x-real-ip") || c.req.header("x-forwarded-for") || "127.0.0.1",
 			user: null, // Populated by auth middleware
 			body: {},
 			log: {

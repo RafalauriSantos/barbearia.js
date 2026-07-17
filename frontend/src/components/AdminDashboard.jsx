@@ -304,6 +304,7 @@ export function AdminDashboard({
 	const [panelMessage, setPanelMessage] = useState("");
 	const [panelError, setPanelError] = useState("");
 	const [lastInviteUrl, setLastInviteUrl] = useState("");
+	const [lastInviteBarberName, setLastInviteBarberName] = useState("");
 	const slots = useMemo(() => getSlots(), []);
 
 	const grouped = useMemo(
@@ -347,6 +348,7 @@ export function AdminDashboard({
 		setPanelMessage("");
 		setPanelError("");
 		setLastInviteUrl("");
+		setLastInviteBarberName("");
 		try {
 			const created = await addBarber({
 				nome: name.trim(),
@@ -354,12 +356,14 @@ export function AdminDashboard({
 				comissao_percent: Number(commission || 50),
 				send_invite: sendInviteNow,
 			});
+			const savedName = name.trim();
 			setName("");
 			setEmail("");
 			setCommission("50");
 			setSendInviteNow(true);
 			setCreateFormOpen(false);
 			setLastInviteUrl(created.inviteUrl || "");
+			setLastInviteBarberName(savedName);
 			setPanelMessage(
 				created.inviteUrl ?
 					"Barbeiro salvo. Convite enviado e link pronto para copiar."
@@ -383,10 +387,12 @@ export function AdminDashboard({
 		setPanelMessage("");
 		setPanelError("");
 		setLastInviteUrl("");
+		setLastInviteBarberName("");
 		setInvitingBarberId(barber.id);
 		try {
 			const result = await sendBarberInvite(barber.id, { email: barber.email });
 			setLastInviteUrl(result.inviteUrl || "");
+			setLastInviteBarberName(barber.name || barber.nome || "");
 			setPanelMessage(
 				result.inviteUrl ?
 					"Convite enviado e link pronto para copiar."
@@ -620,7 +626,7 @@ export function AdminDashboard({
 							{lastInviteUrl && !panelError && (
 								<div className="rounded-lg border border-paid/20 bg-paid/10 p-3">
 									<label className="mb-2 block font-mono-ui text-[10px] uppercase text-paid">
-										Link do convite
+										Link do convite {lastInviteBarberName ? `para ${lastInviteBarberName}` : ""}
 									</label>
 									<div className="grid grid-cols-[1fr_auto] gap-2">
 										<input
@@ -673,6 +679,8 @@ export function AdminDashboard({
 												className="rounded-md border border-border px-3 py-2 font-mono-ui text-[10px] text-foreground-faint disabled:opacity-50">
 												{invitingBarberId === barber.id ?
 													"Enviando…"
+												: barber.convite_pendente ?
+													"Reenviar convite"
 												: 	"Enviar convite"}
 												</button>
 											)}

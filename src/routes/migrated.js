@@ -181,7 +181,7 @@ router.get('/supplier-payables', authMiddleware, adaptController(supplierPayable
 router.post('/supplier-payables/:id/pay', authMiddleware, adaptController(supplierPayablesController.pay));
 
 // Invites (Public)
-router.get('/invites/:id', adaptController(invitesController.getInvite));
-router.post('/invites/:id/accept', adaptController(invitesController.acceptInvite));
+router.get('/invites/:token', adaptController(invitesController.get));
+router.post('/invites/:token/accept', adaptController(invitesController.accept));
 
 export default router;

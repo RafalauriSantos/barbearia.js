@@ -206,7 +206,7 @@ t.test("paid appointment created from agenda enters same-day financial summary",
 	};
 
 	const { env } = require("../src/config/env");
-	const { buildApp } = require("../src/index");
+	const { buildApp } = require("../src/app");
 	const app = await buildApp();
 	const token = jwt.sign({ userId: user.id }, env.JWT_SECRET);
 
@@ -356,7 +356,7 @@ t.test("pending appointment marked as paid enters same-day financial summary", a
 	};
 
 	const { env } = require("../src/config/env");
-	const { buildApp } = require("../src/index");
+	const { buildApp } = require("../src/app");
 	const app = await buildApp();
 	const token = jwt.sign({ userId: user.id }, env.JWT_SECRET);
 

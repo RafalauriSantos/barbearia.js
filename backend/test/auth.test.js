@@ -1,8 +1,11 @@
 const t = require("tap");
-const argon2 = require("argon2");
+const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 process.env.SUPABASE_URL = process.env.SUPABASE_URL || "http://localhost";
 process.env.SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || "anon";
+const crypto = require("crypto");
+const jwtSecret = process.env.JWT_SECRET || "development-only-secret-change-before-production";
+const correctHash = crypto.createHash("sha256").update("123456." + jwtSecret).digest("hex");
 
 t.test("POST /auth/register creates a user", async (t) => {
 	const repoPath = require.resolve("../src/repositories/authRepository");
@@ -36,7 +39,7 @@ t.test("POST /auth/register creates a user", async (t) => {
 	delete require.cache[require.resolve("../src/controllers/authController")];
 	delete require.cache[require.resolve("../src/index")];
 
-	const { buildApp } = require("../src/index");
+	const { buildApp } = require("../src/app");
 	const app = await buildApp();
 
 	const res = await app.inject({
@@ -78,7 +81,7 @@ t.test("GET /auth/me returns current user from token", async (t) => {
 	delete require.cache[require.resolve("../src/index")];
 
 	const { env } = require("../src/config/env");
-	const { buildApp } = require("../src/index");
+	const { buildApp } = require("../src/app");
 	const app = await buildApp();
 	const token = jwt.sign({ userId: "u3" }, env.JWT_SECRET);
 
@@ -103,7 +106,7 @@ t.test("GET /auth/me returns current user from token", async (t) => {
 
 t.test("POST /auth/login returns tokens for valid credentials", async (t) => {
 	const password = "mypassword";
-	const hash = await argon2.hash(password, { type: argon2.argon2id });
+	const hash = await bcrypt.hash(password, 10);
 
 	const repoPath = require.resolve("../src/repositories/authRepository");
 	const mock = {
@@ -121,7 +124,7 @@ t.test("POST /auth/login returns tokens for valid credentials", async (t) => {
 	delete require.cache[require.resolve("../src/controllers/authController")];
 	delete require.cache[require.resolve("../src/index")];
 
-	const { buildApp } = require("../src/index");
+	const { buildApp } = require("../src/app");
 	const app = await buildApp();
 
 	const res = await app.inject({
@@ -139,7 +142,7 @@ t.test("POST /auth/login returns tokens for valid credentials", async (t) => {
 
 t.test("POST /auth/login rejects unverified users", async (t) => {
 	const password = "mypassword";
-	const hash = await argon2.hash(password, { type: argon2.argon2id });
+	const hash = await bcrypt.hash(password, 10);
 
 	const repoPath = require.resolve("../src/repositories/authRepository");
 	const mock = {
@@ -157,7 +160,7 @@ t.test("POST /auth/login rejects unverified users", async (t) => {
 	delete require.cache[require.resolve("../src/routes/auth")];
 	delete require.cache[require.resolve("../src/index")];
 
-	const { buildApp } = require("../src/index");
+	const { buildApp } = require("../src/app");
 	const app = await buildApp();
 
 	const res = await app.inject({
@@ -198,7 +201,7 @@ t.test("POST /auth/verify-code marks user as verified", async (t) => {
 	};
 	require.cache[verificationRepoPath] = {
 		exports: {
-			findValidByUserAndHash: async () => ({ id: "code-1" }),
+			findActiveForUser: async () => ({ id: "code-1", code_hash: correctHash, attempts_count: 0 }),
 			markUsed: async () => true,
 		},
 	};
@@ -208,7 +211,7 @@ t.test("POST /auth/verify-code marks user as verified", async (t) => {
 	delete require.cache[require.resolve("../src/routes/auth")];
 	delete require.cache[require.resolve("../src/index")];
 
-	const { buildApp } = require("../src/index");
+	const { buildApp } = require("../src/app");
 	const app = await buildApp();
 
 	const res = await app.inject({
@@ -247,7 +250,7 @@ t.test("POST /auth/verify-code does not issue tokens for already verified email"
 	};
 	require.cache[verificationRepoPath] = {
 		exports: {
-			findValidByUserAndHash: async () => null,
+			findActiveForUser: async () => null,
 			markUsed: async () => true,
 		},
 	};
@@ -257,7 +260,7 @@ t.test("POST /auth/verify-code does not issue tokens for already verified email"
 	delete require.cache[require.resolve("../src/routes/auth")];
 	delete require.cache[require.resolve("../src/index")];
 
-	const { buildApp } = require("../src/index");
+	const { buildApp } = require("../src/app");
 	const app = await buildApp();
 
 	const res = await app.inject({
@@ -311,7 +314,7 @@ t.test("POST /auth/forgot-password sends reset code without exposing users", asy
 	delete require.cache[require.resolve("../src/routes/auth")];
 	delete require.cache[require.resolve("../src/index")];
 
-	const { buildApp } = require("../src/index");
+	const { buildApp } = require("../src/app");
 	const app = await buildApp();
 
 	const res = await app.inject({
@@ -349,7 +352,7 @@ t.test("POST /auth/reset-password updates password with valid code", async (t) =
 	};
 	require.cache[passwordResetRepoPath] = {
 		exports: {
-			findValidByUserAndHash: async () => ({ id: "reset-2" }),
+			findActiveForUser: async () => ({ id: "reset-2", code_hash: correctHash, attempts_count: 0 }),
 			markUsed: async () => true,
 		},
 	};
@@ -359,7 +362,7 @@ t.test("POST /auth/reset-password updates password with valid code", async (t) =
 	delete require.cache[require.resolve("../src/routes/auth")];
 	delete require.cache[require.resolve("../src/index")];
 
-	const { buildApp } = require("../src/index");
+	const { buildApp } = require("../src/app");
 	const app = await buildApp();
 
 	const res = await app.inject({
@@ -375,8 +378,8 @@ t.test("POST /auth/reset-password updates password with valid code", async (t) =
 	const body = JSON.parse(res.payload);
 	t.equal(body.ok, true);
 	t.equal(updated.id, "u8");
-	t.same(updated.options, { markEmailVerified: false });
-	t.ok(await argon2.verify(updated.password_hash, "NewPassword123"));
+	t.same(updated.options, { markEmailVerified: false, tokenVersion: 2 });
+	t.ok(await bcrypt.compare("NewPassword123", updated.password_hash));
 
 	await app.close();
 });
@@ -406,7 +409,7 @@ t.test("POST /auth/verify-email marks user as verified", async (t) => {
 	delete require.cache[require.resolve("../src/routes/auth")];
 	delete require.cache[require.resolve("../src/index")];
 
-	const { buildApp } = require("../src/index");
+	const { buildApp } = require("../src/app");
 	const { env } = require("../src/config/env");
 	const app = await buildApp();
 	const token = jwt.sign(

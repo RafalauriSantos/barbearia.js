@@ -23,13 +23,16 @@ function toPublicUser(user) {
 }
 
 function createSession(user) {
-	const accessToken = jwt.sign({ userId: user.id }, env.JWT_SECRET, {
-		expiresIn: "15m",
-	});
-	const refreshToken = jwt.sign(
-		{ userId: user.id, type: "refresh" },
+	const version = user.token_version || 1;
+	const accessToken = jwt.sign(
+		{ userId: user.id, tokenVersion: version },
 		env.JWT_SECRET,
-		{ expiresIn: "30d" },
+		{ expiresIn: "15m" }
+	);
+	const refreshToken = jwt.sign(
+		{ userId: user.id, type: "refresh", tokenVersion: version },
+		env.JWT_SECRET,
+		{ expiresIn: "30d" }
 	);
 
 	return { accessToken, refreshToken, user: toPublicUser(user) };
@@ -37,7 +40,8 @@ function createSession(user) {
 
 exports.register = async (request, reply) => {
 	const payload = validateRegister(request.body);
-	const { user, verificationCode } = await AuthService.register(payload, request.env);
+	const clientIp = request.ip || request.headers?.["x-forwarded-for"] || "127.0.0.1";
+	const { user, verificationCode } = await AuthService.register(payload, request.env, clientIp);
 	return reply.code(201).send({
 		user: toPublicUser(user),
 		email_verification_required: true,
@@ -49,9 +53,11 @@ exports.register = async (request, reply) => {
 
 exports.login = async (request, reply) => {
 	const payload = validateLogin(request.body);
+	const clientIp = request.ip || request.headers?.["x-forwarded-for"] || "127.0.0.1";
 	const user = await AuthService.verifyCredentials(
 		payload.email,
 		payload.password,
+		clientIp,
 	);
 	if (!user) return reply.code(401).send({ error: "Invalid credentials" });
 
@@ -67,9 +73,19 @@ exports.refresh = async (request, reply) => {
 		const decoded = jwt.verify(refreshToken, env.JWT_SECRET);
 		if (decoded.type !== "refresh")
 			return reply.code(400).send({ error: "Invalid token" });
-		const accessToken = jwt.sign({ userId: decoded.userId }, env.JWT_SECRET, {
-			expiresIn: "15m",
-		});
+
+		const user = await AuthService.getCurrentUser(decoded.userId);
+		const payloadVersion = decoded.tokenVersion !== undefined ? decoded.tokenVersion : 1;
+		const userVersion = user.token_version !== undefined ? user.token_version : 1;
+		if (payloadVersion !== userVersion) {
+			return reply.code(401).send({ error: "Invalid refresh token session" });
+		}
+
+		const accessToken = jwt.sign(
+			{ userId: decoded.userId, tokenVersion: user.token_version || 1 },
+			env.JWT_SECRET,
+			{ expiresIn: "15m" }
+		);
 		return reply.send({ accessToken });
 	} catch (err) {
 		return reply.code(401).send({ error: "Invalid refresh token" });
@@ -126,4 +142,10 @@ exports.resetPassword = async (request, reply) => {
 	const payload = validateResetPassword(request.body);
 	const result = await AuthService.resetPassword(payload);
 	return reply.send(result);
+};
+
+exports.logout = async (request, reply) => {
+	const user = request.currentUser || await AuthService.getCurrentUser(request.user.userId);
+	await AuthService.logout(user.id);
+	return reply.send({ ok: true });
 };

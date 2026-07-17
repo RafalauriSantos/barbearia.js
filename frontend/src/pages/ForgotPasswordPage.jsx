@@ -11,6 +11,15 @@ export default function ForgotPasswordPage() {
 	const [step, setStep] = useState("request");
 	const [status, setStatus] = useState("idle");
 	const [message, setMessage] = useState("");
+	const [cooldown, setCooldown] = useState(0);
+
+	useEffect(() => {
+		if (cooldown <= 0) return;
+		const timer = setTimeout(() => {
+			setCooldown((prev) => prev - 1);
+		}, 1000);
+		return () => clearTimeout(timer);
+	}, [cooldown]);
 
 	useEffect(() => {
 		const initialEmail = searchParams.get("email");
@@ -18,9 +27,9 @@ export default function ForgotPasswordPage() {
 	}, [searchParams]);
 
 	const handleRequestCode = async (event) => {
-		event.preventDefault();
+		if (event) event.preventDefault();
 		const cleanEmail = email.trim();
-		if (!cleanEmail || status === "loading") return;
+		if (!cleanEmail || status === "loading" || cooldown > 0) return;
 
 		setStatus("loading");
 		setMessage("");
@@ -29,9 +38,16 @@ export default function ForgotPasswordPage() {
 			setStep("reset");
 			setStatus("idle");
 			setMessage("Enviamos um codigo de 6 digitos para seu email.");
+			setCooldown(60);
 		} catch (error) {
 			setStatus("error");
-			setMessage(error.message || "Nao foi possivel enviar o codigo.");
+			if (error.status === 429 || error.retryAfter) {
+				const waitSecs = error.retryAfter || 60;
+				setCooldown(waitSecs);
+				setMessage(`Muitas tentativas. Aguarde ${waitSecs}s antes de solicitar novamente.`);
+			} else {
+				setMessage(error.message || "Nao foi possivel enviar o codigo.");
+			}
 		}
 	};
 
@@ -175,9 +191,9 @@ export default function ForgotPasswordPage() {
 							<button
 								type="button"
 								onClick={handleRequestCode}
-								disabled={isLoading}
+								disabled={isLoading || cooldown > 0}
 								className="w-full rounded-md border border-border px-6 py-3 font-mono-ui text-xs text-foreground-faint disabled:opacity-60">
-								Reenviar codigo
+								{cooldown > 0 ? `Aguarde ${cooldown}s` : "Reenviar codigo"}
 							</button>
 						)}
 					</form>

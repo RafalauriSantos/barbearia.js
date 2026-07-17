@@ -201,7 +201,7 @@ t.test("without Brevo or SMTP, email is logged with stream transport", async (t)
 		shopName: "Marque’s Barbearia",
 	});
 
-	t.same(logs, [["[password-reset-code]", "654321"]]);
+	t.same(logs, [["[password-reset-code]", "6****1"]]);
 });
 
 t.test("runtimeEnv parameter overrides process.env configurations", async (t) => {

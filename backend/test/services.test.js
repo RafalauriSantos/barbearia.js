@@ -54,7 +54,7 @@ t.test("GET /services returns list", async (t) => {
 	require.cache[repoPath] = { exports: mock };
 
 	clearAppCache();
-	const { buildApp } = require("../src/index");
+	const { buildApp } = require("../src/app");
 	const app = await buildApp();
 
 	const res = await app.inject({
@@ -84,7 +84,7 @@ t.test("POST /services creates service", async (t) => {
 	require.cache[repoPath] = { exports: mock };
 
 	clearAppCache();
-	const { buildApp } = require("../src/index");
+	const { buildApp } = require("../src/app");
 	const app = await buildApp();
 
 	const res = await app.inject({

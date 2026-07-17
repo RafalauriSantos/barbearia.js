@@ -1,6 +1,6 @@
 const { z } = require("zod");
 
-const PRODUCTION_APP_URL = "https://kurt-barbearia.vercel.app";
+const PRODUCTION_APP_URL = "https://barbearia-app.pages.dev";
 
 const envSchema = z
 	.object({
@@ -30,6 +30,7 @@ const envSchema = z
 		EMAIL_TIMEOUT_MS: z.coerce.number().int().positive().default(10000),
 		BREVO_API_KEY: z.string().optional(),
 		AVATAR_BUCKET: z.string().default("barber-avatars"),
+		ADMIN_DEBUG_KEY: z.string().optional(),
 	})
 	.superRefine((env, ctx) => {
 		if (env.NODE_ENV === "production" && !env.JWT_SECRET) {
@@ -60,7 +61,8 @@ function normalizeBoolean(value, fallback = false) {
 function normalizeAppUrl(value, nodeEnv) {
 	const rawValue = String(value || "").trim();
 	const localUrlPattern = /^https?:\/\/(localhost|127\.0\.0\.1|0\.0\.0\.0)(:|\/|$)/i;
-	if (nodeEnv === "production" && (!rawValue || localUrlPattern.test(rawValue))) {
+	const isOldUrl = rawValue.includes("kurt-barbearia") || rawValue.includes("vercel.app");
+	if (nodeEnv === "production" && (!rawValue || localUrlPattern.test(rawValue) || isOldUrl)) {
 		return PRODUCTION_APP_URL;
 	}
 	return rawValue || undefined;
@@ -95,6 +97,7 @@ function setRuntimeEnv(rawEnv) {
 		EMAIL_TIMEOUT_MS: sourceEnv.EMAIL_TIMEOUT_MS,
 		BREVO_API_KEY: sourceEnv.BREVO_API_KEY,
 		AVATAR_BUCKET: sourceEnv.AVATAR_BUCKET,
+		ADMIN_DEBUG_KEY: sourceEnv.ADMIN_DEBUG_KEY,
 	});
 
 	runtimeEnv = {

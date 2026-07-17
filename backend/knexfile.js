@@ -1,3 +1,4 @@
+require("dotenv").config();
 const { getDatabaseConfig } = require("./src/config/database");
 
 const config = getDatabaseConfig();

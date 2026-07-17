@@ -29,4 +29,7 @@ module.exports = async function (fastify, opts) {
 	fastify.post("/refresh", async (request, reply) =>
 		controller.refresh(request, reply),
 	);
+	fastify.post("/logout", { preHandler: auth }, async (request, reply) =>
+		controller.logout(request, reply),
+	);
 };

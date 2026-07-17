@@ -239,13 +239,14 @@ exports.markEmailVerified = async function (userId) {
 exports.updatePassword = async function (
 	userId,
 	password_hash,
-	{ markEmailVerified = false } = {},
+	{ markEmailVerified = false, tokenVersion } = {},
 ) {
 	const updates = {
 		senha_hash: password_hash,
 		...(markEmailVerified ?
 			{ email_verificado_em: new Date().toISOString() }
 		:	{}),
+		...(tokenVersion !== undefined ? { token_version: tokenVersion } : {}),
 	};
 
 	const { data, error } = await supabase
@@ -256,4 +257,56 @@ exports.updatePassword = async function (
 		.single();
 	if (error) throw error;
 	return toAuthUser(data);
+};
+
+exports.updateTokenVersion = async function (userId, version) {
+	const { data, error } = await supabase
+		.from("usuarios")
+		.update({ token_version: version })
+		.eq("id", userId)
+		.select()
+		.single();
+	if (error) throw error;
+	return toAuthUser(data);
+};
+
+exports.logFailedLoginAndCount = async function (email, ipAddress, windowSeconds) {
+	const { data, error } = await supabase.rpc("incrementar_tentativas_login", {
+		p_email: email,
+		p_ip: ipAddress,
+		p_window_seconds: windowSeconds || 900,
+	});
+	if (error) throw error;
+	return data;
+};
+
+exports.getFailedLogins = async function (email, ipAddress, windowMs) {
+	const limitTime = new Date(Date.now() - windowMs).toISOString();
+	const { data, error } = await supabase
+		.from("login_attempts")
+		.select("*")
+		.eq("email", email)
+		.eq("ip_address", ipAddress)
+		.gte("criado_em", limitTime)
+		.order("criado_em", { ascending: false });
+	if (error) throw error;
+	return data || [];
+};
+
+exports.clearFailedLogins = async function (email, ipAddress) {
+	const { error } = await supabase
+		.from("login_attempts")
+		.delete()
+		.eq("email", email)
+		.eq("ip_address", ipAddress);
+	if (error) throw error;
+};
+
+exports.logRegistrationAndCount = async function (ipAddress, windowSeconds) {
+	const { data, error } = await supabase.rpc("incrementar_tentativas_registro", {
+		p_ip: ipAddress,
+		p_window_seconds: windowSeconds || 3600,
+	});
+	if (error) throw error;
+	return data;
 };

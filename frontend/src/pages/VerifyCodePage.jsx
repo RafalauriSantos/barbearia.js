@@ -31,6 +31,15 @@ export default function VerifyCodePage() {
 	const [status, setStatus] = useState("idle");
 	const [message, setMessage] = useState("");
 	const [isResending, setIsResending] = useState(false);
+	const [cooldown, setCooldown] = useState(0);
+
+	useEffect(() => {
+		if (cooldown <= 0) return;
+		const timer = setTimeout(() => {
+			setCooldown((prev) => prev - 1);
+		}, 1000);
+		return () => clearTimeout(timer);
+	}, [cooldown]);
 
 	useEffect(() => {
 		const initialEmail = searchParams.get("email");
@@ -64,7 +73,7 @@ export default function VerifyCodePage() {
 	};
 
 	const handleResend = async () => {
-		if (!email || isResending) return;
+		if (!email || isResending || cooldown > 0) return;
 		setIsResending(true);
 		setMessage("");
 		try {
@@ -76,10 +85,17 @@ export default function VerifyCodePage() {
 			} else {
 				setStatus("idle");
 				setMessage("Reenviamos um novo codigo.");
+				setCooldown(60);
 			}
 		} catch (error) {
 			setStatus("error");
-			setMessage(error.message || "Nao foi possivel reenviar o codigo.");
+			if (error.status === 429 || error.retryAfter) {
+				const waitSecs = error.retryAfter || 60;
+				setCooldown(waitSecs);
+				setMessage(`Muitas tentativas. Aguarde ${waitSecs}s antes de reenviar.`);
+			} else {
+				setMessage(error.message || "Nao foi possivel reenviar o codigo.");
+			}
 		} finally {
 			setIsResending(false);
 		}
@@ -147,9 +163,9 @@ export default function VerifyCodePage() {
 						<button
 							type="button"
 							onClick={handleResend}
-							disabled={!email || isResending}
+							disabled={!email || isResending || cooldown > 0}
 							className="w-full rounded-md border border-border px-6 py-3 font-mono-ui text-xs text-foreground-faint disabled:opacity-60">
-							{isResending ? "Reenviando..." : "Reenviar codigo"}
+							{isResending ? "Reenviando..." : cooldown > 0 ? `Aguarde ${cooldown}s` : "Reenviar codigo"}
 						</button>
 					</form>
 

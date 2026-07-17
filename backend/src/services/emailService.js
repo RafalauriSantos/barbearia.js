@@ -227,6 +227,12 @@ async function sendViaBrevo(message, runtimeEnv) {
 	return parsedBody;
 }
 
+function obfuscateOtp(code) {
+	const str = String(code || "");
+	if (str.length <= 2) return "**";
+	return str[0] + "*".repeat(str.length - 2) + str[str.length - 1];
+}
+
 async function sendEmail(message, debugLog, runtimeEnv) {
 	const provider = getEmailProvider(runtimeEnv);
 	if (provider === "brevo") {
@@ -240,7 +246,9 @@ async function sendEmail(message, debugLog, runtimeEnv) {
 	}
 
 	if (debugLog) {
-		console.log(debugLog.label, debugLog.value);
+		const isOtp = debugLog.label.includes("code");
+		const loggedValue = isOtp ? obfuscateOtp(debugLog.value) : debugLog.value;
+		console.log(debugLog.label, loggedValue);
 	} else {
 		console.log("[email-fallback-log] Envio de email:", message.subject, "Para:", message.to);
 	}

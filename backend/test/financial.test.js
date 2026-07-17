@@ -389,7 +389,7 @@ t.test("GET /financial/summary returns authenticated admin summary", async (t) =
 
 	clearFinancialCache();
 	const { env } = require("../src/config/env");
-	const { buildApp } = require("../src/index");
+	const { buildApp } = require("../src/app");
 	const app = await buildApp();
 	const token = jwt.sign({ userId: "admin-1" }, env.JWT_SECRET);
 

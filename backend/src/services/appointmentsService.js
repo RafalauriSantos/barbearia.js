@@ -45,38 +45,27 @@ async function withPaymentSnapshot(
 ) {
 	const effectiveStatus =
 		payload.status !== undefined ? payload.status : fallbackAppointment?.status;
-	const hasPaymentMethodPayload =
-		payload.payment_method_id !== undefined ||
-		payload.forma_pagamento_id !== undefined;
 	const paymentMethodId =
 		payload.payment_method_id ??
 		payload.forma_pagamento_id ??
 		fallbackAppointment?.payment_method_id ??
 		fallbackAppointment?.forma_pagamento_id ??
 		null;
-	const shouldRecalculate =
-		effectiveStatus === "paid" &&
-		(
-			payload.status !== undefined ||
-			payload.value !== undefined ||
-			payload.services !== undefined ||
-			payload.products !== undefined ||
-			hasPaymentMethodPayload
-		);
 
-	if (effectiveStatus !== "paid" && payload.status !== undefined) {
-		return {
-			...payload,
-			payment_method_id: null,
-			forma_pagamento_id: null,
-			payment_fee_percent: 0,
-			payment_fee_value: 0,
-			net_value: resolveGrossValue(payload, fallbackAppointment),
-			payment_date: null,
-		};
+	if (effectiveStatus !== "paid") {
+		if (payload.status !== undefined) {
+			return {
+				...payload,
+				payment_method_id: null,
+				forma_pagamento_id: null,
+				payment_fee_percent: 0,
+				payment_fee_value: 0,
+				net_value: resolveGrossValue(payload, fallbackAppointment),
+				payment_date: null,
+			};
+		}
+		return payload;
 	}
-
-	if (!shouldRecalculate) return payload;
 
 	const gross = resolveGrossValue(payload, fallbackAppointment);
 	let feePercent = 0;
@@ -323,6 +312,11 @@ exports.listAppointments = async function (
 };
 
 exports.createAppointment = async function (payload, user) {
+	if (payload) {
+		delete payload.net_value;
+		delete payload.payment_fee_value;
+		delete payload.payment_fee_percent;
+	}
 	const barbeiroId = await resolveTargetBarber(user, payload);
 	const canonicalPayload = await withCanonicalCatalog(
 		payload,
@@ -350,10 +344,33 @@ exports.createAppointment = async function (payload, user) {
 exports.updateAppointment = async function (id, updates, user) {
 	assertBarbeariaContext(user);
 
+	if (updates) {
+		delete updates.net_value;
+		delete updates.payment_fee_value;
+		delete updates.payment_fee_percent;
+	}
+
 	const existing = await AppointmentsRepository.findById(id, {
 		barbeariaId: user.barbearia_id,
 	});
 	if (!existing) throw new AppError(404, "NOT_FOUND", "Appointment not found");
+
+	if (existing.status === "paid" && updates) {
+		const isModifyingFinancials =
+			updates.status !== undefined ||
+			updates.value !== undefined ||
+			updates.services !== undefined ||
+			updates.products !== undefined ||
+			updates.payment_method_id !== undefined ||
+			updates.forma_pagamento_id !== undefined;
+		if (isModifyingFinancials) {
+			throw new AppError(
+				400,
+				"PAID_APPOINTMENT_FINANCIAL_EDIT_FORBIDDEN",
+				"Nao e permitido editar dados financeiros de um agendamento ja pago.",
+			);
+		}
+	}
 
 	let payload = updates;
 	if (!isAdmin(user)) {
@@ -366,7 +383,7 @@ exports.updateAppointment = async function (id, updates, user) {
 			);
 		}
 		payload = { ...updates, barbeiro_id: user.barbeiro_id };
-	} else if (updates.barbeiro_id) {
+	} else if (updates && updates.barbeiro_id) {
 		await assertBarberBelongsToShop(updates.barbeiro_id, user.barbearia_id);
 	}
 

@@ -185,7 +185,7 @@ t.test("core CRUD routes respond through layered modules", async (t) => {
 		exports: { syncFromAppointment: async () => null },
 	};
 	const { env } = require("../src/config/env");
-	const { buildApp } = require("../src/index");
+	const { buildApp } = require("../src/app");
 	const app = await buildApp();
 	const token = jwt.sign({ userId: "user-1" }, env.JWT_SECRET);
 	const authHeaders = { authorization: `Bearer ${token}` };
@@ -306,20 +306,32 @@ t.test("core CRUD routes respond through layered modules", async (t) => {
 	t.equal(updatedProfile.statusCode, 200);
 	t.equal(JSON.parse(updatedProfile.payload).appointmentDuration, 45);
 
-	const reset = await app.inject({ method: "DELETE", url: "/reset" });
+	await app.close();
+
+	process.env.ADMIN_DEBUG_KEY = "test-debug-key";
+	clearAppCache();
+	const debugApp = await buildApp();
+
+	const reset = await debugApp.inject({
+		method: "DELETE",
+		url: "/reset",
+		headers: { "x-admin-debug-key": "test-debug-key" },
+	});
 	t.equal(reset.statusCode, 204);
 
-	const missingRecipient = await app.inject({
+	const missingRecipient = await debugApp.inject({
 		method: "POST",
 		url: "/test-email",
+		headers: { "x-admin-debug-key": "test-debug-key" },
 		payload: {},
 	});
 	t.equal(missingRecipient.statusCode, 400);
 	t.equal(JSON.parse(missingRecipient.payload).code, "EMAIL_TO_REQUIRED");
 
-	const testEmail = await app.inject({
+	const testEmail = await debugApp.inject({
 		method: "POST",
 		url: "/test-email",
+		headers: { "x-admin-debug-key": "test-debug-key" },
 		payload: {
 			to: "rafael@example.com",
 			subject: "Teste Brevo",
@@ -334,7 +346,7 @@ t.test("core CRUD routes respond through layered modules", async (t) => {
 		text: "Mensagem de teste",
 	});
 
-	await app.close();
+	await debugApp.close();
 });
 
 t.test("system routes are not available in production", async (t) => {
@@ -361,7 +373,7 @@ t.test("system routes are not available in production", async (t) => {
 	});
 
 	clearAppCache();
-	const { buildApp } = require("../src/index");
+	const { buildApp } = require("../src/app");
 	const app = await buildApp();
 
 	const reset = await app.inject({ method: "DELETE", url: "/reset" });

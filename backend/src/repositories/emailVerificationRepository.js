@@ -47,3 +47,35 @@ exports.markUsed = async function (id) {
 	if (error) throw error;
 	return data;
 };
+
+exports.findActiveForUser = async function (userId) {
+	const now = new Date().toISOString();
+	const { data, error } = await supabase
+		.from("email_verification_codes")
+		.select("*")
+		.eq("user_id", userId)
+		.is("usado_em", null)
+		.gt("expira_em", now)
+		.order("criado_em", { ascending: false })
+		.limit(1)
+		.maybeSingle();
+	if (error && error.code !== "PGRST116") throw error;
+	return data || null;
+};
+
+exports.incrementAttempts = async function (id) {
+	const { data, error } = await supabase.rpc("incrementar_tentativas_codigo_verificacao", { p_id: id });
+	if (error) throw error;
+	return data;
+};
+
+exports.findRecentCodesForUser = async function (userId, windowMs) {
+	const limitTime = new Date(Date.now() - windowMs).toISOString();
+	const { data, error } = await supabase
+		.from("email_verification_codes")
+		.select("criado_em")
+		.eq("user_id", userId)
+		.gte("criado_em", limitTime);
+	if (error) throw error;
+	return data || [];
+};

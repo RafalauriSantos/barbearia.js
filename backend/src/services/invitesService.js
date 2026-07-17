@@ -59,13 +59,16 @@ function assertActiveInvite(invite) {
 }
 
 function createSession(user) {
-	const accessToken = jwt.sign({ userId: user.id }, env.JWT_SECRET, {
-		expiresIn: "15m",
-	});
-	const refreshToken = jwt.sign(
-		{ userId: user.id, type: "refresh" },
+	const version = user.token_version || 1;
+	const accessToken = jwt.sign(
+		{ userId: user.id, tokenVersion: version },
 		env.JWT_SECRET,
-		{ expiresIn: "30d" },
+		{ expiresIn: "15m" }
+	);
+	const refreshToken = jwt.sign(
+		{ userId: user.id, type: "refresh", tokenVersion: version },
+		env.JWT_SECRET,
+		{ expiresIn: "30d" }
 	);
 	return { accessToken, refreshToken };
 }
@@ -161,12 +164,25 @@ exports.acceptInvite = async function (token, payload) {
 		user = await AuthRepository.markEmailVerified(user.id);
 	}
 
-	const linkedBarber = await BarbersRepository.linkUser(
-		invite.barbeiro_id,
-		invite.barbearia_id,
-		user.id,
-		email,
-	);
+	let linkedBarber;
+	try {
+		linkedBarber = await BarbersRepository.linkUser(
+			invite.barbeiro_id,
+			invite.barbearia_id,
+			user.id,
+			email,
+		);
+	} catch (error) {
+		if (error.code === "23505" || error.message?.includes("idx_barbeiros_usuario_unique")) {
+			throw new AppError(
+				400,
+				"USER_ALREADY_LINKED",
+				"Este e-mail ja esta vinculado ao acesso de outro barbeiro.",
+			);
+		}
+		throw error;
+	}
+
 	if (!linkedBarber) {
 		throw new AppError(
 			400,

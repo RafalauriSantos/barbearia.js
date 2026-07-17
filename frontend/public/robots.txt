@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://kurt-barbearia.vercel.app/sitemap.xml
+Sitemap: https://barbearia-app.pages.dev/sitemap.xml

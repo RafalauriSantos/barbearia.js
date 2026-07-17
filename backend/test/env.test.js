@@ -36,7 +36,7 @@ t.test("production app url falls back from localhost to public frontend", (t) =>
 		APP_URL: "http://localhost:5173",
 	});
 
-	t.equal(env.APP_URL, "https://kurt-barbearia.vercel.app");
+	t.equal(env.APP_URL, "https://barbearia-app.pages.dev");
 	t.end();
 });
 
@@ -48,5 +48,16 @@ t.test("production app url keeps explicit public origin", (t) => {
 	});
 
 	t.equal(env.APP_URL, "https://app.example.com");
+	t.end();
+});
+
+t.test("production app url overrides old vercel urls", (t) => {
+	const env = loadEnv({
+		NODE_ENV: "production",
+		JWT_SECRET: "production-test-secret-with-enough-length",
+		APP_URL: "https://kurt-barbearia.vercel.app",
+	});
+
+	t.equal(env.APP_URL, "https://barbearia-app.pages.dev");
 	t.end();
 });

@@ -4,7 +4,7 @@ import {
 	Routes,
 	useLocation,
 } from "react-router-dom";
-import { lazy, Suspense, useEffect } from "react";
+import { Component, lazy, Suspense, useEffect } from "react";
 import { warmUpApi } from "@/lib/api/client";
 import { APP_NAME } from "@/lib/brand";
 import LandingPage from "./pages/LandingPage";
@@ -134,6 +134,65 @@ function AppRoutes() {
 	);
 }
 
+class ErrorBoundary extends Component {
+	constructor(props) {
+		super(props);
+		this.state = { hasError: false, errorType: null };
+	}
+
+	static getDerivedStateFromError(error) {
+		const isChunkError =
+			error.name === "ChunkLoadError" ||
+			error.message?.includes("Failed to fetch dynamically imported module");
+		return { hasError: true, errorType: isChunkError ? "chunk" : "other" };
+	}
+
+	componentDidCatch(error, errorInfo) {
+		console.error("ErrorBoundary caught an error", error, errorInfo);
+	}
+
+	render() {
+		if (this.state.hasError) {
+			if (this.state.errorType === "chunk") {
+				return (
+					<div className="app-shell flex items-center justify-center bg-background px-4">
+						<div className="w-full max-w-md rounded-lg border border-border bg-card p-6 text-center">
+							<h2 className="text-lg font-bold text-foreground">Sem conexão com a internet</h2>
+							<p className="mt-2 text-sm text-foreground-faint">
+								Não foi possível carregar a página atual. Verifique sua conexão e tente novamente.
+							</p>
+							<button
+								onClick={() => window.location.reload()}
+								className="mt-4 w-full rounded bg-primary py-2 px-4 text-primary-foreground font-medium hover:bg-primary/90 transition-colors"
+							>
+								Recarregar página
+							</button>
+						</div>
+					</div>
+				);
+			}
+			return (
+				<div className="app-shell flex items-center justify-center bg-background px-4">
+					<div className="w-full max-w-md rounded-lg border border-border bg-card p-6 text-center">
+						<h2 className="text-lg font-bold text-destructive">Algo deu errado</h2>
+						<p className="mt-2 text-sm text-foreground-faint">
+							Ocorreu um erro inesperado ao carregar esta página.
+						</p>
+						<button
+							onClick={() => window.location.reload()}
+							className="mt-4 w-full rounded bg-primary py-2 px-4 text-primary-foreground font-medium hover:bg-primary/90 transition-colors"
+						>
+							Recarregar página
+						</button>
+					</div>
+				</div>
+			);
+		}
+
+		return this.props.children;
+	}
+}
+
 // Define as rotas principais do sistema.
 // Junta todas as telas e decide qual abrir por rota.
 const App = () => {
@@ -144,7 +203,9 @@ const App = () => {
 	return (
 		<BrowserRouter>
 			<RouteSeo />
-			<AppRoutes />
+			<ErrorBoundary>
+				<AppRoutes />
+			</ErrorBoundary>
 		</BrowserRouter>
 	);
 };
