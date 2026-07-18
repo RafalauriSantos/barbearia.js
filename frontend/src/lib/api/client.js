@@ -6,14 +6,8 @@ import {
 	setAccessToken,
 } from "@/lib/auth";
 
-const isProduction =
-	typeof window !== "undefined" &&
-	!window.location.hostname.includes("localhost") &&
-	!window.location.hostname.includes("127.0.0.1");
-
 export const API_BASE_URL =
-	import.meta.env.VITE_API_URL ||
-	(isProduction ? "https://barbearia-workers.agenddar.workers.dev" : "http://localhost:3000");
+	import.meta.env.VITE_API_URL || "http://localhost:3000";
 export const API_TIMEOUT_MS = Number(
 	import.meta.env.VITE_API_TIMEOUT_MS || 75000,
 );
