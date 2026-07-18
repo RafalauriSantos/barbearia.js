@@ -19,4 +19,9 @@ export default defineConfig(() => ({
 	build: {
 		outDir: ".output",
 	},
+	define: {
+		"import.meta.env.VITE_API_URL": JSON.stringify(
+			process.env.VITE_API_URL || "https://barbearia-workers.agenddar.workers.dev"
+		),
+	},
 }));
