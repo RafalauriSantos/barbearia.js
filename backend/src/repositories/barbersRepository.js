@@ -145,3 +145,30 @@ exports.linkUser = async function (id, barbeariaId, userId, email) {
 	if (error && error.code !== "PGRST116") throw error;
 	return toApi(data);
 };
+
+exports.countAppointments = async function (barberId) {
+	const { count, error } = await supabase
+		.from("agendamentos")
+		.select("id", { count: "exact", head: true })
+		.eq("barbeiro_id", barberId);
+	if (error) throw error;
+	return count || 0;
+};
+
+exports.hardDelete = async function (id, barbeariaId) {
+	const { error } = await supabase
+		.from("barbeiros")
+		.delete()
+		.eq("id", id)
+		.eq("barbearia_id", barbeariaId);
+	if (error) throw error;
+};
+
+exports.deletePendingInvites = async function (barberId) {
+	const { error } = await supabase
+		.from("convites_barbeiros")
+		.delete()
+		.eq("barbeiro_id", barberId)
+		.is("aceito_em", null);
+	if (error) throw error;
+};

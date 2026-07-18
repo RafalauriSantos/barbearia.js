@@ -153,6 +153,7 @@ router.get('/barbers', authMiddleware, adaptController(barbersController.list));
 router.post('/barbers', authMiddleware, adaptController(barbersController.create));
 router.patch('/barbers/:id', authMiddleware, adaptController(barbersController.update));
 router.post('/barbers/:id/invite', authMiddleware, adaptController(barbersController.invite));
+router.delete('/barbers/:id', authMiddleware, adaptController(barbersController.destroy));
 
 // Clients
 router.get('/clients/fixed', authMiddleware, adaptController(clientsController.listFixed));

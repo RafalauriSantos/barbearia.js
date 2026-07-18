@@ -38,3 +38,8 @@ export async function inviteBarber(id, payload) {
 	const response = await apiClient.post(`/barbers/${id}/invite`, payload);
 	return response.data;
 }
+
+export async function removeBarber(id) {
+	const response = await apiClient.delete(`/barbers/${id}`);
+	return response.data;
+}

@@ -7,4 +7,5 @@ module.exports = async function (fastify) {
 	fastify.post("/", { preHandler: [auth, requireRole(["admin"])] }, controller.create);
 	fastify.patch("/:id", { preHandler: [auth, requireRole(["admin"])] }, controller.update);
 	fastify.post("/:id/invite", { preHandler: [auth, requireRole(["admin"])] }, controller.invite);
+	fastify.delete("/:id", { preHandler: [auth, requireRole(["admin"])] }, controller.destroy);
 };

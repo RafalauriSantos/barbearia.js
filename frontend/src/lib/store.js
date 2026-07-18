@@ -43,6 +43,7 @@ import {
 	createBarber,
 	inviteBarber,
 	updateBarber,
+	removeBarber,
 } from "@/lib/api/barbers.api";
 import { getFinancialSummary } from "@/lib/api/financial.api";
 import {
@@ -691,6 +692,13 @@ export async function saveBarber(id, payload) {
 
 export async function sendBarberInvite(id, payload) {
 	return inviteBarber(id, payload);
+}
+
+export async function deleteBarber(id) {
+	const res = await removeBarber(id);
+	invalidateCache(cacheKeys.barbers);
+	invalidateCache("appointments:");
+	return res;
 }
 
 export function getCachedPaymentMethods() {

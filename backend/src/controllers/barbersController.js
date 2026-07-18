@@ -42,3 +42,9 @@ exports.invite = async (request, reply) => {
 	);
 	return reply.code(201).send(invite);
 };
+
+exports.destroy = async (request, reply) => {
+	const user = await getCurrentUser(request);
+	const result = await BarbersService.deleteBarber(request.params.id, user);
+	return reply.send(result);
+};

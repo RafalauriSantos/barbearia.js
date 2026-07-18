@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
-import { ChevronRight, Copy, Plus, UsersRound, X } from "lucide-react";
+import { ChevronRight, Copy, Plus, Trash2, UsersRound, X } from "lucide-react";
 import { AppointmentDialog } from "@/components/AppointmentDialog";
 import { EmptyState, IconButton, Notice } from "@/components/ScreenPrimitives";
-import { addBarber, formatCurrency, sendBarberInvite } from "@/lib/store";
+import { addBarber, deleteBarber, formatCurrency, sendBarberInvite } from "@/lib/store";
 
 const SLOT_START_MINUTES = 9 * 60;
 const SLOT_END_MINUTES = 20 * 60;
@@ -301,6 +301,7 @@ export function AdminDashboard({
 	const [createFormOpen, setCreateFormOpen] = useState(false);
 	const [isSubmittingBarber, setIsSubmittingBarber] = useState(false);
 	const [invitingBarberId, setInvitingBarberId] = useState("");
+	const [deletingBarberId, setDeletingBarberId] = useState("");
 	const [panelMessage, setPanelMessage] = useState("");
 	const [panelError, setPanelError] = useState("");
 	const [lastInviteUrl, setLastInviteUrl] = useState("");
@@ -409,6 +410,33 @@ export function AdminDashboard({
 			setPanelError(error.message || "Nao foi possivel enviar convite.");
 		} finally {
 			setInvitingBarberId("");
+		}
+	};
+
+	const handleDeleteBarber = async (barber) => {
+		if (deletingBarberId) return;
+
+		if (barber.cargo === "dono") {
+			setPanelError("Não é permitido remover o proprietário da barbearia.");
+			return;
+		}
+
+		const confirmMsg = `Deseja realmente remover ${barber.name} da equipe? Se ele(a) tiver histórico de agendamentos, será inativado(a) para preservar o histórico financeiro.`;
+		if (!window.confirm(confirmMsg)) return;
+
+		setPanelMessage("");
+		setPanelError("");
+		setLastInviteUrl("");
+		setLastInviteBarberName("");
+		setDeletingBarberId(barber.id);
+		try {
+			const res = await deleteBarber(barber.id);
+			setPanelMessage(res.message || "Barbeiro removido com sucesso.");
+			await onReload();
+		} catch (error) {
+			setPanelError(error.message || "Não foi possível remover o barbeiro.");
+		} finally {
+			setDeletingBarberId("");
 		}
 	};
 
@@ -671,19 +699,31 @@ export function AdminDashboard({
 											<p className="font-mono-ui text-[10px] text-foreground-faint">
 												Comissão {barber.comissao_percent}%
 											</p>
-											{!barber.usuario_id && (
-												<button
-													type="button"
-												onClick={() => handleInvite(barber)}
-												disabled={Boolean(invitingBarberId)}
-												className="rounded-md border border-border px-3 py-2 font-mono-ui text-[10px] text-foreground-faint disabled:opacity-50">
-												{invitingBarberId === barber.id ?
-													"Enviando…"
-												: barber.convite_pendente ?
-													"Reenviar convite"
-												: 	"Enviar convite"}
-												</button>
-											)}
+											<div className="flex items-center gap-2">
+												{barber.cargo !== "dono" && (
+													<button
+														type="button"
+														onClick={() => handleDeleteBarber(barber)}
+														disabled={Boolean(deletingBarberId || invitingBarberId)}
+														className="rounded-md border border-error/20 bg-error/5 p-2 font-mono-ui text-[10px] text-error hover:bg-error/10 disabled:opacity-50"
+														title="Remover barbeiro">
+														<Trash2 className="h-3.5 w-3.5" />
+													</button>
+												)}
+												{!barber.usuario_id && (
+													<button
+														type="button"
+														onClick={() => handleInvite(barber)}
+														disabled={Boolean(invitingBarberId || deletingBarberId)}
+														className="rounded-md border border-border px-3 py-2 font-mono-ui text-[10px] text-foreground-faint disabled:opacity-50">
+														{invitingBarberId === barber.id ?
+															"Enviando…"
+														: barber.convite_pendente ?
+															"Reenviar convite"
+														: 	"Enviar convite"}
+													</button>
+												)}
+											</div>
 										</div>
 									</div>
 								))}
