@@ -3,8 +3,11 @@
   "version": "1.0.0",
   "main": "src/index.js",
   "scripts": {
-    "dev": "wrangler dev",
+    "dev": "powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/start-dev.ps1",
+    "dev:worker": "wrangler dev",
     "deploy": "wrangler deploy",
+    "check": "powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/check-all.ps1",
+    "stop": "powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/stop-dev.ps1",
     "test": "vitest run tests/"
   },
   "dependencies": {
