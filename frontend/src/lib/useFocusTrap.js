@@ -2,13 +2,18 @@ import { useEffect, useRef } from "react";
 
 export function useFocusTrap(onClose, active = true) {
 	const containerRef = useRef(null);
+	const onCloseRef = useRef(onClose);
+
+	useEffect(() => {
+		onCloseRef.current = onClose;
+	}, [onClose]);
 
 	useEffect(() => {
 		if (!active) return;
 
 		const handleKeyDown = (e) => {
 			if (e.key === "Escape") {
-				onClose();
+				onCloseRef.current?.();
 				return;
 			}
 
@@ -40,8 +45,11 @@ export function useFocusTrap(onClose, active = true) {
 
 		document.addEventListener("keydown", handleKeyDown);
 
-		// Focus primary element or modal container
-		if (containerRef.current) {
+		// Focus primary element or modal container ONLY if focus is not already inside the container
+		if (
+			containerRef.current &&
+			!containerRef.current.contains(document.activeElement)
+		) {
 			const focusableElements = containerRef.current.querySelectorAll(
 				'a[href], area[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), button:not([disabled]), iframe, object, embed, [tabindex="0"], [contenteditable]'
 			);
@@ -55,7 +63,7 @@ export function useFocusTrap(onClose, active = true) {
 		return () => {
 			document.removeEventListener("keydown", handleKeyDown);
 		};
-	}, [onClose, active]);
+	}, [active]);
 
 	return containerRef;
 }

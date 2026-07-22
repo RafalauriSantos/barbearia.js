@@ -343,7 +343,7 @@ export default function ClientsPage() {
 		reload();
 	}, [reload]);
 
-	const closeSheets = () => {
+	const closeSheets = useCallback(() => {
 		setShowClientSheet(false);
 		setShowWaitSheet(false);
 		setCutClient(null);
@@ -354,7 +354,7 @@ export default function ClientsPage() {
 		setCutForm(emptyCutForm);
 		setWaitForm(emptyWaitForm);
 		setFormError("");
-	};
+	}, []);
 
 	const openAction = () => {
 		setFormError("");
