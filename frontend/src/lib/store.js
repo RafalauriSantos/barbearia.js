@@ -1185,24 +1185,19 @@ export function formatDayKey(date) {
 	return `${year}-${month}-${day}`;
 }
 
-// Converte data para um texto curto amigavel.
+// Converte data para um texto amigavel por extenso (ex: "Quarta-feira, 22 de julho").
 export function formatDateDisplay(date) {
-	const months = [
-		"jan",
-		"fev",
-		"mar",
-		"abr",
-		"mai",
-		"jun",
-		"jul",
-		"ago",
-		"set",
-		"out",
-		"nov",
-		"dez",
-	];
-	const day = date.getDate();
-	return `${day} ${months[date.getMonth()]}`;
+	if (!date) return "";
+	const dateObj = date instanceof Date ? date : new Date(date);
+	if (isNaN(dateObj.getTime())) return "";
+
+	const formatted = new Intl.DateTimeFormat("pt-BR", {
+		weekday: "long",
+		day: "numeric",
+		month: "long",
+	}).format(dateObj);
+
+	return formatted.charAt(0).toUpperCase() + formatted.slice(1);
 }
 
 // Diz se a data recebida e hoje.

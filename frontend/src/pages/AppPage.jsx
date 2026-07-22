@@ -963,7 +963,6 @@ export default function AppPage() {
 					</IconButton>
 					<div className="flex min-w-0 items-center justify-center gap-2 rounded-md border border-border bg-background-deep px-2 py-1">
 						<span className="truncate font-mono-ui text-[11px] text-foreground">
-							{todaySelected ? "Hoje, " : ""}
 							{formatDateDisplay(currentDate)}
 						</span>
 						{todaySelected && (

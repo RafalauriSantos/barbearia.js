@@ -47,11 +47,7 @@ export function AppHeader({ currentDate, onPrevDay, onNextDay, onSettings }) {
 		};
 	}, [initialProfile]);
 
-	// Mostra "Hoje" quando a data atual esta selecionada.
-	const dateLabel =
-		isToday(currentDate) ?
-			`Hoje, ${formatDateDisplay(currentDate)}`
-		:	formatDateDisplay(currentDate);
+	const dateLabel = formatDateDisplay(currentDate);
 	const displayName = profile?.barberName || user?.nome || "Usuário";
 	return (
 		<header className="z-50 shrink-0 border-b border-border bg-background/95 px-4 py-3 backdrop-blur">
