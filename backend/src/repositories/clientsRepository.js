@@ -6,9 +6,28 @@ function toNumber(value) {
 }
 
 function addDays(dayKey, days) {
-	const date = new Date(`${dayKey}T00:00:00`);
+	if (!dayKey) return null;
+	const [year, month, day] = String(dayKey).split("-").map(Number);
+	if (!year || !month || !day) return null;
+	const date = new Date(year, month - 1, day);
 	date.setDate(date.getDate() + Number(days || 0));
-	return date.toISOString().slice(0, 10);
+	const yyyy = date.getFullYear();
+	const mm = String(date.getMonth() + 1).padStart(2, "0");
+	const dd = String(date.getDate()).padStart(2, "0");
+	return `${yyyy}-${mm}-${dd}`;
+}
+
+function parsePreferredTime(observacoes) {
+	if (!observacoes) return null;
+	const match = String(observacoes).match(/\[horario_fixo:(\d{2}:\d{2})\]/);
+	return match ? match[1] : null;
+}
+
+function cleanNotes(observacoes) {
+	if (!observacoes) return "";
+	return String(observacoes)
+		.replace(/\[horario_fixo:\d{2}:\d{2}\]/g, "")
+		.trim();
 }
 
 function todayInSaoPaulo() {
@@ -43,7 +62,7 @@ function toCutApi(row) {
 		payment_method_id: appointment?.forma_pagamento_id || null,
 		payment_date: appointment?.data_pagamento || null,
 		due_date: appointment?.prazo_fiado_data || null,
-		notes: row.observacoes || "",
+		notes: cleanNotes(row.observacoes),
 		created_at: row.criado_em,
 	};
 }
@@ -58,6 +77,7 @@ function toClientApi(row) {
 		0,
 	);
 	const lastCutDate = cuts[0]?.date || null;
+	const lastCutTime = cuts[0]?.time || null;
 	const packageTotalCuts = Number(row.pacote_total_cortes || 0);
 	const today = todayInSaoPaulo();
 	const nextAppointment = (row.agendamentos || [])
@@ -69,15 +89,21 @@ function toClientApi(row) {
 		.sort((first, second) =>
 			`${first.data} ${first.hora}`.localeCompare(`${second.data} ${second.hora}`),
 		)[0];
+	const nextApptTime = nextAppointment ? String(nextAppointment.hora || "").slice(0, 5) : null;
+	const parsedPreferredTime = parsePreferredTime(row.observacoes);
+	const preferredTime = parsedPreferredTime || lastCutTime || nextApptTime || "17:30";
+
 	return {
 		id: row.id,
 		name: row.nome,
 		phone: row.telefone || "",
 		barbeiro_id: row.barbeiro_id || null,
 		barber_name: row.barbeiros?.nome || "",
-		notes: row.observacoes || "",
+		notes: cleanNotes(row.observacoes),
+		preferred_time: preferredTime,
+		last_cut_time: lastCutTime,
 		active: Boolean(row.ativo),
-		interval_days: Number(row.intervalo_dias || 15),
+		interval_days: Number(row.intervalo_dias || 7),
 		package_total_cuts: packageTotalCuts,
 		cuts,
 		cuts_count: cutsCount,
@@ -88,7 +114,7 @@ function toClientApi(row) {
 		payment_due_value: paymentDueValue,
 		last_cut_date: lastCutDate,
 		next_due_date:
-			lastCutDate ? addDays(lastCutDate, Number(row.intervalo_dias || 15)) : null,
+			lastCutDate ? addDays(lastCutDate, Number(row.intervalo_dias || 7)) : null,
 		next_appointment:
 			nextAppointment ?
 				{
@@ -110,7 +136,7 @@ function toWaitlistApi(row) {
 		barbeiro_id: row.barbeiro_id || null,
 		barber_name: row.barbeiros?.nome || "",
 		preference: row.preferencia || "",
-		notes: row.observacoes || "",
+		notes: cleanNotes(row.observacoes),
 		status: row.status,
 		created_at: row.criado_em,
 		updated_at: row.atualizado_em,
@@ -118,10 +144,17 @@ function toWaitlistApi(row) {
 }
 
 function toClientDatabase(payload) {
+	let observacoes = payload.notes !== undefined ? cleanNotes(payload.notes || "") : undefined;
+	if (payload.preferred_time) {
+		const tag = `[horario_fixo:${String(payload.preferred_time).slice(0, 5)}]`;
+		const baseNotes = observacoes !== undefined ? observacoes : "";
+		observacoes = baseNotes ? `${baseNotes}\n${tag}` : tag;
+	}
+
 	return {
 		...(payload.name !== undefined ? { nome: payload.name } : {}),
 		...(payload.phone !== undefined ? { telefone: payload.phone || null } : {}),
-		...(payload.notes !== undefined ? { observacoes: payload.notes || null } : {}),
+		...(observacoes !== undefined ? { observacoes } : {}),
 		...(payload.active !== undefined ? { ativo: payload.active } : {}),
 		...(payload.interval_days !== undefined ?
 			{ intervalo_dias: Number(payload.interval_days) }

@@ -37,7 +37,8 @@ import {
 const emptyClientForm = {
 	name: "",
 	phone: "",
-	interval_days: "15",
+	interval_days: "7",
+	preferred_time: "17:30",
 	package_total_cuts: "4",
 	notes: "",
 };
@@ -151,7 +152,11 @@ function FixedClientCard({
 						{client.name}
 					</p>
 					<p className="mt-1 truncate font-mono-ui text-[10px] text-foreground-faint">
-						{client.phone || "Sem telefone"} • a cada {client.interval_days} dias
+						{client.phone || "Sem telefone"} • {
+							Number(client.interval_days) === 7 ? "Toda semana"
+							: Number(client.interval_days) === 14 || Number(client.interval_days) === 15 ? "A cada 15 dias"
+							: `A cada ${client.interval_days} dias`
+						}{client.preferred_time ? ` às ${client.preferred_time}` : ""}
 					</p>
 					{client.barber_name && (
 						<p className="mt-1 truncate font-client text-[10px] font-semibold text-paid">
@@ -372,7 +377,8 @@ export default function ClientsPage() {
 		setClientForm({
 			name: client.name || "",
 			phone: client.phone || "",
-			interval_days: String(client.interval_days || 15),
+			interval_days: String(client.interval_days || 7),
+			preferred_time: client.preferred_time || "17:30",
 			package_total_cuts: String(client.package_total_cuts ?? 4),
 			notes: client.notes || "",
 		});
@@ -434,7 +440,8 @@ export default function ClientsPage() {
 				name: clientForm.name.trim(),
 				phone: clientForm.phone.trim(),
 				notes: clientForm.notes.trim(),
-				interval_days: Number(clientForm.interval_days || 15),
+				interval_days: Number(clientForm.interval_days || 7),
+				preferred_time: clientForm.preferred_time || "17:30",
 				package_total_cuts: Number(clientForm.package_total_cuts || 4),
 			};
 			if (editingClientId) {
@@ -773,10 +780,8 @@ export default function ClientsPage() {
 							/>
 						</Field>
 						<div className="grid grid-cols-2 gap-3">
-							<Field label="Recorrencia em dias">
-								<TextInput
-									type="number"
-									min="1"
+							<Field label="Frequencia de atendimento">
+								<select
 									value={clientForm.interval_days}
 									onChange={(event) =>
 										setClientForm((prev) => ({
@@ -785,9 +790,29 @@ export default function ClientsPage() {
 										}))
 									}
 									disabled={isSubmitting}
+									className="w-full rounded-md border border-border bg-secondary px-3 py-3 text-sm text-foreground">
+									<option value="7">Toda semana (7 dias)</option>
+									<option value="14">A cada 15 dias (14 dias)</option>
+									<option value="15">A cada 15 dias (15 dias)</option>
+									<option value="30">Mensal (30 dias)</option>
+								</select>
+							</Field>
+							<Field label="Horario fixo reservado">
+								<TextInput
+									type="time"
+									value={clientForm.preferred_time}
+									onChange={(event) =>
+										setClientForm((prev) => ({
+											...prev,
+											preferred_time: event.target.value,
+										}))
+									}
+									disabled={isSubmitting}
 								/>
 							</Field>
-							<Field label="Cortes do pacote">
+						</div>
+						<div className="grid grid-cols-2 gap-3">
+							<Field label="Total do pacote de cortes">
 								<TextInput
 									type="number"
 									min="0"
@@ -1022,6 +1047,7 @@ export default function ClientsPage() {
 					dayKey={scheduleClient.next_due_date || formatDayKey(new Date())}
 					defaultClientId={scheduleClient.id}
 					defaultClientName={scheduleClient.name}
+					defaultTimeSlot={scheduleClient.preferred_time || scheduleClient.last_cut_time || "17:30"}
 					forcedBarberId={scheduleClient.barbeiro_id}
 					canChooseDate
 					onClose={() => setScheduleClient(null)}
