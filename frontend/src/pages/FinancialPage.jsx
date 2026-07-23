@@ -309,49 +309,69 @@ export default function FinancialPage() {
 						</button>
 					))}
 				</div>
-				<div className="mt-4 space-y-3 rounded-lg border border-border bg-background-deep p-3">
-					<div className="grid grid-cols-2 gap-2">
-						<label className="block">
-							<span className="mb-1 block font-mono-ui text-[10px] uppercase text-foreground-faint">
-								De
+				<div className="mt-4 space-y-3 rounded-xl border border-border bg-background-deep p-3.5 shadow-sm">
+					<div>
+						<div className="mb-1.5 flex items-center justify-between px-0.5">
+							<span className="font-mono-ui text-[10px] uppercase font-bold tracking-wider text-foreground-faint">
+								Período de Consulta
 							</span>
-							<input
-								type="date"
-								value={startDate}
-								onChange={(event) => setStartDate(event.target.value)}
-								className="h-10 w-full rounded-md border border-border bg-secondary px-2 font-mono-ui text-xs text-foreground"
-							/>
-						</label>
-						<label className="block">
-							<span className="mb-1 block font-mono-ui text-[10px] uppercase text-foreground-faint">
-								Ate
+							<span className="font-mono-ui text-[10px] text-paid font-semibold">
+								{startDate === endDate ? "1 dia selecionado" : "Período personalizado"}
 							</span>
-							<input
-								type="date"
-								value={endDate}
-								onChange={(event) => setEndDate(event.target.value)}
-								className="h-10 w-full rounded-md border border-border bg-secondary px-2 font-mono-ui text-xs text-foreground"
-							/>
-						</label>
+						</div>
+						<div className="flex items-center gap-2 rounded-lg border border-border bg-card p-1.5 shadow-inner">
+							<div className="relative flex-1 min-w-0">
+								<span className="absolute left-2.5 top-1 font-mono-ui text-[9px] uppercase tracking-tight text-foreground-faint/70 pointer-events-none">
+									De
+								</span>
+								<input
+									type="date"
+									value={startDate}
+									onChange={(event) => setStartDate(event.target.value)}
+									className="h-11 w-full min-w-0 rounded-md border-0 bg-secondary/60 pl-2.5 pr-1 pt-3.5 font-mono-ui text-xs font-semibold text-foreground focus:bg-secondary focus:ring-1 focus:ring-paid"
+								/>
+							</div>
+							<div className="flex shrink-0 items-center justify-center text-foreground-faint/50 px-0.5">
+								<svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+									<path strokeLinecap="round" strokeLinejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+								</svg>
+							</div>
+							<div className="relative flex-1 min-w-0">
+								<span className="absolute left-2.5 top-1 font-mono-ui text-[9px] uppercase tracking-tight text-foreground-faint/70 pointer-events-none">
+									Até
+								</span>
+								<input
+									type="date"
+									value={endDate}
+									onChange={(event) => setEndDate(event.target.value)}
+									className="h-11 w-full min-w-0 rounded-md border-0 bg-secondary/60 pl-2.5 pr-1 pt-3.5 font-mono-ui text-xs font-semibold text-foreground focus:bg-secondary focus:ring-1 focus:ring-paid"
+								/>
+							</div>
+						</div>
 					</div>
-					<div className="grid grid-cols-3 gap-2">
+
+					<div className="grid grid-cols-3 gap-2 pt-0.5">
 						<button
 							type="button"
 							onClick={() => setSingleDay(new Date())}
-							className="rounded-md border border-border px-3 py-2 font-mono-ui text-[10px] text-foreground-faint">
+							className={`rounded-md border py-1.5 font-mono-ui text-[10px] font-semibold transition-colors ${
+								startDate === endDate && startDate === formatDayKey(new Date()) ?
+									"border-paid bg-paid/10 text-paid"
+								:	"border-border bg-card text-foreground-faint hover:bg-secondary hover:text-foreground"
+							}`}>
 							Hoje
 						</button>
 						<button
 							type="button"
 							onClick={setLastSevenDays}
-							className="rounded-md border border-border px-3 py-2 font-mono-ui text-[10px] text-foreground-faint">
+							className="rounded-md border border-border bg-card py-1.5 font-mono-ui text-[10px] font-semibold text-foreground-faint hover:bg-secondary hover:text-foreground transition-colors">
 							7 dias
 						</button>
 						<button
 							type="button"
 							onClick={setCurrentMonth}
-							className="rounded-md border border-border px-3 py-2 font-mono-ui text-[10px] text-foreground-faint">
-							Mês
+							className="rounded-md border border-border bg-card py-1.5 font-mono-ui text-[10px] font-semibold text-foreground-faint hover:bg-secondary hover:text-foreground transition-colors">
+							Este Mês
 						</button>
 					</div>
 				</div>
