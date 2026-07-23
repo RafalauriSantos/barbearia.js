@@ -88,6 +88,17 @@ async function buildApp() {
 		};
 	}
 
+	await app.register(require("@fastify/helmet"), {
+		contentSecurityPolicy: false, // Permite flexibilidade de assets mantendo proteção contra iframe framing/sniffing
+		crossOriginResourcePolicy: { policy: "cross-origin" },
+	});
+
+	await app.register(require("@fastify/rate-limit"), {
+		max: 100,
+		timeWindow: "1 minute",
+		allowList: () => env.NODE_ENV === "test",
+	});
+
 	await app.register(cors, {
 		origin: allowedOrigin,
 	});

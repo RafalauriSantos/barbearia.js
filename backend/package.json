@@ -11,6 +11,8 @@
 		"test": "tap --no-coverage \"test/**/*.test.js\""
 	},
 	"dependencies": {
+		"@fastify/helmet": "^13.1.0",
+		"@fastify/rate-limit": "^11.1.0",
 		"@supabase/supabase-js": "^2.105.1",
 		"bcryptjs": "^2.4.3",
 		"hono": "^4.0.0",
