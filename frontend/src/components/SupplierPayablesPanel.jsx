@@ -271,13 +271,13 @@ function SupplierPayModal({
 	const containerRef = useFocusTrap(onClose);
 	return (
 		<div
-			className="fixed inset-0 z-[120] flex items-end justify-center bg-black/70 backdrop-blur-sm p-0 sm:p-4"
+			className="fixed inset-0 z-[120] flex items-center sm:items-end justify-center bg-black/65 backdrop-blur-sm p-3 sm:p-4 overflow-hidden"
 			onClick={onClose}>
 			<form
 				ref={containerRef}
 				tabIndex="-1"
 				onSubmit={handlePay}
-				className="w-full max-w-[520px] rounded-t-lg border-x border-t border-border bg-card p-4 pb-6 shadow-2xl outline-none"
+				className="max-h-[calc(100dvh-2.5rem)] w-full max-w-[520px] overflow-y-auto rounded-xl border border-border bg-card p-4 pb-6 shadow-2xl outline-none my-auto sm:my-0"
 				onClick={(event) => event.stopPropagation()}>
 				<div className="flex items-center justify-between">
 					<p className="font-mono-ui text-[10px] uppercase text-paid">
@@ -337,13 +337,13 @@ function SupplierPurchaseModal({
 	const containerRef = useFocusTrap(onClose);
 	return (
 		<div
-			className="fixed inset-0 z-[120] flex items-end justify-center bg-black/70 backdrop-blur-sm p-0 sm:p-4"
+			className="fixed inset-0 z-[120] flex items-center sm:items-end justify-center bg-black/65 backdrop-blur-sm p-3 sm:p-4 overflow-hidden"
 			onClick={onClose}>
 			<form
 				ref={containerRef}
 				tabIndex="-1"
 				onSubmit={handlePurchase}
-				className="max-h-[90dvh] overflow-y-auto w-full max-w-[520px] rounded-t-lg border-x border-t border-border bg-card p-4 pb-6 shadow-2xl outline-none"
+				className="max-h-[calc(100dvh-2.5rem)] w-full max-w-[520px] overflow-y-auto rounded-xl border border-border bg-card p-4 pb-6 shadow-2xl outline-none my-auto sm:my-0"
 				onClick={(event) => event.stopPropagation()}>
 				<div className="flex items-center justify-between">
 					<p className="font-mono-ui text-[10px] uppercase text-foreground-faint">

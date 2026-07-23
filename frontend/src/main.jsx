@@ -4,10 +4,6 @@ import "./index.css";
 import { initializeTheme } from "@/lib/theme";
 
 function syncAppViewportHeight() {
-	const activeTag = document.activeElement?.tagName?.toLowerCase();
-	if (activeTag === "input" || activeTag === "textarea" || activeTag === "select") {
-		return;
-	}
 	const height = window.visualViewport?.height || window.innerHeight;
 	document.documentElement.style.setProperty("--app-height", `${height}px`);
 }
