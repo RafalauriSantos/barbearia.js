@@ -67,9 +67,40 @@ exports.listFixedClients = async function (user, query = {}) {
 	);
 };
 
+function todayInSaoPaulo() {
+	return new Intl.DateTimeFormat("en-CA", {
+		timeZone: "America/Sao_Paulo",
+		year: "numeric",
+		month: "2-digit",
+		day: "2-digit",
+	}).format(new Date());
+}
+
 exports.createFixedClient = async function (payload, user) {
 	const context = await getWriteContext(user, payload.barbeiro_id);
-	return ClientsRepository.createFixedClient(payload, context);
+	const client = await ClientsRepository.createFixedClient(payload, context);
+
+	const startDate = payload.start_date || payload.first_cut_date || todayInSaoPaulo();
+	const preferredTime = payload.preferred_time || payload.time || "17:30";
+
+	try {
+		await AppointmentsService.createAppointment(
+			{
+				client_name: client.name,
+				cliente_id: client.id,
+				barbeiro_id: context.barbeiroId,
+				day_key: startDate,
+				time_slot: preferredTime,
+				status: "normal",
+				observacoes: `[horario_fixo:${preferredTime}] Cliente Fixo`,
+			},
+			user,
+		);
+	} catch (_err) {
+		// Non-fatal if schedule conflict; client creation completes
+	}
+
+	return client;
 };
 
 exports.updateFixedClient = async function (id, payload, user) {

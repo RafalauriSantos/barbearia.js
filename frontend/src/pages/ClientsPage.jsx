@@ -242,7 +242,7 @@ function FixedClientCard({
 					onClick={() => onSchedule(client)}
 					disabled={isSubmitting}
 					className="flex-1 rounded-md bg-paid px-3 py-2 font-mono-ui text-[10px] text-primary-foreground disabled:opacity-60">
-					{client.next_appointment ? "Agendar outro" : "Agendar próximo"}
+					{client.next_appointment ? "Adiar / Remanejar" : "Agendar próximo"}
 				</button>
 				<button
 					type="button"
@@ -1025,10 +1025,11 @@ export default function ClientsPage() {
 
 			{scheduleClient && (
 				<AppointmentDialog
-					dayKey={scheduleClient.next_due_date || formatDayKey(new Date())}
+					appointment={scheduleClient.next_appointment || null}
+					dayKey={scheduleClient.next_appointment?.date || scheduleClient.next_due_date || formatDayKey(new Date())}
 					defaultClientId={scheduleClient.id}
 					defaultClientName={scheduleClient.name}
-					defaultTimeSlot={scheduleClient.preferred_time || scheduleClient.last_cut_time || "17:30"}
+					defaultTimeSlot={scheduleClient.next_appointment?.time || scheduleClient.preferred_time || "17:30"}
 					forcedBarberId={scheduleClient.barbeiro_id}
 					canChooseDate
 					onClose={() => setScheduleClient(null)}
