@@ -61,30 +61,43 @@ export const BottomNav = memo(function BottomNav({ variant = "default" }) {
 	const location = useLocation();
 	const navigate = useNavigate();
 	const { user } = useAuth();
-	const [isKeyboardOpen, setIsKeyboardOpen] = useState(false);
+	const [isKeyboardOrModalOpen, setIsKeyboardOrModalOpen] = useState(false);
 
 	useEffect(() => {
-		const handleFocusIn = (e) => {
-			const tag = e.target?.tagName?.toLowerCase();
-			if (tag === "input" || tag === "textarea" || tag === "select") {
-				setIsKeyboardOpen(true);
-			}
+		const checkHideState = () => {
+			const activeTag = document.activeElement?.tagName?.toLowerCase();
+			const isInputFocused =
+				activeTag === "input" || activeTag === "textarea" || activeTag === "select";
+
+			const vvHeight = window.visualViewport?.height;
+			const winHeight = window.innerHeight;
+			const isViewportReduced = Boolean(vvHeight && winHeight && vvHeight < winHeight - 120);
+
+			const isModalOpen = document.body.style.overflow === "hidden";
+
+			setIsKeyboardOrModalOpen(Boolean(isInputFocused || isViewportReduced || isModalOpen));
 		};
 
-		const handleFocusOut = () => {
-			setTimeout(() => {
-				const activeTag = document.activeElement?.tagName?.toLowerCase();
-				if (activeTag !== "input" && activeTag !== "textarea" && activeTag !== "select") {
-					setIsKeyboardOpen(false);
-				}
-			}, 100);
+		checkHideState();
+
+		const handleFocusChange = () => {
+			requestAnimationFrame(checkHideState);
 		};
 
-		window.addEventListener("focusin", handleFocusIn);
-		window.addEventListener("focusout", handleFocusOut);
+		window.addEventListener("focusin", handleFocusChange);
+		window.addEventListener("focusout", handleFocusChange);
+		window.visualViewport?.addEventListener("resize", checkHideState);
+		window.visualViewport?.addEventListener("scroll", checkHideState);
+
+		const observer = new MutationObserver(checkHideState);
+		observer.observe(document.body, { attributes: true, attributeFilter: ["style"] });
+
 		return () => {
-			window.removeEventListener("focusin", handleFocusIn);
-			window.removeEventListener("focusout", handleFocusOut);
+			window.removeEventListener("focusin", handleFocusChange);
+			window.removeEventListener("focusout", handleFocusChange);
+			window.visualViewport?.removeEventListener("resize", checkHideState);
+			window.visualViewport?.removeEventListener("scroll", checkHideState);
+			observer.disconnect();
 		};
 	}, []);
 
@@ -102,7 +115,7 @@ export const BottomNav = memo(function BottomNav({ variant = "default" }) {
 		: tabs.length === 5 ? "grid-cols-5"
 		: "grid-cols-4";
 
-	if (isKeyboardOpen) return null;
+	if (isKeyboardOrModalOpen) return null;
 
 	return (
 		<nav
