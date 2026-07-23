@@ -12,6 +12,9 @@ Recentemente, a infraestrutura passou por uma migração arquitetural profunda (
 - Despesas e resumo financeiro diário
 - Equipe, convites e separação de dados por barbearia
 - Foto de perfil dos barbeiros na agenda, com editor de enquadramento
+- **Novo:** Sistema de Modais via React Portal (`ReactDOM.createPortal`) com Focus Trap, trava de scroll e restauração determinística de viewport para teclados mobile (iOS Safari / Android).
+- **Novo:** Hardening de segurança no servidor com **Rate Limiting** (proteção contra força bruta) e **Cabeçalhos de Segurança HTTP (Helmet)**.
+- **Novo:** Sobrescrita dinâmica de valores de agendamentos com preservação de preços customizados no backend.
 - **Novo:** Motor de sincronização offline (PWA) resiliente, com fila de requisições retidas no `localStorage`.
 - **Novo:** Cache persistente aprimorado com abertura de sessão usando dados em cache para mascarar o tempo de rede.
 
@@ -26,6 +29,7 @@ Recentemente, a infraestrutura passou por uma migração arquitetural profunda (
 
 - Aplicação do **Padrão Adapter** para migrar controladores Node.js (Fastify) para o runtime V8 da Cloudflare (Hono), mantendo as regras de negócio isoladas.
 - Backend estruturado em camadas iterativas (routes/controllers/services/repositories).
+- Proteção contra ataques de força bruta com Rate Limiting e injeção de cabeçalhos OWASP via Helmet (`X-Frame-Options`, `nosniff`, `Referrer-Policy`).
 - Integração com Supabase/Postgres via Connection Pooling para suportar o ambiente Serverless.
 - Frontend React com rotas protegidas (`AuthGate`) e cliente HTTP centralizado com interceptores dinâmicos.
 - Suíte de testes de integração E2E extremamente rápida (Vitest) rodando requisições em memória.
@@ -33,13 +37,15 @@ Recentemente, a infraestrutura passou por uma migração arquitetural profunda (
 
 ## Stack
 
-- **Backend:** Cloudflare Workers + Hono + Knex + Postgres (Supabase) + Zod
+- **Backend:** Cloudflare Workers + Hono + Fastify + Knex + Postgres (Supabase) + Zod
 - **Frontend:** React + Vite + Cloudflare Pages + React Router v6
-- **Testes:** Vitest
+- **Testes:** Vitest + Node Tap
 
 ## Decisões de arquitetura
 
 - **Edge Computing:** Hospedagem descentralizada na Cloudflare para unificar CDN estática e execução de API com máxima proximidade do usuário final.
+- **Arquitetura de Modais via Portal:** Isolamento de overlays do fluxo DOM padrão renderizando diretamente em `document.body` via React Portals, eliminando clipping de `overflow: hidden` e bugs de viewport com teclado no iOS Safari.
+- **Segurança Defensiva e Hardening:** Injeção de cabeçalhos de segurança OWASP (`X-Frame-Options`, `X-Content-Type-Options`, `Referrer-Policy`) e controle estrito de Rate Limiting por IP para mitigação de força bruta.
 - **Micro-tarefas e Níveis:** Migração de arquitetura realizada de forma estruturada e sequencial, garantindo estabilidade antes de avançar para a próxima fase técnica.
 - **Criptografia Híbrida:** Adaptação da segurança de senhas na borda mantendo o suporte ao Argon2id legado e implementando Bcryptjs via WebAssembly/APIs nativas.
 - **Gerenciamento de Estado Customizado:** Utilização de um motor próprio de cache em memória (`Map`) e `localStorage` no frontend, evitando bibliotecas pesadas de terceiros (como Redux) para focar na resiliência offline do PWA.
