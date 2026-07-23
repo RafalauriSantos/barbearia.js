@@ -57,7 +57,7 @@ const baseTabs = [
 ];
 
 // Barra fixa embaixo para trocar de tela.
-export const BottomNav = memo(function BottomNav({ variant = "default" }) {
+export const BottomNav = memo(function BottomNav({ variant = "minimal" }) {
 	const location = useLocation();
 	const navigate = useNavigate();
 	const { user } = useAuth();
