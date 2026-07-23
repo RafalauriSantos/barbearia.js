@@ -13,34 +13,82 @@ export function BaseModal({
 	const overlayRef = useRef(null);
 	const containerRef = useRef(null);
 	const previousFocusRef = useRef(null);
+	const savedScrollYRef = useRef(0);
+	const savedVisualViewportHeightRef = useRef(null);
+	const originalOverflowRef = useRef("");
 	const onCloseRef = useRef(onClose);
 
 	useEffect(() => {
 		onCloseRef.current = onClose;
 	}, [onClose]);
 
-	// 1. Guardar foco anterior & Bloquear scroll do body
+	// Função centralizada para fechar com desalocacao limpa de foco e viewport
+	const executeClose = () => {
+		// 1. Desfoca ativamente qualquer campo focado para recolher o teclado
+		if (document.activeElement && typeof document.activeElement.blur === "function") {
+			document.activeElement.blur();
+		}
+
+		// 2. Notifica o manipulador de fechamento pai
+		onCloseRef.current?.();
+	};
+
+	// 1. Guardar estado da viewport/scroll & Bloquear scroll do body
 	useEffect(() => {
-
 		previousFocusRef.current = document.activeElement;
+		savedScrollYRef.current = window.scrollY;
+		savedVisualViewportHeightRef.current = window.visualViewport?.height || null;
+		originalOverflowRef.current = document.body.style.overflow;
 
-		const originalOverflow = document.body.style.overflow;
 		document.body.style.overflow = "hidden";
 
 		return () => {
-			document.body.style.overflow = originalOverflow;
-			// Restaura o foco ao fechar
-			if (previousFocusRef.current && typeof previousFocusRef.current.focus === "function") {
-				previousFocusRef.current.focus();
+			// Ao desmontar: Desfocar ativamente qualquer input dentro do modal
+			if (document.activeElement && typeof document.activeElement.blur === "function") {
+				document.activeElement.blur();
+			}
+
+			// Função de restauração sincronizada de viewport e scroll
+			const restorePosition = () => {
+				const currentY = window.scrollY;
+				// Restaura o scroll APENAS se a posição tiver sido alterada
+				if (currentY !== savedScrollYRef.current) {
+					window.scrollTo({
+						top: savedScrollYRef.current,
+						behavior: "instant",
+					});
+				}
+
+				// Restaura overflow do body
+				document.body.style.overflow = originalOverflowRef.current;
+
+				// Restaura o foco para o elemento anterior
+				if (previousFocusRef.current && typeof previousFocusRef.current.focus === "function") {
+					previousFocusRef.current.focus();
+				}
+			};
+
+			if (window.visualViewport) {
+				const handleViewportChange = () => {
+					window.visualViewport.removeEventListener("resize", handleViewportChange);
+					window.visualViewport.removeEventListener("scroll", handleViewportChange);
+					requestAnimationFrame(restorePosition);
+				};
+				window.visualViewport.addEventListener("resize", handleViewportChange, { once: true });
+				window.visualViewport.addEventListener("scroll", handleViewportChange, { once: true });
+				// Fallback por rAF caso a viewport nao mude
+				requestAnimationFrame(restorePosition);
+			} else {
+				requestAnimationFrame(restorePosition);
 			}
 		};
 	}, []);
 
-	// 2. Focus Trap & Tecla ESC
+	// 2. Focus Trap & Tecla ESC / Voltar
 	useEffect(() => {
 		const handleKeyDown = (e) => {
 			if (e.key === "Escape") {
-				onCloseRef.current?.();
+				executeClose();
 				return;
 			}
 
@@ -70,7 +118,7 @@ export function BaseModal({
 
 		document.addEventListener("keydown", handleKeyDown);
 
-		// Foco inicial se nao houver nenhum foco ativo no container
+		// Foco inicial seguro no container ou primeiro input
 		if (containerRef.current && !containerRef.current.contains(document.activeElement)) {
 			const focusableElements = containerRef.current.querySelectorAll(
 				'a[href], area[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), button:not([disabled]), iframe, object, embed, [tabindex="0"], [contenteditable]'
@@ -106,7 +154,7 @@ export function BaseModal({
 			className={`fixed inset-0 z-[9999] flex ${alignmentClasses} bg-black/75 backdrop-blur-sm`}
 			onClick={(e) => {
 				if (e.target === overlayRef.current) {
-					onCloseRef.current?.();
+					executeClose();
 				}
 			}}>
 			<div
@@ -131,7 +179,7 @@ export function BaseModal({
 						{onClose && (
 							<button
 								type="button"
-								onClick={onClose}
+								onClick={executeClose}
 								aria-label="Fechar janela"
 								className="flex h-8 w-8 items-center justify-center rounded-full text-xl leading-none text-foreground-faint hover:bg-secondary hover:text-foreground">
 								&times;
