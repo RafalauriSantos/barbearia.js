@@ -216,7 +216,7 @@ export default function TeamPage() {
 				onTeamSheetOpenChange={setTeamSheetOpen}
 			/>
 
-			<BottomNav variant="minimal" />
+			<BottomNav />
 		</div>
 	);
 }
