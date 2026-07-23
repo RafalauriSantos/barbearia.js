@@ -122,10 +122,15 @@ async function resolveCatalogItems(items, repository, barbeariaId, type) {
 			}
 
 			if (type === "Servico") {
+				const itemPrice =
+					item.price !== undefined && item.price !== null && !isNaN(Number(item.price)) ?
+						Number(item.price)
+					:	Number(catalogItem.price || 0);
+
 				return {
 					id: catalogItem.id,
 					name: catalogItem.name,
-					price: Number(catalogItem.price || 0),
+					price: itemPrice,
 					quantity: Number(item.quantity || 1),
 				};
 			}
@@ -176,11 +181,19 @@ async function withCanonicalCatalog(payload, barbeariaId, existing = null) {
 			)
 		: 	existing?.products || [];
 
+	const customGrossValue =
+		payload.value !== undefined && payload.value !== null && !isNaN(Number(payload.value)) ?
+			Number(payload.value)
+		:	undefined;
+
 	return {
 		...payload,
 		services,
 		products,
-		value: undefined,
+		value:
+			customGrossValue !== undefined ?
+				customGrossValue
+			:	sumItems(services) + sumItems(products),
 		...(services.length === 1 ?
 			{
 				service_id: services[0].id,
