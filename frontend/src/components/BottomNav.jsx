@@ -1,4 +1,4 @@
-import { memo } from "react";
+import { memo, useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 
@@ -61,6 +61,33 @@ export const BottomNav = memo(function BottomNav({ variant = "default" }) {
 	const location = useLocation();
 	const navigate = useNavigate();
 	const { user } = useAuth();
+	const [isKeyboardOpen, setIsKeyboardOpen] = useState(false);
+
+	useEffect(() => {
+		const handleFocusIn = (e) => {
+			const tag = e.target?.tagName?.toLowerCase();
+			if (tag === "input" || tag === "textarea" || tag === "select") {
+				setIsKeyboardOpen(true);
+			}
+		};
+
+		const handleFocusOut = () => {
+			setTimeout(() => {
+				const activeTag = document.activeElement?.tagName?.toLowerCase();
+				if (activeTag !== "input" && activeTag !== "textarea" && activeTag !== "select") {
+					setIsKeyboardOpen(false);
+				}
+			}, 100);
+		};
+
+		window.addEventListener("focusin", handleFocusIn);
+		window.addEventListener("focusout", handleFocusOut);
+		return () => {
+			window.removeEventListener("focusin", handleFocusIn);
+			window.removeEventListener("focusout", handleFocusOut);
+		};
+	}, []);
+
 	const isAdmin = user?.role === "admin";
 	const tabs =
 		isAdmin ?
@@ -74,6 +101,9 @@ export const BottomNav = memo(function BottomNav({ variant = "default" }) {
 		tabs.length === 6 ? "grid-cols-6"
 		: tabs.length === 5 ? "grid-cols-5"
 		: "grid-cols-4";
+
+	if (isKeyboardOpen) return null;
+
 	return (
 		<nav
 			data-variant={variant}

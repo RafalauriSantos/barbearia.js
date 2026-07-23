@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Notice } from "@/components/ScreenPrimitives";
+import { useFocusTrap } from "@/lib/useFocusTrap";
 import {
 	formatCurrency,
 	formatDayKey,
@@ -227,172 +228,239 @@ export function SupplierPayablesPanel({ startDate, endDate, onChanged }) {
 
 			{/* Modal para Baixa de Fornecedor */}
 			{selected && (
-				<div
-					className="fixed inset-0 z-[120] flex items-end justify-center bg-black/70"
-					onClick={() => setSelected(null)}>
-					<form
-						onSubmit={handlePay}
-						className="w-full max-w-[520px] rounded-t-lg border-x border-t border-border bg-background p-4 pb-6"
-						onClick={(event) => event.stopPropagation()}>
-						<p className="font-mono-ui text-[10px] uppercase text-paid">
-							Baixa de fornecedor
-						</p>
-						<h2 className="mt-1 font-logo text-lg text-foreground">
-							{selected.supplier_name}
-						</h2>
-						<p className="mt-2 font-value text-xl text-fiado">
-							{formatCurrency(selected.value)}
-						</p>
-						<label className="mt-4 block">
-							<span className="mb-1 block font-mono-ui text-[10px] text-foreground-faint">
-								Data do pagamento
-							</span>
-							<input
-								required
-								type="date"
-								value={paymentDate}
-								onChange={(event) => setPaymentDate(event.target.value)}
-								className="w-full rounded-md border border-border bg-secondary px-3 py-3 text-sm text-foreground"
-							/>
-						</label>
-						<button
-							type="submit"
-							disabled={isSaving}
-							className="mt-4 w-full rounded-md bg-paid py-3 font-mono-ui text-sm text-primary-foreground disabled:opacity-60">
-							{isSaving ? "Salvando..." : "Confirmar baixa"}
-						</button>
-					</form>
-				</div>
+				<SupplierPayModal
+					selected={selected}
+					paymentDate={paymentDate}
+					setPaymentDate={setPaymentDate}
+					isSaving={isSaving}
+					handlePay={handlePay}
+					onClose={() => setSelected(null)}
+				/>
 			)}
 
 			{/* Modal para Nova Compra de Estoque */}
 			{showPurchaseForm && (
-				<div
-					className="fixed inset-0 z-[120] flex items-end justify-center bg-black/70"
-					onClick={() => setShowPurchaseForm(false)}>
-					<form
-						onSubmit={handlePurchase}
-						className="max-h-[90dvh] overflow-y-auto w-full max-w-[520px] rounded-t-lg border-x border-t border-border bg-background p-4 pb-6"
-						onClick={(event) => event.stopPropagation()}>
-						<div className="flex items-center justify-between">
-							<p className="font-mono-ui text-[10px] uppercase text-foreground-faint">
-								Nova entrada de estoque
-							</p>
-							<button
-								type="button"
-								onClick={() => setShowPurchaseForm(false)}
-								className="text-xl leading-none text-foreground-faint">
-								&times;
-							</button>
-						</div>
-						<h2 className="mt-1 font-logo text-lg text-foreground">
-							Registrar compra
-						</h2>
-						<p className="mt-2 font-client text-sm leading-relaxed text-foreground-faint">
-							Escolha o produto, informe o fornecedor e o sistema já soma isso
-							ao estoque e ao financeiro.
-						</p>
-
-						<div className="mt-4 space-y-3">
-							<label className="block">
-								<span className="mb-1 block font-mono-ui text-[10px] text-foreground-faint">
-									Produto do catálogo
-								</span>
-								<select
-									required
-									value={purchaseProduct}
-									onChange={handleProductChange}
-									className="w-full rounded-md border border-border bg-secondary px-3 py-3 text-sm text-foreground">
-									<option value="" disabled>
-										Selecione um produto...
-									</option>
-									{products.map((product) => (
-										<option key={product.id} value={product.id}>
-											{product.name} (Estoque: {product.stock_quantity})
-										</option>
-									))}
-								</select>
-							</label>
-
-							<label className="block">
-								<span className="mb-1 block font-mono-ui text-[10px] text-foreground-faint">
-									Fornecedor
-								</span>
-								<input
-									required
-									type="text"
-									value={purchaseSupplier}
-									onChange={(e) => setPurchaseSupplier(e.target.value)}
-									placeholder="Nome do fornecedor"
-									className="w-full rounded-md border border-border bg-secondary px-3 py-3 text-sm text-foreground"
-								/>
-							</label>
-
-							<div className="grid grid-cols-2 gap-3">
-								<label className="block">
-									<span className="mb-1 block font-mono-ui text-[10px] text-foreground-faint">
-										Quantidade comprada
-									</span>
-									<input
-										required
-										type="number"
-										min="1"
-										step="1"
-										value={purchaseQuantity}
-										onChange={(e) => setPurchaseQuantity(e.target.value)}
-										className="w-full rounded-md border border-border bg-secondary px-3 py-3 text-sm text-foreground"
-									/>
-								</label>
-							</div>
-
-							<div className="rounded-md border border-border bg-card p-3">
-								<div className="flex items-center justify-between">
-									<span className="font-mono-ui text-[10px] uppercase text-foreground-faint">
-										Valor total
-									</span>
-									<span className="font-value text-lg text-foreground">
-										R$ {purchaseTotal}
-									</span>
-								</div>
-								<p className="mt-2 font-client text-xs text-foreground-faint">
-									Calculado com o custo do produto no catálogo.
-								</p>
-								<label className="mt-3 flex items-center gap-3 rounded-md border border-border bg-background-deep px-3 py-3">
-									<input
-										type="checkbox"
-										checked={purchasePaid}
-										onChange={(event) => setPurchasePaid(event.target.checked)}
-										className="h-4 w-4 rounded border-border"
-									/>
-									<div>
-										<p className="font-mono-ui text-[10px] uppercase text-foreground-faint">
-											Compra paga agora
-										</p>
-										<p className="font-client text-xs text-foreground-faint">
-											Marque só se já foi quitada.
-										</p>
-									</div>
-								</label>
-							</div>
-						</div>
-
-						<div className="mt-4 grid grid-cols-2 gap-3">
-							<button
-								type="button"
-								onClick={() => setShowPurchaseForm(false)}
-								className="w-full rounded-md border border-border py-3 font-mono-ui text-sm text-foreground-faint">
-								Cancelar
-							</button>
-							<button
-								type="submit"
-								disabled={isSaving || !purchaseProduct || !purchaseSupplier}
-								className="w-full rounded-md bg-foreground py-3 font-mono-ui text-sm text-primary-foreground disabled:opacity-60">
-								{isSaving ? "Salvando..." : "Confirmar compra"}
-							</button>
-						</div>
-					</form>
-				</div>
+				<SupplierPurchaseModal
+					products={products}
+					purchaseProduct={purchaseProduct}
+					handleProductChange={handleProductChange}
+					purchaseSupplier={purchaseSupplier}
+					setPurchaseSupplier={setPurchaseSupplier}
+					purchaseQuantity={purchaseQuantity}
+					setPurchaseQuantity={setPurchaseQuantity}
+					purchaseTotal={purchaseTotal}
+					purchasePaid={purchasePaid}
+					setPurchasePaid={setPurchasePaid}
+					isSaving={isSaving}
+					handlePurchase={handlePurchase}
+					onClose={() => setShowPurchaseForm(false)}
+				/>
 			)}
+		</div>
+	);
+}
+
+function SupplierPayModal({
+	selected,
+	paymentDate,
+	setPaymentDate,
+	isSaving,
+	handlePay,
+	onClose,
+}) {
+	const containerRef = useFocusTrap(onClose);
+	return (
+		<div
+			className="fixed inset-0 z-[120] flex items-end justify-center bg-black/70 backdrop-blur-sm p-0 sm:p-4"
+			onClick={onClose}>
+			<form
+				ref={containerRef}
+				tabIndex="-1"
+				onSubmit={handlePay}
+				className="w-full max-w-[520px] rounded-t-lg border-x border-t border-border bg-card p-4 pb-6 shadow-2xl outline-none"
+				onClick={(event) => event.stopPropagation()}>
+				<div className="flex items-center justify-between">
+					<p className="font-mono-ui text-[10px] uppercase text-paid">
+						Baixa de fornecedor
+					</p>
+					<button
+						type="button"
+						onClick={onClose}
+						className="text-xl leading-none text-foreground-faint hover:text-foreground">
+						&times;
+					</button>
+				</div>
+				<h2 className="mt-1 font-logo text-lg text-foreground">
+					{selected.supplier_name}
+				</h2>
+				<p className="mt-2 font-value text-xl text-fiado">
+					{formatCurrency(selected.value)}
+				</p>
+				<label className="mt-4 block">
+					<span className="mb-1 block font-mono-ui text-[10px] text-foreground-faint">
+						Data do pagamento
+					</span>
+					<input
+						required
+						type="date"
+						value={paymentDate}
+						onChange={(event) => setPaymentDate(event.target.value)}
+						className="w-full rounded-md border border-border bg-secondary px-3 py-3 text-sm text-foreground focus:border-paid focus:ring-1 focus:ring-paid"
+					/>
+				</label>
+				<button
+					type="submit"
+					disabled={isSaving}
+					className="mt-4 w-full rounded-md bg-paid py-3 font-mono-ui text-sm text-primary-foreground disabled:opacity-60">
+					{isSaving ? "Salvando..." : "Confirmar baixa"}
+				</button>
+			</form>
+		</div>
+	);
+}
+
+function SupplierPurchaseModal({
+	products,
+	purchaseProduct,
+	handleProductChange,
+	purchaseSupplier,
+	setPurchaseSupplier,
+	purchaseQuantity,
+	setPurchaseQuantity,
+	purchaseTotal,
+	purchasePaid,
+	setPurchasePaid,
+	isSaving,
+	handlePurchase,
+	onClose,
+}) {
+	const containerRef = useFocusTrap(onClose);
+	return (
+		<div
+			className="fixed inset-0 z-[120] flex items-end justify-center bg-black/70 backdrop-blur-sm p-0 sm:p-4"
+			onClick={onClose}>
+			<form
+				ref={containerRef}
+				tabIndex="-1"
+				onSubmit={handlePurchase}
+				className="max-h-[90dvh] overflow-y-auto w-full max-w-[520px] rounded-t-lg border-x border-t border-border bg-card p-4 pb-6 shadow-2xl outline-none"
+				onClick={(event) => event.stopPropagation()}>
+				<div className="flex items-center justify-between">
+					<p className="font-mono-ui text-[10px] uppercase text-foreground-faint">
+						Nova entrada de estoque
+					</p>
+					<button
+						type="button"
+						onClick={onClose}
+						className="text-xl leading-none text-foreground-faint hover:text-foreground">
+						&times;
+					</button>
+				</div>
+				<h2 className="mt-1 font-logo text-lg text-foreground">
+					Registrar compra
+				</h2>
+				<p className="mt-2 font-client text-sm leading-relaxed text-foreground-faint">
+					Escolha o produto, informe o fornecedor e o sistema já soma isso ao estoque e ao financeiro.
+				</p>
+
+				<div className="mt-4 space-y-3">
+					<label className="block">
+						<span className="mb-1 block font-mono-ui text-[10px] text-foreground-faint">
+							Produto do catálogo
+						</span>
+						<select
+							required
+							value={purchaseProduct}
+							onChange={handleProductChange}
+							className="w-full rounded-md border border-border bg-secondary px-3 py-3 text-sm text-foreground focus:border-primary">
+							<option value="" disabled>
+								Selecione um produto...
+							</option>
+							{products.map((product) => (
+								<option key={product.id} value={product.id}>
+									{product.name} (Estoque: {product.stock_quantity})
+								</option>
+							))}
+						</select>
+					</label>
+
+					<label className="block">
+						<span className="mb-1 block font-mono-ui text-[10px] text-foreground-faint">
+							Fornecedor
+						</span>
+						<input
+							required
+							type="text"
+							value={purchaseSupplier}
+							onChange={(e) => setPurchaseSupplier(e.target.value)}
+							placeholder="Nome do fornecedor"
+							className="w-full rounded-md border border-border bg-secondary px-3 py-3 text-sm text-foreground placeholder:text-foreground-faint/60 focus:border-primary"
+						/>
+					</label>
+
+					<div className="grid grid-cols-2 gap-3">
+						<label className="block">
+							<span className="mb-1 block font-mono-ui text-[10px] text-foreground-faint">
+								Quantidade comprada
+							</span>
+							<input
+								required
+								type="number"
+								min="1"
+								step="1"
+								value={purchaseQuantity}
+								onChange={(e) => setPurchaseQuantity(e.target.value)}
+								className="w-full rounded-md border border-border bg-secondary px-3 py-3 text-sm text-foreground focus:border-primary"
+							/>
+						</label>
+					</div>
+
+					<div className="rounded-md border border-border bg-background-deep p-3">
+						<div className="flex items-center justify-between">
+							<span className="font-mono-ui text-[10px] uppercase text-foreground-faint">
+								Valor total
+							</span>
+							<span className="font-value text-lg text-foreground">
+								R$ {purchaseTotal}
+							</span>
+						</div>
+						<p className="mt-2 font-client text-xs text-foreground-faint">
+							Calculado com o custo do produto no catálogo.
+						</p>
+						<label className="mt-3 flex items-center gap-3 rounded-md border border-border bg-card px-3 py-3 cursor-pointer">
+							<input
+								type="checkbox"
+								checked={purchasePaid}
+								onChange={(event) => setPurchasePaid(event.target.checked)}
+								className="h-4 w-4 rounded border-border accent-paid"
+							/>
+							<div>
+								<p className="font-mono-ui text-[10px] uppercase text-foreground-faint">
+									Compra paga agora
+								</p>
+								<p className="font-client text-xs text-foreground-faint">
+									Marque só se já foi quitada.
+								</p>
+							</div>
+						</label>
+					</div>
+				</div>
+
+				<div className="mt-4 grid grid-cols-2 gap-3">
+					<button
+						type="button"
+						onClick={onClose}
+						className="w-full rounded-md border border-border py-3 font-mono-ui text-sm text-foreground-faint hover:text-foreground">
+						Cancelar
+					</button>
+					<button
+						type="submit"
+						disabled={isSaving || !purchaseProduct || !purchaseSupplier}
+						className="w-full rounded-md bg-foreground py-3 font-mono-ui text-sm text-primary-foreground disabled:opacity-60">
+						{isSaving ? "Salvando..." : "Confirmar compra"}
+					</button>
+				</div>
+			</form>
 		</div>
 	);
 }
