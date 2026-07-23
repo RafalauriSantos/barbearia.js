@@ -143,7 +143,7 @@ t.test("Security Improvements Suite", async (t) => {
 		t.equal(attempts, 5);
 	});
 
-	t.test("Paid appointment financial edit forbidden (Mass Assignment)", async (t) => {
+	t.test("Paid appointment financial edit allowed", async (t) => {
 		const authRepoPath = require.resolve("../src/repositories/authRepository");
 		const appointmentsRepoPath = require.resolve("../src/repositories/appointmentsRepository");
 
@@ -163,11 +163,18 @@ t.test("Security Improvements Suite", async (t) => {
 				findById: async () => ({
 					id: "apt-1",
 					barbearia_id: "shop-1",
-					status: "paid", // This is the crucial part
+					status: "paid",
 					value: 50,
+					payment_method_id: "method-1",
 				}),
-				// mock update to avoid errors if it bypassed (it shouldn't)
-				update: async () => ({}),
+				update: async (_id, payload) => ({ id: "apt-1", ...payload }),
+			},
+		};
+
+		const paymentMethodsRepoPath = require.resolve("../src/repositories/paymentMethodsRepository");
+		require.cache[paymentMethodsRepoPath] = {
+			exports: {
+				findById: async () => ({ id: "method-1", active: true, fee_percent: 0 }),
 			},
 		};
 
@@ -184,26 +191,14 @@ t.test("Security Improvements Suite", async (t) => {
 
 		const token = jwt.sign({ userId: "admin-1", tokenVersion: 1 }, jwtSecret);
 
-		const payloadsToTest = [
-			{ status: "normal" }, // changing status
-			{ value: 100 }, // changing value
-			{ net_value: 100, status: "paid" }, // explicitly modifying financials via mass assignment while sending a blockable field (like status to re-trigger) or just test mass assignment + status
-			// We can just test a combined payload like the user suggested
-			{ net_value: 100, payment_fee_value: 10, status: "normal", value: 100 }
-		];
-
-		for (const payload of payloadsToTest) {
-			const res = await app.inject({
-				method: "PUT",
-				url: "/agendamentos/apt-1",
-				headers: { Authorization: `Bearer ${token}` },
-				payload,
-			});
-			
-			t.equal(res.statusCode, 400, "Should return 400 for financial edit");
-			const body = JSON.parse(res.payload);
-			t.equal(body.code, "PAID_APPOINTMENT_FINANCIAL_EDIT_FORBIDDEN");
-		}
+		const res = await app.inject({
+			method: "PUT",
+			url: "/agendamentos/apt-1",
+			headers: { Authorization: `Bearer ${token}` },
+			payload: { value: 100, status: "paid" },
+		});
+		
+		t.equal(res.statusCode, 200, "Should allow updating value of paid appointment");
 
 		await app.close();
 

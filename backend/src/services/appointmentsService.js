@@ -368,23 +368,6 @@ exports.updateAppointment = async function (id, updates, user) {
 	});
 	if (!existing) throw new AppError(404, "NOT_FOUND", "Appointment not found");
 
-	if (existing.status === "paid" && updates) {
-		const isModifyingFinancials =
-			updates.status !== undefined ||
-			updates.value !== undefined ||
-			updates.services !== undefined ||
-			updates.products !== undefined ||
-			updates.payment_method_id !== undefined ||
-			updates.forma_pagamento_id !== undefined;
-		if (isModifyingFinancials) {
-			throw new AppError(
-				400,
-				"PAID_APPOINTMENT_FINANCIAL_EDIT_FORBIDDEN",
-				"Nao e permitido editar dados financeiros de um agendamento ja pago.",
-			);
-		}
-	}
-
 	let payload = updates;
 	if (!isAdmin(user)) {
 		assertBarberContext(user);
