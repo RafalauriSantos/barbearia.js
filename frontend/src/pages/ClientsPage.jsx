@@ -1,6 +1,15 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useFocusTrap } from "@/lib/useFocusTrap";
+import { BaseModal } from "@/components/BaseModal";
 import { BottomNav } from "@/components/BottomNav";
+
+function Sheet({ title, eyebrow, onClose, children }) {
+	return (
+		<BaseModal title={title} eyebrow={eyebrow} onClose={onClose} variant="bottom-sheet">
+			{children}
+		</BaseModal>
+	);
+}
 import { AppointmentDialog } from "@/components/AppointmentDialog";
 import {
 	EmptyState,
@@ -97,35 +106,7 @@ function TextArea(props) {
 	);
 }
 
-function Sheet({ title, eyebrow, onClose, children }) {
-	const containerRef = useFocusTrap(onClose);
-	return (
-		<div
-			className="fixed inset-0 z-[100] flex items-end justify-center bg-black/70 backdrop-blur-sm"
-			onClick={onClose}>
-			<div
-				ref={containerRef}
-				tabIndex="-1"
-				className="max-h-[92dvh] w-full max-w-[520px] overflow-y-auto rounded-t-lg border-x border-t border-border bg-background px-4 pb-6 pt-4 outline-none"
-				onClick={(event) => event.stopPropagation()}>
-				<div className="flex items-center justify-between gap-3">
-					<div>
-						<p className="font-client text-xs font-semibold text-foreground-faint">
-							{eyebrow}
-						</p>
-						<h2 className="mt-1 font-logo text-lg text-foreground">
-							{title}
-						</h2>
-					</div>
-					<IconButton label="Fechar" onClick={onClose}>
-						x
-					</IconButton>
-				</div>
-				<div className="mt-4">{children}</div>
-			</div>
-		</div>
-	);
-}
+
 
 function FixedClientCard({
 	client,

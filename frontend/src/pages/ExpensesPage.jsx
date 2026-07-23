@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { BaseModal } from "@/components/BaseModal";
 import { BottomNav } from "@/components/BottomNav";
 import {
 	EmptyState,
@@ -269,26 +270,12 @@ export default function ExpensesPage() {
 			</div>
 
 			{showForm && (
-				<div
-					className="fixed inset-0 z-[100] flex items-end justify-center bg-black/70 px-0 backdrop-blur-sm"
-					onClick={resetForm}>
-					<form
-						onSubmit={handleSaveExpense}
-						className="max-h-[92dvh] w-full max-w-[480px] space-y-3 overflow-y-auto rounded-t-lg border-x border-t border-border bg-background px-4 pb-6 pt-4"
-						onClick={(event) => event.stopPropagation()}>
-						<div className="flex items-center justify-between gap-3">
-							<div>
-								<p className="font-mono-ui text-[10px] uppercase text-foreground-faint">
-									Saída do caixa
-								</p>
-								<h2 className="mt-1 font-logo text-lg text-foreground">
-									{editingId ? "Editar custo" : "Novo custo"}
-								</h2>
-							</div>
-							<IconButton label="Fechar" onClick={resetForm}>
-								×
-							</IconButton>
-						</div>
+				<BaseModal
+					eyebrow="Saída do caixa"
+					title={editingId ? "Editar custo" : "Novo custo"}
+					onClose={resetForm}
+					variant="bottom-sheet">
+					<form onSubmit={handleSaveExpense} className="space-y-3 pb-6">
 						{errorMessage && (
 							<Notice tone="error" title="Erro">
 								{errorMessage}
@@ -367,7 +354,7 @@ export default function ExpensesPage() {
 							</button>
 						</div>
 					</form>
-				</div>
+				</BaseModal>
 			)}
 
 			<div className="min-h-0 flex-1 overflow-y-auto safe-bottom">

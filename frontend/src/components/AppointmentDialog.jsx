@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { BaseModal } from "@/components/BaseModal";
 import {
 	getCachedProducts,
 	getCachedServices,
@@ -321,27 +322,13 @@ export function AppointmentDialog({
 		}
 	};
 	return (
-		<div
-			className="fixed inset-0 z-[100] flex items-end justify-center bg-black/70 px-0 backdrop-blur-sm"
-			onClick={onClose}>
-			<div
-				className="max-h-[92dvh] w-full max-w-[480px] overflow-y-auto rounded-t-lg border-x border-t border-border bg-background"
-				onClick={(e) => e.stopPropagation()}>
-				<div className="flex items-center justify-between px-4 pb-3 pt-4">
-					<div>
-						<p className="font-mono-ui text-[10px] uppercase text-foreground-faint">
-							Agenda
-						</p>
-						<h2 className="mt-1 font-logo text-lg text-foreground">
-							{appointment ? "Editar atendimento" : "Novo atendimento"}
-						</h2>
-					</div>
-					<IconButton label="Fechar" onClick={onClose}>
-						×
-					</IconButton>
-				</div>
-
-				<form onSubmit={handleSubmit} className="space-y-3 px-4 pb-6">
+		<BaseModal
+			eyebrow="Agenda"
+			title={appointment ? "Editar atendimento" : "Novo atendimento"}
+			onClose={onClose}
+			maxWidthClass="max-w-[480px]"
+			variant="bottom-sheet">
+			<form onSubmit={handleSubmit} className="space-y-3 pb-6">
 					{errorMessage && (
 						<p className="rounded-md border border-overdue/30 bg-overdue/10 px-3 py-2 font-mono-ui text-[10px] text-overdue">
 							{errorMessage}
@@ -670,7 +657,6 @@ export function AppointmentDialog({
 						:	"Confirmar"}
 					</button>
 				</form>
-			</div>
-		</div>
+		</BaseModal>
 	);
 }

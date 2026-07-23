@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { IconButton, Notice } from "@/components/ScreenPrimitives";
+import { BaseModal } from "@/components/BaseModal";
 import {
 	addReceivable,
 	cancelReceivable,
@@ -42,24 +43,9 @@ const emptyForm = {
 
 function Sheet({ eyebrow, title, onClose, children }) {
 	return (
-		<div
-			className="fixed inset-0 z-[120] flex items-end justify-center bg-black/70 backdrop-blur-sm"
-			onClick={onClose}>
-			<div
-				className="max-h-[92dvh] w-full max-w-[520px] overflow-y-auto rounded-t-lg border-x border-t border-border bg-background px-4 pb-6 pt-4"
-				onClick={(event) => event.stopPropagation()}>
-				<div className="flex items-center justify-between gap-3">
-					<div>
-						<p className="font-mono-ui text-[10px] uppercase text-foreground-faint">
-							{eyebrow}
-						</p>
-						<h2 className="mt-1 font-logo text-lg text-foreground">{title}</h2>
-					</div>
-					<IconButton label="Fechar" onClick={onClose}>×</IconButton>
-				</div>
-				<div className="mt-4">{children}</div>
-			</div>
-		</div>
+		<BaseModal eyebrow={eyebrow} title={title} onClose={onClose} variant="bottom-sheet">
+			{children}
+		</BaseModal>
 	);
 }
 

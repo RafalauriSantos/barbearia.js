@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Notice } from "@/components/ScreenPrimitives";
-import { useFocusTrap } from "@/lib/useFocusTrap";
+import { BaseModal } from "@/components/BaseModal";
 import {
 	formatCurrency,
 	formatDayKey,
@@ -268,32 +268,14 @@ function SupplierPayModal({
 	handlePay,
 	onClose,
 }) {
-	const containerRef = useFocusTrap(onClose);
 	return (
-		<div
-			className="fixed inset-0 z-[100] flex items-end justify-center bg-black/70 backdrop-blur-sm"
-			onClick={onClose}>
-			<form
-				ref={containerRef}
-				tabIndex="-1"
-				onSubmit={handlePay}
-				className="max-h-[92dvh] w-full max-w-[520px] overflow-y-auto rounded-t-lg border-x border-t border-border bg-background px-4 pb-6 pt-4 outline-none"
-				onClick={(event) => event.stopPropagation()}>
-				<div className="flex items-center justify-between">
-					<p className="font-mono-ui text-[10px] uppercase text-paid">
-						Baixa de fornecedor
-					</p>
-					<button
-						type="button"
-						onClick={onClose}
-						className="text-xl leading-none text-foreground-faint hover:text-foreground">
-						&times;
-					</button>
-				</div>
-				<h2 className="mt-1 font-logo text-lg text-foreground">
-					{selected.supplier_name}
-				</h2>
-				<p className="mt-2 font-value text-xl text-fiado">
+		<BaseModal
+			eyebrow="Baixa de fornecedor"
+			title={selected.supplier_name}
+			onClose={onClose}
+			variant="bottom-sheet">
+			<form onSubmit={handlePay}>
+				<p className="mt-1 font-value text-xl text-fiado">
 					{formatCurrency(selected.value)}
 				</p>
 				<label className="mt-4 block">
@@ -315,7 +297,7 @@ function SupplierPayModal({
 					{isSaving ? "Salvando..." : "Confirmar baixa"}
 				</button>
 			</form>
-		</div>
+		</BaseModal>
 	);
 }
 
@@ -334,32 +316,14 @@ function SupplierPurchaseModal({
 	handlePurchase,
 	onClose,
 }) {
-	const containerRef = useFocusTrap(onClose);
 	return (
-		<div
-			className="fixed inset-0 z-[100] flex items-end justify-center bg-black/70 backdrop-blur-sm"
-			onClick={onClose}>
-			<form
-				ref={containerRef}
-				tabIndex="-1"
-				onSubmit={handlePurchase}
-				className="max-h-[92dvh] w-full max-w-[520px] overflow-y-auto rounded-t-lg border-x border-t border-border bg-background px-4 pb-6 pt-4 outline-none"
-				onClick={(event) => event.stopPropagation()}>
-				<div className="flex items-center justify-between">
-					<p className="font-mono-ui text-[10px] uppercase text-foreground-faint">
-						Nova entrada de estoque
-					</p>
-					<button
-						type="button"
-						onClick={onClose}
-						className="text-xl leading-none text-foreground-faint hover:text-foreground">
-						&times;
-					</button>
-				</div>
-				<h2 className="mt-1 font-logo text-lg text-foreground">
-					Registrar compra
-				</h2>
-				<p className="mt-2 font-client text-sm leading-relaxed text-foreground-faint">
+		<BaseModal
+			eyebrow="Nova entrada de estoque"
+			title="Registrar compra"
+			onClose={onClose}
+			variant="bottom-sheet">
+			<form onSubmit={handlePurchase}>
+				<p className="font-client text-sm leading-relaxed text-foreground-faint">
 					Escolha o produto, informe o fornecedor e o sistema já soma isso ao estoque e ao financeiro.
 				</p>
 
@@ -461,6 +425,6 @@ function SupplierPurchaseModal({
 					</button>
 				</div>
 			</form>
-		</div>
+		</BaseModal>
 	);
 }
