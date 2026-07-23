@@ -169,6 +169,7 @@ export function AppointmentDialog({
 	}, [initialCatalog.paymentMethods]);
 
 	const addService = (svc) => {
+		setAutoValue(true);
 		setSelectedServices((prev) => {
 			const existing = prev.find((item) => item.id === svc.id);
 			if (!existing) {
@@ -185,6 +186,7 @@ export function AppointmentDialog({
 		});
 	};
 	const addProduct = (prod) => {
+		setAutoValue(true);
 		setSelectedProducts((prev) => {
 			const existing = prev.find((item) => item.id === prod.id);
 			if (!existing) {
@@ -212,11 +214,20 @@ export function AppointmentDialog({
 		});
 	};
 	const updateItemQuantity = (listSetter, id, quantity) => {
+		setAutoValue(true);
 		listSetter((prev) =>
 			prev.map((item) => (item.id === id ? { ...item, quantity } : item)),
 		);
 	};
+	const updateItemPrice = (listSetter, id, rawPrice) => {
+		const price = parseMoneyInput(rawPrice) || 0;
+		setAutoValue(true);
+		listSetter((prev) =>
+			prev.map((item) => (item.id === id ? { ...item, price } : item)),
+		);
+	};
 	const removeItem = (listSetter, id) => {
+		setAutoValue(true);
 		listSetter((prev) => prev.filter((item) => item.id !== id));
 	};
 	const itemsTotal = [...selectedServices, ...selectedProducts].reduce(
