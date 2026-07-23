@@ -319,32 +319,32 @@ export default function FinancialPage() {
 								{startDate === endDate ? "1 dia selecionado" : "Período personalizado"}
 							</span>
 						</div>
-						<div className="flex items-center gap-2 rounded-lg border border-border bg-card p-1.5 shadow-inner">
-							<div className="relative flex-1 min-w-0">
-								<span className="absolute left-2.5 top-1 font-mono-ui text-[9px] uppercase tracking-tight text-foreground-faint/70 pointer-events-none">
+						<div className="flex items-center gap-1.5 rounded-lg border border-border bg-card p-1.5 shadow-inner min-w-0 overflow-hidden">
+							<div className="relative flex-1 min-w-0 overflow-hidden">
+								<span className="absolute left-2 top-1 font-mono-ui text-[9px] uppercase tracking-tight text-foreground-faint/70 pointer-events-none z-10">
 									De
 								</span>
 								<input
 									type="date"
 									value={startDate}
 									onChange={(event) => setStartDate(event.target.value)}
-									className="h-11 w-full min-w-0 rounded-md border-0 bg-secondary/60 pl-2.5 pr-1 pt-3.5 font-mono-ui text-xs font-semibold text-foreground focus:bg-secondary focus:ring-1 focus:ring-paid"
+									className="h-11 w-full min-w-0 max-w-full rounded-md border-0 bg-secondary/60 pl-2 pr-1 pt-3.5 font-mono-ui text-xs font-semibold text-foreground focus:bg-secondary focus:ring-1 focus:ring-paid appearance-none box-border text-ellipsis overflow-hidden"
 								/>
 							</div>
-							<div className="flex shrink-0 items-center justify-center text-foreground-faint/50 px-0.5">
-								<svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+							<div className="flex shrink-0 items-center justify-center text-foreground-faint/50 px-0.5 pointer-events-none">
+								<svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
 									<path strokeLinecap="round" strokeLinejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" />
 								</svg>
 							</div>
-							<div className="relative flex-1 min-w-0">
-								<span className="absolute left-2.5 top-1 font-mono-ui text-[9px] uppercase tracking-tight text-foreground-faint/70 pointer-events-none">
+							<div className="relative flex-1 min-w-0 overflow-hidden">
+								<span className="absolute left-2 top-1 font-mono-ui text-[9px] uppercase tracking-tight text-foreground-faint/70 pointer-events-none z-10">
 									Até
 								</span>
 								<input
 									type="date"
 									value={endDate}
 									onChange={(event) => setEndDate(event.target.value)}
-									className="h-11 w-full min-w-0 rounded-md border-0 bg-secondary/60 pl-2.5 pr-1 pt-3.5 font-mono-ui text-xs font-semibold text-foreground focus:bg-secondary focus:ring-1 focus:ring-paid"
+									className="h-11 w-full min-w-0 max-w-full rounded-md border-0 bg-secondary/60 pl-2 pr-1 pt-3.5 font-mono-ui text-xs font-semibold text-foreground focus:bg-secondary focus:ring-1 focus:ring-paid appearance-none box-border text-ellipsis overflow-hidden"
 								/>
 							</div>
 						</div>
