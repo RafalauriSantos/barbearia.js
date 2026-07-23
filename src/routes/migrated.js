@@ -175,10 +175,15 @@ router.get('/financial/summary', authMiddleware, adaptController(financialContro
 
 // Receivables
 router.get('/receivables', authMiddleware, adaptController(receivablesController.list));
+router.post('/receivables', authMiddleware, adaptController(receivablesController.create));
+router.put('/receivables/:id', authMiddleware, adaptController(receivablesController.update));
 router.post('/receivables/:id/receive', authMiddleware, adaptController(receivablesController.receive));
+router.delete('/receivables/:id', authMiddleware, adaptController(receivablesController.cancel));
 
 // Supplier Payables
 router.get('/supplier-payables', authMiddleware, adaptController(supplierPayablesController.list));
+router.post('/supplier-payables', authMiddleware, adaptController(supplierPayablesController.createPurchase));
+router.post('/supplier-purchases', authMiddleware, adaptController(supplierPayablesController.createPurchase));
 router.post('/supplier-payables/:id/pay', authMiddleware, adaptController(supplierPayablesController.pay));
 
 // Invites (Public)
