@@ -50,10 +50,10 @@ test.describe("Forgot Password E2E Flow", () => {
 		// Step 2: Redefine Password
 		await page.locator('input[id="password-reset-code"]').fill("123456");
 		await page.locator('input[id="password-reset-new-password"]').fill("newpassword123");
-		await page.getByRole("button", { name: "Redefinir senha" }).click();
+		await page.getByRole("button", { name: "Salvar nova senha" }).click();
 
 		// Verify success message
-		await expect(page.getByText("Senha redefinida. Agora voce ja pode entrar.")).toBeVisible();
+		await expect(page.getByText("Senha alterada com sucesso. Agora voce ja pode entrar.")).toBeVisible();
 		expect(resetPasswordCalled).toBe(true);
 	});
 
