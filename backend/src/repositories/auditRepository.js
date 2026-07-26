@@ -1,32 +1,16 @@
 const supabase = require("../lib/supabase");
 
-const SENSITIVE_KEYS = new Set([
-	"password",
-	"senha",
-	"password_hash",
-	"senha_hash",
-	"token",
-	"jwt",
-	"access_token",
-	"refreshtoken",
-	"refresh_token",
-	"code",
-	"resetcode",
-	"reset_code",
-	"otp",
-	"turnstiletoken",
-	"turnstile_token",
-	"cf_turnstile_response",
-	"authorization",
-	"secret",
-	"private_key",
-	"credentials",
-	"apikey",
-	"api_key",
-]);
+const SENSITIVE_KEY_PATTERN =
+	/password|passwd|senha|token|jwt|bearer|otp|code|authorization|secret|api_key|apikey|key|private_key|credentials|access_token|refresh_token|turnstile|cf_turnstile/i;
+
+function isSensitiveKey(key) {
+	if (!key || typeof key !== "string") return false;
+	return SENSITIVE_KEY_PATTERN.test(key);
+}
 
 /**
  * Deeply redacts sensitive credentials and secret keys from audit log objects.
+ * Uses case-insensitive regex pattern matching to detect compound sensitive keys.
  */
 function sanitizeValue(value) {
 	if (!value || typeof value !== "object") return value;
@@ -34,7 +18,7 @@ function sanitizeValue(value) {
 
 	const sanitized = {};
 	for (const [key, val] of Object.entries(value)) {
-		if (SENSITIVE_KEYS.has(String(key).toLowerCase())) {
+		if (isSensitiveKey(key)) {
 			sanitized[key] = "[REDACTED]";
 		} else if (typeof val === "object" && val !== null) {
 			sanitized[key] = sanitizeValue(val);
