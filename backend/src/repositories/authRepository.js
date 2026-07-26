@@ -243,6 +243,8 @@ exports.updatePassword = async function (
 ) {
 	const updates = {
 		senha_hash: password_hash,
+		tentativas_login_falhas: 0,
+		bloqueado_ate: null,
 		...(markEmailVerified ?
 			{ email_verificado_em: new Date().toISOString() }
 		:	{}),

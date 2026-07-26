@@ -51,7 +51,7 @@ exports.up = async function (knex) {
 				'locked_until', v_locked_until
 			);
 		END;
-		$$ LANGUAGE plpgsql SECURITY DEFINER;
+		$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp;
 
 		-- Atomic procedure to reset failed login attempts on successful login
 		CREATE OR REPLACE FUNCTION public.resetar_falhas_login_usuario(p_user_id uuid)
@@ -62,7 +62,7 @@ exports.up = async function (knex) {
 				bloqueado_ate = NULL
 			WHERE id = p_user_id;
 		END;
-		$$ LANGUAGE plpgsql SECURITY DEFINER;
+		$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp;
 	`);
 };
 
