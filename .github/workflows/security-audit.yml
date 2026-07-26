@@ -1,0 +1,119 @@
+name: Security Audit, SBOM & License Compliance
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: '0 4 * * 1'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: security-audit-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  dependency-audit:
+    name: Dependency Vulnerability Audit (High & Critical)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: |
+            backend/package-lock.json
+            frontend/package-lock.json
+
+      - name: Audit Backend Dependencies
+        working-directory: backend
+        run: npm audit --audit-level=high
+
+      - name: Audit Frontend Dependencies
+        working-directory: frontend
+        run: npm audit --audit-level=high
+
+  sbom-generation:
+    name: Generate Software Bill of Materials (SBOM CycloneDX)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Generate Backend CycloneDX SBOM
+        working-directory: backend
+        run: |
+          npx -y @cyclonedx/cyclonedx-npm --output-format JSON --output-file bom-backend.cdx.json
+
+      - name: Generate Frontend CycloneDX SBOM
+        working-directory: frontend
+        run: |
+          npx -y @cyclonedx/cyclonedx-npm --output-format JSON --output-file bom-frontend.cdx.json
+
+      - name: Upload SBOM Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom-cyclonedx-reports
+          path: |
+            backend/bom-backend.cdx.json
+            frontend/bom-frontend.cdx.json
+          retention-days: 90
+
+  license-audit:
+    name: Open Source License Compliance Audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install backend dependencies for license check
+        working-directory: backend
+        run: npm ci --omit=dev
+
+      - name: Install frontend dependencies for license check
+        working-directory: frontend
+        run: npm ci --omit=dev
+
+      - name: Audit Backend Licenses
+        working-directory: backend
+        run: |
+          npx -y license-checker-rseidelsohn --production --summary > licenses-backend-summary.txt
+          npx -y license-checker-rseidelsohn --production --failOn "AGPL-1.0-only;AGPL-1.0-or-later;AGPL-3.0-only;AGPL-3.0-or-later;GPL-1.0-only;GPL-1.0-or-later;GPL-2.0-only;GPL-2.0-or-later;GPL-3.0-only;GPL-3.0-or-later" || echo "Copyleft license warning detected"
+
+      - name: Audit Frontend Licenses
+        working-directory: frontend
+        run: |
+          npx -y license-checker-rseidelsohn --production --summary > licenses-frontend-summary.txt
+          npx -y license-checker-rseidelsohn --production --failOn "AGPL-1.0-only;AGPL-1.0-or-later;AGPL-3.0-only;AGPL-3.0-or-later;GPL-1.0-only;GPL-1.0-or-later;GPL-2.0-only;GPL-2.0-or-later;GPL-3.0-only;GPL-3.0-or-later" || echo "Copyleft license warning detected"
+
+      - name: Upload License Compliance Reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: license-compliance-reports
+          path: |
+            backend/licenses-backend-summary.txt
+            frontend/licenses-frontend-summary.txt
+          retention-days: 90

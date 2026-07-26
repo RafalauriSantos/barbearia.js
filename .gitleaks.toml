@@ -1,0 +1,54 @@
+title = "Marque's Barbearia Gitleaks Security Scan Configuration"
+
+[allowlist]
+description = "Global allowlist for example files and test mocks"
+paths = [
+  '''^\.env\.example$''',
+  '''^backend/\.env\.example$''',
+  '''^frontend/\.env\.example$''',
+  '''^backend/test/.*$''',
+  '''^frontend/src/.*\.test\..*$'''
+]
+
+[[rules]]
+id = "jwt-secret"
+description = "Detected potential JWT Secret in configuration or source code"
+regex = '''(?i)(jwt_secret|jwt-secret)\s*[:=]\s*["']?[A-Za-z0-9+/=_-]{16,}["']?'''
+keywords = ["jwt_secret", "jwt-secret"]
+
+[[rules]]
+id = "supabase-service-key"
+description = "Detected Supabase Service Role Key"
+regex = '''eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+'''
+keywords = ["supabase", "service_role"]
+
+[[rules]]
+id = "cloudflare-api-token"
+description = "Detected Cloudflare API Token"
+regex = '''(?i)(cloudflare|cf)[_-]?(api[_-]?token|key)\s*[:=]\s*["']?[A-Za-z0-9_-]{40}["']?'''
+keywords = ["cloudflare", "cf_token", "cf_api"]
+
+[[rules]]
+id = "turnstile-secret-key"
+description = "Detected Cloudflare Turnstile Secret Key"
+regex = '''0x4AAAAAA[A-Za-z0-9_-]{20,40}'''
+keywords = ["turnstile", "turnstile_secret"]
+
+[[rules]]
+id = "brevo-api-key"
+description = "Detected Brevo (Sendinblue) API Key"
+regex = '''xkeysib-[a-f0-9]{64}-[a-zA-Z0-9]{16}'''
+keywords = ["xkeysib", "brevo"]
+
+[[rules]]
+id = "github-pat"
+description = "Detected GitHub Personal Access Token"
+regex = '''(ghp|gho|ghu|ghs|ghr)_[A-Za-z0-9_]{36,255}'''
+keywords = ["ghp_", "gho_", "ghu_", "ghs_", "ghr_"]
+
+[[rules]]
+id = "committed-env-file"
+description = "Committed .env file containing live secrets"
+regex = '''^\.env$'''
+path = '''^\.env$'''
+keywords = [".env"]

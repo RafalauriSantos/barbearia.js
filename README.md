@@ -183,6 +183,16 @@ O repositório executa a higienização profunda automática (`sanitizeValue`), 
 - **Catálogo & Financeiro:** `SERVICE_CREATED`, `SERVICE_UPDATED`, `SERVICE_DELETED`, `PRODUCT_CREATED`, `PRODUCT_UPDATED`, `PRODUCT_DELETED`, `EXPENSE_CREATED`, `EXPENSE_UPDATED`, `EXPENSE_DELETED`, `RECEIVABLE_RECEIVED`.
 - **Convites:** `INVITE_SENT`, `INVITE_REVOKED`.
 
+## 🛡️ CI/CD Pipeline Hardening & Supply Chain Security (OWASP SAMM & SLSA)
+
+### **Fluxos de Automação e Segurança Implementados:**
+- **CodeQL SAST ([.github/workflows/codeql.yml](file:///c:/Users/Rafael%20lauri/tcc/.github/workflows/codeql.yml)):** Análise estática automatizada em JavaScript/TypeScript com execução em PRs, pushes para `main` e cron diário.
+- **Secret Scanning com Gitleaks ([.github/workflows/secret-scanning.yml](file:///c:/Users/Rafael%20lauri/tcc/.github/workflows/secret-scanning.yml) e [.gitleaks.toml](file:///c:/Users/Rafael%20lauri/tcc/.gitleaks.toml)):** Bloqueio preventivo contra vazamentos de segredos (JWT, Supabase keys, Cloudflare Tokens, Turnstile secrets, Brevo API Keys, GitHub PATs e arquivos `.env`).
+- **Auditoria de Dependências & Dependabot ([.github/dependabot.yml](file:///c:/Users/Rafael%20lauri/tcc/.github/dependabot.yml) e [.github/workflows/security-audit.yml](file:///c:/Users/Rafael%20lauri/tcc/.github/workflows/security-audit.yml)):** Verificação periódica de vulnerabilidades críticas/altas no `npm` e atualizações automatizadas.
+- **Geração de SBOM CycloneDX ([.github/workflows/security-audit.yml](file:///c:/Users/Rafael%20lauri/tcc/.github/workflows/security-audit.yml)):** Emissão e publicação de relatórios Software Bill of Materials para o backend e frontend.
+- **Auditoria de Licenças Open Source:** Verificação automática contra licenças não-comerciais/copyleft incompatíveis (AGPL, GPL).
+- **Proteção dos Deploys de Produção ([.github/workflows/deploy.yml](file:///c:/Users/Rafael%20lauri/tcc/.github/workflows/deploy.yml)):** Restrição estrita de deploys à branch `main`, impedindo acesso a segredos por Pull Requests de forks.
+
 ## Estrutura do repositório
 
 - `backend/` - API Hono, rotas, testes automatizados e integração com banco

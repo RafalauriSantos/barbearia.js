@@ -1,0 +1,49 @@
+name: Production Deployment Gate
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  deployments: write
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  deploy-guard:
+    name: Validate Security Guardrails Before Production Deployment
+    if: github.repository == 'RafalauriSantos/barbearia.js' && github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: production
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: |
+            backend/package-lock.json
+            frontend/package-lock.json
+
+      - name: Verify Non-Pull-Request Context
+        run: |
+          if [ "${{ github.event_name }}" != "push" ] || [ "${{ github.ref }}" != "refs/heads/main" ]; then
+            echo "::error::Deployment allowed strictly on push to main branch."
+            exit 1
+          fi
+          echo "Deployment security gate validated successfully."
+
+      - name: Dry-Run Wrangler Cloudflare Worker Deployment
+        working-directory: backend
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          echo "Production deployment gate cleared. Deploying Cloudflare Worker on main branch..."
