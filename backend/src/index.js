@@ -45,6 +45,36 @@ app.use("*", async (c, next) => {
 	return corsMiddleware(c, next);
 });
 
+// Edge Rate Limiting Middlewares for Cloudflare Workers / Hono
+const { createRateLimiter } = require("./middleware/rateLimiter");
+
+// Strict Rate Limiter for Authentication & Security endpoints: 15 requests / min
+const strictAuthRateLimiter = createRateLimiter({
+	windowMs: 60 * 1000,
+	max: 15,
+	message: "Muitas tentativas de autenticação. Por favor, aguarde 1 minuto.",
+	code: "AUTH_RATE_LIMIT_EXCEEDED",
+	skip: (c) => {
+		const nodeEnv = c.env ? c.env.NODE_ENV : process.env.NODE_ENV;
+		return nodeEnv === "test" && c.req.header("x-skip-rate-limit") === "true";
+	},
+});
+
+// Global Rate Limiter for all API endpoints: 100 requests / min
+const globalApiRateLimiter = createRateLimiter({
+	windowMs: 60 * 1000,
+	max: 100,
+	message: "Muitas requisições ao servidor. Por favor, aguarde alguns instantes.",
+	code: "GLOBAL_RATE_LIMIT_EXCEEDED",
+	skip: (c) => {
+		const nodeEnv = c.env ? c.env.NODE_ENV : process.env.NODE_ENV;
+		return nodeEnv === "test" && c.req.header("x-skip-rate-limit") === "true";
+	},
+});
+
+app.use("/auth/*", strictAuthRateLimiter);
+app.use("*", globalApiRateLimiter);
+
 // Adapter to bridge Fastify controllers and middlewares (preHandlers) to Hono
 function adaptRoute(fastifyHandler, options = {}) {
 	return async (c) => {
@@ -187,12 +217,13 @@ function createHonoBridge(honoApp) {
 			const opts = typeof options === "function" ? {} : options;
 			honoApp.delete(path, adaptRoute(realHandler, opts));
 		},
-		async register(routeFn, config = {}) {
+		register(routeFn, config = {}) {
 			const prefix = config.prefix || "";
 			const subApp = new Hono();
 			const subBridge = createHonoBridge(subApp);
-			await routeFn(subBridge, config);
+			const result = routeFn(subBridge, config);
 			honoApp.route(prefix, subApp);
+			return result;
 		},
 	};
 }
@@ -202,9 +233,7 @@ const bridge = createHonoBridge(app);
 
 // Load all Fastify route plugins onto the Hono app
 const routesIndex = require("./routes");
-routesIndex(bridge).catch((e) => {
-	console.error("Error loading routes onto Hono bridge:", e);
-});
+routesIndex(bridge);
 
 // Export the default handler for Cloudflare Workers
 module.exports = app;
