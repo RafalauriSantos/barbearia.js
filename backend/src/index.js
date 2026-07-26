@@ -4,6 +4,7 @@ const { setRuntimeEnv } = require("./config/env");
 const supabase = require("./lib/supabase");
 const { AppError } = require("./lib/errors");
 const { ZodError } = require("zod");
+const { getSecurityHeaders } = require("./middleware/securityHeaders");
 
 const app = new Hono();
 
@@ -20,6 +21,16 @@ app.use("*", async (c, next) => {
 		}
 	}
 	await next();
+});
+
+// OWASP Security Headers Middleware
+app.use("*", async (c, next) => {
+	await next();
+	const nodeEnv = c.env?.NODE_ENV || process.env.NODE_ENV || "development";
+	const secHeaders = getSecurityHeaders(nodeEnv === "production");
+	for (const [key, value] of Object.entries(secHeaders)) {
+		c.header(key, value);
+	}
 });
 
 // Dynamic CORS configuration using the env Proxy

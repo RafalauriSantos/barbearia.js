@@ -136,6 +136,34 @@ Para proteger a plataforma contra cadastros em massa automatizados (*Spam Signup
 - **Frontend (`.env`):** `VITE_TURNSTILE_SITE_KEY`
 - **Backend (`wrangler.toml` / `.dev.vars`):** `TURNSTILE_SECRET_KEY`
 
+## 🛡️ Cabeçalhos de Segurança OWASP & Content Security Policy (CSP)
+
+### **Objetivo e Funcionamento**
+A aplicação adota a especificação moderna de segurança OWASP recomendada para Cloudflare Workers, Hono e PWA React ([backend/src/middleware/securityHeaders.js](file:///c:/Users/Rafael%20lauri/tcc/backend/src/middleware/securityHeaders.js)).
+
+### **Cabeçalhos HTTP Injetados em Todas as Respostas:**
+- `X-Content-Type-Options: nosniff`: Impede interpretação incorreta de MIME-types.
+- `X-Frame-Options: DENY`: Protege contra ataques de Clickjacking.
+- `Referrer-Policy: strict-origin-when-cross-origin`: Restringe o vazamento de caminhos de URL em navegações externas.
+- `Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=(), usb=()`: Desativa APIs de hardware não utilizadas.
+- `X-Permitted-Cross-Domain-Policies: none`: Bloqueia clientes legados Flash/Acrobat.
+- `X-DNS-Prefetch-Control: off`: Desativa pré-carregamento especulativo de DNS.
+- `Strict-Transport-Security: max-age=31536000; includeSubDomains; preload` *(Apenas em Produção sobre HTTPS)*: Força comunicação segura por 1 ano.
+
+### **Diretivas da Content Security Policy (CSP):**
+- `default-src 'self'`
+- `script-src 'self' https://challenges.cloudflare.com` *(Em dev: inclui `'unsafe-inline' 'unsafe-eval'` para HMR Vite)*
+- `style-src 'self' 'unsafe-inline' https://fonts.googleapis.com`
+- `font-src 'self' https://fonts.gstatic.com data:`
+- `img-src 'self' data: blob: https://*.supabase.co`
+- `connect-src 'self' https://*.supabase.co https://challenges.cloudflare.com https://api.brevo.com` *(Em dev: inclui `http://localhost:* ws://localhost:*`)*
+- `frame-src 'self' https://challenges.cloudflare.com`
+- `object-src 'none'`
+- `base-uri 'self'`
+- `form-action 'self'`
+- `frame-ancestors 'none'`
+- `upgrade-insecure-requests` *(Apenas em Produção)*
+
 ## Estrutura do repositório
 
 - `backend/` - API Hono, rotas, testes automatizados e integração com banco

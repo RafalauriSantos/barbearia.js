@@ -103,6 +103,16 @@ async function buildApp() {
 		origin: allowedOrigin,
 	});
 
+const { getSecurityHeaders } = require("./middleware/securityHeaders");
+
+	app.addHook("onSend", async (request, reply) => {
+		const isProd = env.NODE_ENV === "production";
+		const secHeaders = getSecurityHeaders(isProd);
+		for (const [key, value] of Object.entries(secHeaders)) {
+			reply.header(key, value);
+		}
+	});
+
 	registerErrorHandler(app);
 	await registerDocs(app);
 	await app.register(require("./routes"));
