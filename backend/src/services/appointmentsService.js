@@ -357,16 +357,41 @@ exports.createAppointment = async function (payload, user) {
 exports.updateAppointment = async function (id, updates, user) {
 	assertBarbeariaContext(user);
 
-	if (updates) {
-		delete updates.net_value;
-		delete updates.payment_fee_value;
-		delete updates.payment_fee_percent;
+	if (
+		updates &&
+		(updates.net_value !== undefined ||
+			updates.payment_fee_value !== undefined ||
+			updates.payment_fee_percent !== undefined)
+	) {
+		throw new AppError(
+			400,
+			"READONLY_FIELD",
+			"Nao e permitido alterar diretamente campos calculados (net_value, payment_fee_value).",
+		);
 	}
 
 	const existing = await AppointmentsRepository.findById(id, {
 		barbeariaId: user.barbearia_id,
 	});
 	if (!existing) throw new AppError(404, "NOT_FOUND", "Appointment not found");
+
+	const existingStatus =
+		existing.status ||
+		(existing.status_pagamento === "pago" ? "paid" : existing.status_pagamento);
+	if (existingStatus === "paid") {
+		if (
+			updates &&
+			updates.status !== undefined &&
+			updates.status !== "paid" &&
+			updates.status !== "pago"
+		) {
+			throw new AppError(
+				400,
+				"APPOINTMENT_PAID_READONLY",
+				"Nao e permitido alterar o status de um agendamento ja pago.",
+			);
+		}
+	}
 
 	let payload = updates;
 	if (!isAdmin(user)) {
