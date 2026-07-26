@@ -54,41 +54,49 @@ Recentemente, a infraestrutura passou por uma migração arquitetural profunda (
 ## 🛡️ Proteção contra Abuso e Rate Limiting na Borda (Cloudflare Workers)
 
 ### **Como Funciona**
-A proteção contra força bruta e excesso de requisições foi implementada via middleware nativo do Hono (`backend/src/middleware/rateLimiter.js`) integrado ao ponto de entrada dos Workers (`backend/src/index.js`). 
+A proteção contra força bruta e excesso de requisições utiliza **Cloudflare Workers Native Rate Limiting Bindings** declarados no `wrangler.toml` (`AUTH_LIMITER` e `GLOBAL_LIMITER`) e integrados no Hono (`backend/src/index.js`). 
 
-O sistema utiliza a técnica de **Sliding Window em memória por IP** (extraído via cabeçalho `CF-Connecting-IP` / `x-forwarded-for`) e injeta os cabeçalhos padrão IETF:
-- `RateLimit-Limit`: Limite máximo de requisições permitidas na janela.
-- `RateLimit-Remaining`: Quantidade de requisições restantes na janela atual.
-- `RateLimit-Reset`: Segundos até a renovação da janela.
-- `Retry-After`: Enviado em respostas HTTP `429 Too Many Requests` indicando quando o cliente pode tentar novamente.
+A aplicação utiliza a infraestrutura nativa da Cloudflare na borda para sincronizar a contagem de requisições com latência zero e sem consumo de memória RAM no Isolate V8.
 
 ### **Tiering de Endpoints Protegidos**
 
 1. **Strict Tier (`/auth/*`)**
-   - **Limite:** 15 requisições por minuto por IP.
+   - **Binding:** `AUTH_LIMITER` (Configurado no `wrangler.toml`: 15 req / min).
    - **Rotas:** `/auth/login`, `/auth/register`, `/auth/forgot-password`, `/auth/verify-code`, `/auth/resend-code`, `/auth/reset-password`.
    - **Objetivo:** Mitigar credential stuffing, brute-force de senhas/código OTP e abuso de envio de e-mails via Brevo.
-   - **Código de Erro:** `AUTH_RATE_LIMIT_EXCEEDED` (HTTP 429).
+   - **Código de Erro:** `AUTH_RATE_LIMIT_EXCEEDED` (HTTP 429 com `Retry-After: 60`).
 
 2. **Global Tier (`/*`)**
-   - **Limite:** 100 requisições por minuto por IP.
+   - **Binding:** `GLOBAL_LIMITER` (Configurado no `wrangler.toml`: 100 req / min).
    - **Rotas:** Todos os demais endpoints da API (`/agendamentos`, `/clients`, `/services`, `/products`, `/expenses`, `/financial`, etc.).
    - **Objetivo:** Prevenir DoS, raspagem automatizada de dados e esgotamento de cota do banco de dados.
-   - **Código de Erro:** `GLOBAL_RATE_LIMIT_EXCEEDED` (HTTP 429).
+   - **Código de Erro:** `GLOBAL_RATE_LIMIT_EXCEEDED` (HTTP 429 com `Retry-After: 60`).
 
-### **Configuração em Desenvolvimento e Testes**
-- **Desenvolvimento Local / Wrangler:** O middleware Hono gerencia os contadores automaticamente sem necessidade de serviços externos.
-- **Suíte de Testes (Vitest / Node Tap):** Requisições com o cabeçalho `x-skip-rate-limit: true` em ambiente de testes (`NODE_ENV=test`) podem ignorar os limites para evitar intermitência em suítes E2E intensivas.
+### **Política de Segurança e Resiliência (Fail-Closed em Produção)**
+- **Ambiente de Produção (`NODE_ENV=production`):**  
+  As bindings `AUTH_LIMITER` e `GLOBAL_LIMITER` são **obrigatórias**. Caso alguma binding não esteja configurada no ambiente publicável, o servidor adota a política **FAIL-CLOSED**, registrando um erro crítico no console e rejeitando requisições com HTTP `500` (`SECURITY_BINDING_MISSING`). Isso garante que a aplicação jamais rode desprotegida por falha de deploy.
+- **Ambiente de Desenvolvimento (`NODE_ENV=development`):**  
+  Caso as bindings nativas da Cloudflare não estejam presentes no dev server local, o sistema registra um aviso único no console (`[DEV WARN]`) e permite o fluxo (`FAIL-SAFE DEV`), garantindo agilidade no desenvolvimento local sem travar testes manuais.
 
-### **Configuração em Produção (Cloudflare WAF)**
-Como camada complementar de defesa em profundidade (Layer 7 WAF), recomenda-se configurar regras no painel da Cloudflare:
-- **Cloudflare WAF Rate Limiting Rule:** Criar uma regra no painel da Cloudflare para o caminho `/auth/*` bloqueando IPs que excedam 20 req/min antes da chamada atingir a CPU do Worker.
+### **Checklist Pré-Deploy e Regras WAF Recomendadas**
+1. **Verificação de Bindings no `wrangler.toml`:**
+   ```toml
+   [[unsafe.bindings]]
+   name = "AUTH_LIMITER"
+   type = "ratelimit"
+   namespace_id = "1001"
+   simple = { limit = 15, period = 60 }
 
-### **Decisão de Arquitetura do Rate Limiter**
-- **Por que não utilizar `@fastify/rate-limit` em produção?**  
-  O plugin do Fastify é executado apenas quando a API roda via `src/server.js` (Node.js). Em produção, o Cloudflare Worker executa diretamente o runtime Hono em `src/index.js`, ignorando o ciclo de vida do Fastify.
-- **Por que escolher Middleware Hono em memória em vez de KV / Durable Objects?**  
-  O middleware Hono em memória possui **custo zero**, **latência zero** (sem chamadas assíncronas externas de I/O) e funciona perfeitamente tanto no Wrangler local quanto no Cloudflare Worker publicado.
+   [[unsafe.bindings]]
+   name = "GLOBAL_LIMITER"
+   type = "ratelimit"
+   namespace_id = "1002"
+   simple = { limit = 100, period = 60 }
+   ```
+2. **Regra de Borda no WAF (Cloudflare Dashboard):**
+   - **Caminho:** `/auth/*`
+   - **Limite:** 20 requisições / 1 minuto por IP.
+   - **Ação:** `Block` ou `Managed Challenge`.
 
 ## Estrutura do repositório
 

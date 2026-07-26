@@ -77,8 +77,35 @@ t.test("Cloudflare Workers Native Rate Limiting Binding Suite", async (t) => {
 		t.equal(body.code, "GLOBAL_RATE_LIMIT_EXCEEDED");
 	});
 
-	t.test("passes through safely when no rate limiter binding is defined in env", async (t) => {
-		const res = await workerApp.request("http://localhost/health", {}, {});
+	t.test("fails-closed with HTTP 500 when required binding is missing in production environment", async (t) => {
+		const env = { NODE_ENV: "production" };
+		const res = await workerApp.request("http://localhost/auth/login", { method: "POST" }, env);
+
+		t.equal(res.status, 500);
+		const body = await res.json();
+		t.equal(body.code, "SECURITY_BINDING_MISSING");
+		t.equal(body.error, "Erro de configuração de segurança do servidor. Contate o administrador.");
+	});
+
+	t.test("allows requests with warning when binding is missing in development environment", async (t) => {
+		const env = { NODE_ENV: "development" };
+		const res = await workerApp.request("http://localhost/health", {}, env);
 		t.equal(res.status, 200);
+	});
+
+	t.test("handles throwing binding error gracefully with HTTP 500 in production", async (t) => {
+		const env = {
+			NODE_ENV: "production",
+			AUTH_LIMITER: {
+				async limit() {
+					throw new Error("Cloudflare internal rate limit service unavailable");
+				},
+			},
+		};
+
+		const res = await workerApp.request("http://localhost/auth/login", { method: "POST" }, env);
+		t.equal(res.status, 500);
+		const body = await res.json();
+		t.equal(body.code, "RATE_LIMIT_SERVICE_ERROR");
 	});
 });

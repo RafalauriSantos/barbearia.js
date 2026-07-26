@@ -45,6 +45,9 @@ app.use("*", async (c, next) => {
 	return corsMiddleware(c, next);
 });
 
+// Set to track logged development warnings once per binding
+const loggedDevWarnings = new Set();
+
 // Helper to extract client IP safely from Cloudflare Edge headers
 function getClientIp(c) {
 	return (
@@ -55,45 +58,93 @@ function getClientIp(c) {
 	);
 }
 
-// Native Cloudflare Rate Limiter Middleware for Auth Endpoints (/auth/*)
-app.use("/auth/*", async (c, next) => {
-	const limiter = c.env?.AUTH_LIMITER;
-	if (limiter && typeof limiter.limit === "function") {
-		const clientIp = getClientIp(c);
-		const result = await limiter.limit({ key: clientIp });
-		if (result && result.success === false) {
-			c.header("Retry-After", "60");
-			return c.json(
-				{
-					error: "Muitas tentativas de autenticação. Por favor, aguarde 1 minuto.",
-					code: "AUTH_RATE_LIMIT_EXCEEDED",
-				},
-				429,
-			);
+// Factory function for Cloudflare Rate Limiting Bindings with Fail-Safe / Fail-Closed policy
+function createBindingRateLimiterMiddleware(options) {
+	const { bindingName, errorCode, errorMessage, retryAfterSeconds = 60 } = options;
+
+	return async function rateLimiterMiddleware(c, next) {
+		const nodeEnv = c.env?.NODE_ENV || process.env.NODE_ENV || "development";
+		const limiter = c.env?.[bindingName];
+		const hasValidBinding = limiter && typeof limiter.limit === "function";
+
+		if (!hasValidBinding) {
+			// FAIL-CLOSED IN PRODUCTION: Never allow un-rate-limited traffic if binding is missing
+			if (nodeEnv === "production") {
+				console.error(
+					`[CRITICAL SECURITY ERROR] Required Cloudflare Rate Limiter binding '${bindingName}' is missing in production environment! Request rejected for security.`,
+				);
+				return c.json(
+					{
+						error: "Erro de configuração de segurança do servidor. Contate o administrador.",
+						code: "SECURITY_BINDING_MISSING",
+					},
+					500,
+				);
+			}
+
+			// FAIL-SAFE IN DEVELOPMENT: Log warning once and allow local dev without wrangler bindings
+			if (nodeEnv === "development" && !loggedDevWarnings.has(bindingName)) {
+				loggedDevWarnings.add(bindingName);
+				console.warn(
+					`[DEV WARN] Cloudflare Rate Limiter binding '${bindingName}' is missing. Rate limiting is bypassed in local development.`,
+				);
+			}
+
+			return next();
 		}
-	}
-	await next();
-});
+
+		// Binding exists and is valid -> execute rate limit check
+		const clientIp = getClientIp(c);
+		try {
+			const result = await limiter.limit({ key: clientIp });
+			if (result && result.success === false) {
+				c.header("Retry-After", String(retryAfterSeconds));
+				return c.json(
+					{
+						error: errorMessage,
+						code: errorCode,
+					},
+					429,
+				);
+			}
+		} catch (err) {
+			console.error(`[RATE LIMIT ERROR] Failed executing ${bindingName}.limit():`, err);
+			if (nodeEnv === "production") {
+				return c.json(
+					{
+						error: "Erro interno no serviço de limitação de taxa.",
+						code: "RATE_LIMIT_SERVICE_ERROR",
+					},
+					500,
+				);
+			}
+		}
+
+		return next();
+	};
+}
+
+// Native Cloudflare Rate Limiter Middleware for Auth Endpoints (/auth/*)
+app.use(
+	"/auth/*",
+	createBindingRateLimiterMiddleware({
+		bindingName: "AUTH_LIMITER",
+		errorCode: "AUTH_RATE_LIMIT_EXCEEDED",
+		errorMessage: "Muitas tentativas de autenticação. Por favor, aguarde 1 minuto.",
+		retryAfterSeconds: 60,
+	}),
+);
 
 // Native Cloudflare Rate Limiter Middleware for Global API Endpoints (/*)
-app.use("*", async (c, next) => {
-	const limiter = c.env?.GLOBAL_LIMITER;
-	if (limiter && typeof limiter.limit === "function") {
-		const clientIp = getClientIp(c);
-		const result = await limiter.limit({ key: clientIp });
-		if (result && result.success === false) {
-			c.header("Retry-After", "60");
-			return c.json(
-				{
-					error: "Muitas requisições ao servidor. Por favor, aguarde alguns instantes.",
-					code: "GLOBAL_RATE_LIMIT_EXCEEDED",
-				},
-				429,
-			);
-		}
-	}
-	await next();
-});
+app.use(
+	"*",
+	createBindingRateLimiterMiddleware({
+		bindingName: "GLOBAL_LIMITER",
+		errorCode: "GLOBAL_RATE_LIMIT_EXCEEDED",
+		errorMessage: "Muitas requisições ao servidor. Por favor, aguarde alguns instantes.",
+		retryAfterSeconds: 60,
+	}),
+);
 
 // Adapter to bridge Fastify controllers and middlewares (preHandlers) to Hono
 function adaptRoute(fastifyHandler, options = {}) {
