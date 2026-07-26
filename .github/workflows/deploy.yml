@@ -41,9 +41,14 @@ jobs:
           fi
           echo "Deployment security gate validated successfully."
 
-      - name: Dry-Run Wrangler Cloudflare Worker Deployment
+      - name: Validate Cloudflare API Token & Wrangler Authentication
         working-directory: backend
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         run: |
-          echo "Production deployment gate cleared. Deploying Cloudflare Worker on main branch..."
+          if [ -z "$CLOUDFLARE_API_TOKEN" ]; then
+            echo "::error::CLOUDFLARE_API_TOKEN secret is missing or empty!"
+            exit 1
+          fi
+          echo "Validating Cloudflare API token credentials via Wrangler..."
+          npx wrangler whoami
