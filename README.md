@@ -193,6 +193,25 @@ O repositório executa a higienização profunda automática (`sanitizeValue`), 
 - **Auditoria de Licenças Open Source:** Verificação automática contra licenças não-comerciais/copyleft incompatíveis (AGPL, GPL).
 - **Proteção dos Deploys de Produção ([.github/workflows/deploy.yml](file:///c:/Users/Rafael%20lauri/tcc/.github/workflows/deploy.yml)):** Restrição estrita de deploys à branch `main`, impedindo acesso a segredos por Pull Requests de forks.
 
+### 🔑 Git Pre-Commit Hook (Prevenção Local de Vazamento de Segredos)
+
+O projeto possui um **Pre-commit Hook com Husky e Gitleaks** ([scripts/run-gitleaks.js](file:///c:/Users/Rafael%20lauri/tcc/scripts/run-gitleaks.js)) configurado para escanear automaticamente os arquivos preparados (`staged`) antes de cada `git commit`.
+
+#### **Como funciona o Hook Local:**
+1. Ao executar `git commit`, o Husky aciona o script `.husky/pre-commit`.
+2. O Gitleaks analisa as modificações staged contra as regras definidas em [.gitleaks.toml](file:///c:/Users/Rafael%20lauri/tcc/.gitleaks.toml).
+3. Se qualquer credencial ou chave for detectada, o commit é imediatamente **bloqueado** (código de saída `!= 0`), impedindo que o segredo seja gravado no histórico Git.
+
+#### **Comandos Úteis:**
+- **Escanear arquivos staged manualmente:**
+  ```bash
+  npm run gitleaks
+  ```
+- **Escanear o histórico completo do repositório:**
+  ```bash
+  npm run gitleaks:detect
+  ```
+
 ## Estrutura do repositório
 
 - `backend/` - API Hono, rotas, testes automatizados e integração com banco

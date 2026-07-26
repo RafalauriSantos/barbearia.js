@@ -6,6 +6,7 @@ paths = [
   '''^\.env\.example$''',
   '''^backend/\.env\.example$''',
   '''^frontend/\.env\.example$''',
+  '''^scripts/run-gitleaks\.js$''',
   '''^backend/test/.*$''',
   '''^frontend/src/.*\.test\..*$'''
 ]

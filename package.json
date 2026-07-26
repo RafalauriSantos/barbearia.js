@@ -8,7 +8,10 @@
     "deploy": "wrangler deploy",
     "check": "powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/check-all.ps1",
     "stop": "powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/stop-dev.ps1",
-    "test": "vitest run tests/"
+    "test": "vitest run tests/",
+    "prepare": "husky",
+    "gitleaks": "node scripts/run-gitleaks.js",
+    "gitleaks:detect": "node scripts/run-gitleaks.js detect"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.105.1",
@@ -19,6 +22,7 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "husky": "^9.1.7",
     "vitest": "^4.1.10",
     "wrangler": "^4.111.0"
   }

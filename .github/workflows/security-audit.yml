@@ -129,3 +129,20 @@ jobs:
             backend/licenses-backend-summary.txt
             frontend/licenses-frontend-summary.txt
           retention-days: 90
+
+  secret-detection-full-history:
+    name: Repository Full History Secret Scan (Gitleaks)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run Gitleaks Full Repository Scan
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_CONFIG: .gitleaks.toml
