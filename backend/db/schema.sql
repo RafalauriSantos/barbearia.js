@@ -12,6 +12,8 @@ CREATE TABLE IF NOT EXISTS public.usuarios (
     senha_hash varchar NOT NULL,
     email_verificado_em timestamptz,
     token_version integer DEFAULT 1,
+    tentativas_login_falhas integer DEFAULT 0,
+    bloqueado_ate timestamptz DEFAULT NULL,
     criado_em timestamptz NOT NULL DEFAULT now(),
     atualizado_em timestamptz NOT NULL DEFAULT now()
 );

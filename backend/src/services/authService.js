@@ -17,6 +17,12 @@ function wrapRepo(repo) {
 			if (prop === "logFailedLoginAndCount" || prop === "logRegistrationAndCount") {
 				return async () => 1;
 			}
+			if (prop === "recordUserFailedLogin") {
+				return async () => ({ found: true, attempts: 1, locked: false });
+			}
+			if (prop === "resetUserFailedLogin") {
+				return async () => {};
+			}
 			if (prop === "clearFailedLogins" || prop === "invalidateForUser") {
 				return async () => {};
 			}
@@ -104,56 +110,58 @@ exports.register = async function ({ email, password }, runtimeEnv, ipAddress) {
 	};
 };
 
-exports.verifyCredentials = async function (email, password, ipAddress) {
+const DUMMY_HASH = "$2a$10$7EqJtq98hPqEX7fNZaFWoO.Nqf1f.gW7g.2K8/m.4x.x.x.x.x.x.";
+
+exports.verifyCredentials = async function (email, password, _ipAddress) {
 	const AuthRepository = getRepo();
 	const cleanEmail = String(email || "").trim().toLowerCase();
-	const clientIp = ipAddress || "127.0.0.1";
+	const maxAttempts = 5;
+	const lockoutSeconds = 15 * 60;
 
-	// Pre-check: read existing count to block already-rate-limited IPs
-	const windowSeconds = 15 * 60;
-	const failedAttempts = await AuthRepository.getFailedLogins(cleanEmail, clientIp, windowSeconds * 1000);
-	if (failedAttempts.length >= 5) {
-		const latestAttempt = new Date(failedAttempts[0].criado_em).getTime();
-		const secondsPassed = Math.floor((Date.now() - latestAttempt) / 1000);
-		const remaining = windowSeconds - secondsPassed;
-		if (remaining > 0) {
+	// Check if user exists and check lockout status
+	const user = await AuthRepository.findByEmail(cleanEmail);
+
+	if (user && user.bloqueado_ate) {
+		const lockedUntil = new Date(user.bloqueado_ate).getTime();
+		const now = Date.now();
+		if (lockedUntil > now) {
+			const remaining = Math.ceil((lockedUntil - now) / 1000);
 			throw new AppError(
 				429,
-				"RATE_LIMIT_EXCEEDED",
-				"Muitas tentativas de login incorretas. Tente novamente mais tarde.",
-				{ retryAfter: remaining }
+				"ACCOUNT_LOCKED",
+				"Muitas tentativas de login incorretas. Conta bloqueada temporariamente por 15 minutos.",
+				{ retryAfter: remaining },
 			);
 		}
 	}
 
-	const user = await AuthRepository.findByEmail(cleanEmail);
 	if (!user) {
-		// Atomic: insert attempt AND count in one DB operation (stored procedure)
-		const count = await AuthRepository.logFailedLoginAndCount(cleanEmail, clientIp, windowSeconds).catch(() => 0);
-		if (count >= 5) {
-			throw new AppError(
-				429,
-				"RATE_LIMIT_EXCEEDED",
-				"Muitas tentativas de login incorretas. Tente novamente mais tarde.",
-				{ retryAfter: windowSeconds }
-			);
-		}
+		// Prevent user enumeration via timing attack with dummy hash comparison
+		await bcrypt.compare(password || "", DUMMY_HASH).catch(() => {});
 		return null;
 	}
 
 	const ok = await bcrypt.compare(password, user.password_hash);
 	if (!ok) {
-		const count = await AuthRepository.logFailedLoginAndCount(cleanEmail, clientIp, windowSeconds).catch(() => 0);
-		if (count >= 5) {
+		const result = await AuthRepository.recordUserFailedLogin(
+			cleanEmail,
+			maxAttempts,
+			lockoutSeconds,
+		).catch(() => ({ attempts: 1, locked: false }));
+
+		if (result && result.locked) {
 			throw new AppError(
 				429,
-				"RATE_LIMIT_EXCEEDED",
-				"Muitas tentativas de login incorretas. Tente novamente mais tarde.",
-				{ retryAfter: windowSeconds }
+				"ACCOUNT_LOCKED",
+				"Muitas tentativas de login incorretas. Conta bloqueada temporariamente por 15 minutos.",
+				{ retryAfter: lockoutSeconds },
 			);
 		}
 		return null;
 	}
+
+	// Password is correct -> Reset failed login counter and clear lockout
+	await AuthRepository.resetUserFailedLogin(user.id).catch(() => {});
 
 	if (!user.email_verificado_em) {
 		throw new AppError(
@@ -162,8 +170,6 @@ exports.verifyCredentials = async function (email, password, ipAddress) {
 			"Confirme seu email antes de entrar.",
 		);
 	}
-
-	await AuthRepository.clearFailedLogins(cleanEmail, clientIp).catch(() => {});
 
 	return user;
 };

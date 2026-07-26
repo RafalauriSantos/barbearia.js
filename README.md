@@ -98,6 +98,20 @@ A aplicação utiliza a infraestrutura nativa da Cloudflare na borda para sincro
    - **Limite:** 20 requisições / 1 minuto por IP.
    - **Ação:** `Block` ou `Managed Challenge`.
 
+## 🔐 Bloqueio de Conta por Identidade do Usuário (User Login Lockout)
+
+### **Objetivo e Funcionamento**
+Para proteger as contas de barbeiros e administradores contra ataques direcionados de força bruta (*Credential Stuffing*) que utilizam rotação de IP ou redes de botnets distribuídas, o sistema implementa o **Login Lockout baseado na Identidade (E-mail)** persistentemente no banco PostgreSQL/Supabase.
+
+### **Regras e Parâmetros:**
+- **Contador por Usuário:** O histórico de erros consecutivos é rastreado na coluna `tentativas_login_falhas` da tabela `usuarios`.
+- **Limite Máximo:** **5 tentativas incorretas consecutivas**.
+- **Duração do Bloqueio:** **15 minutos** (`bloqueado_ate = now() + interval '15 minutes'`).
+- **Reset em Sucesso:** Qualquer autenticação bem-sucedida zera imediatamente o contador (`tentativas_login_falhas = 0`) e limpa a trava (`bloqueado_ate = NULL`).
+- **Desbloqueio Automático:** Após decorridos 15 minutos do bloqueio, o próximo acesso com a senha correta é liberado normalmente.
+- **Proteção contra Enumeração e Timing Attacks:** Se uma solicitação for enviada para um e-mail inexistente, a aplicação executa uma comparação `bcrypt` fictícia de tempo constante (dummy hash), retornando a resposta genérica `401 Unauthorized` ("E-mail ou senha incorretos.").
+- **Resistência a Race Conditions:** As atualizações de contadores e bloqueio são executadas via stored procedures atômicas em PostgreSQL (`registrar_falha_login_usuario` e `resetar_falhas_login_usuario`) utilizando `FOR UPDATE` para travar a linha do usuário na transação do banco.
+
 ## Estrutura do repositório
 
 - `backend/` - API Hono, rotas, testes automatizados e integração com banco

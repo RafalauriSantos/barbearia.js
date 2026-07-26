@@ -310,3 +310,20 @@ exports.logRegistrationAndCount = async function (ipAddress, windowSeconds) {
 	if (error) throw error;
 	return data;
 };
+
+exports.recordUserFailedLogin = async function (email, maxAttempts = 5, lockoutSeconds = 900) {
+	const { data, error } = await supabase.rpc("registrar_falha_login_usuario", {
+		p_email: email,
+		p_max_attempts: maxAttempts,
+		p_lockout_seconds: lockoutSeconds,
+	});
+	if (error) throw error;
+	return data;
+};
+
+exports.resetUserFailedLogin = async function (userId) {
+	const { error } = await supabase.rpc("resetar_falhas_login_usuario", {
+		p_user_id: userId,
+	});
+	if (error) throw error;
+};
