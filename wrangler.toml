@@ -11,7 +11,7 @@ EMAIL_BRAND_NAME = "Marque’s Barbearia"
 SUPABASE_URL = "https://zniehugopmvoutxnpgox.supabase.co"
 
 [observability]
-enabled = false
+enabled = true
 head_sampling_rate = 1
 
 [observability.logs]

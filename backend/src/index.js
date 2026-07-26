@@ -1,5 +1,6 @@
 const { Hono } = require("hono");
 const { cors } = require("hono/cors");
+const { logger } = require("hono/logger");
 const { setRuntimeEnv } = require("./config/env");
 const supabase = require("./lib/supabase");
 const { AppError } = require("./lib/errors");
@@ -7,6 +8,29 @@ const { ZodError } = require("zod");
 const { getSecurityHeaders } = require("./middleware/securityHeaders");
 
 const app = new Hono();
+
+// X-Request-ID & Correlation Tracing Middleware
+app.use("*", async (c, next) => {
+	const reqId =
+		c.req.header("x-request-id") ||
+		c.req.header("cf-ray") ||
+		(typeof crypto !== "undefined" && typeof crypto.randomUUID === "function" ?
+			crypto.randomUUID()
+		:	`req-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`);
+	c.set("requestId", reqId);
+	c.header("x-request-id", reqId);
+	await next();
+});
+
+// Native Hono HTTP Logger Middleware (skipped in test mode)
+app.use("*", async (c, next) => {
+	const currentEnv = c.env?.NODE_ENV || process.env.NODE_ENV || "development";
+	if (currentEnv === "test") {
+		return next();
+	}
+	const loggerMiddleware = logger();
+	return loggerMiddleware(c, next);
+});
 
 // Global runtime environment initialization on first request
 let envInitialized = false;
@@ -316,6 +340,49 @@ const bridge = createHonoBridge(app);
 // Load all Fastify route plugins onto the Hono app
 const routesIndex = require("./routes");
 routesIndex(bridge);
+
+// Global Hono Central Error Handler
+app.onError((err, c) => {
+	const reqId =
+		c.get("requestId") ||
+		c.req.header("x-request-id") ||
+		c.req.header("cf-ray") ||
+		null;
+
+	if (err instanceof AppError) {
+		return c.json({ error: err.message, code: err.code }, err.status);
+	}
+	if (err instanceof ZodError) {
+		return c.json(
+			{
+				error: "Validation error",
+				code: "VALIDATION_ERROR",
+				issues: err.issues.map((issue) => ({
+					path: issue.path.join("."),
+					message: issue.message,
+				})),
+			},
+			400,
+		);
+	}
+
+	console.error(
+		JSON.stringify({
+			level: "error",
+			message: err.message || "Unhandled server error",
+			stack: err.stack || null,
+			requestId: reqId,
+			path: c.req.path,
+			method: c.req.method,
+			timestamp: new Date().toISOString(),
+		}),
+	);
+
+	return c.json(
+		{ error: "Internal Server Error", code: "INTERNAL_ERROR" },
+		500,
+	);
+});
 
 // Export the default handler for Cloudflare Workers
 module.exports = app;
