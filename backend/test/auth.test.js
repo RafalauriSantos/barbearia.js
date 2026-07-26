@@ -45,7 +45,7 @@ t.test("POST /auth/register creates a user", async (t) => {
 	const res = await app.inject({
 		method: "POST",
 		url: "/auth/register",
-		payload: { email: "x@y.com", password: "supersecret" },
+		payload: { email: "x@y.com", password: "supersecret", turnstileToken: "dummy-turnstile-token" },
 	});
 	t.equal(res.statusCode, 201);
 	const body = JSON.parse(res.payload);
@@ -320,7 +320,7 @@ t.test("POST /auth/forgot-password sends reset code without exposing users", asy
 	const res = await app.inject({
 		method: "POST",
 		url: "/auth/forgot-password",
-		payload: { email: "renan@kashflow.com" },
+		payload: { email: "renan@kashflow.com", turnstileToken: "dummy-turnstile-token" },
 	});
 	t.equal(res.statusCode, 200);
 	const body = JSON.parse(res.payload);

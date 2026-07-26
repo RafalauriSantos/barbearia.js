@@ -112,6 +112,30 @@ Para proteger as contas de barbeiros e administradores contra ataques direcionad
 - **Proteção contra Enumeração e Timing Attacks:** Se uma solicitação for enviada para um e-mail inexistente, a aplicação executa uma comparação `bcrypt` fictícia de tempo constante (dummy hash), retornando a resposta genérica `401 Unauthorized` ("E-mail ou senha incorretos.").
 - **Resistência a Race Conditions:** As atualizações de contadores e bloqueio são executadas via stored procedures atômicas em PostgreSQL (`registrar_falha_login_usuario` e `resetar_falhas_login_usuario`) utilizando `FOR UPDATE` para travar a linha do usuário na transação do banco.
 
+## 🤖 Proteção Anti-Bot com Cloudflare Turnstile
+
+### **Objetivo e Funcionamento**
+Para proteger a plataforma contra cadastros em massa automatizados (*Spam Signup*), esgotamento de cotas de envio de e-mail (API da Brevo) e ataques de inundação na recuperação de senha (*Email Flooding*), a aplicação integra a verificação oficial não-intrusiva **Cloudflare Turnstile**.
+
+### **Escopo de Aplicação:**
+- **Endpoints Protegidos (Backend):**
+  - `POST /auth/register` (Criar conta)
+  - `POST /auth/forgot-password` (Solicitar código de recuperação)
+  - `POST /auth/resend-code` (Reenviar código de verificação)
+- **Endpoints Não Afetados:**
+  - `POST /auth/login` (Protegido por Rate Limiting + User Identity Lockout para preservar UX)
+  - `POST /auth/verify-code` (Protegido por contador atômico de 5 tentativas por ID de código)
+  - Endpoints autenticados (Protegidos por validação JWT Bearer Token)
+
+### **Arquitetura e Validação Server-Side:**
+1. **Frontend Component:** Componente isolado `<TurnstileWidget />` ([frontend/src/components/TurnstileWidget.jsx](file:///c:/Users/Rafael%20lauri/tcc/frontend/src/components/TurnstileWidget.jsx)) que carrega o script oficial assíncrono da Cloudflare e gera o token de resposta.
+2. **Backend Service:** Serviço isolado `turnstileService.verifyToken()` ([backend/src/services/turnstileService.js](file:///c:/Users/Rafael%20lauri/tcc/backend/src/services/turnstileService.js)) que efetua requisição HTTP POST para `https://challenges.cloudflare.com/turnstile/v0/siteverify` com a `TURNSTILE_SECRET_KEY` antes de qualquer toque no banco de dados Supabase ou chamada ao serviço de e-mails Brevo.
+3. **Garantia Anti-Bypass:** Se o token for omitido, expirado ou recusado pela Cloudflare, a requisição é rejeitada na hora com `400 Bad Request` (`INVALID_TURNSTILE_TOKEN`).
+
+### **Variáveis de Ambiente Necessárias:**
+- **Frontend (`.env`):** `VITE_TURNSTILE_SITE_KEY`
+- **Backend (`wrangler.toml` / `.dev.vars`):** `TURNSTILE_SECRET_KEY`
+
 ## Estrutura do repositório
 
 - `backend/` - API Hono, rotas, testes automatizados e integração com banco

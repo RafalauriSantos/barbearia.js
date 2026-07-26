@@ -3,6 +3,7 @@ import { Link, Navigate, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import { AppApiError, warmUpApi } from "@/lib/api/client";
 import { BrandName } from "@/components/BrandName";
+import { TurnstileWidget } from "@/components/TurnstileWidget";
 
 const SIGNUP_SUCCESS_MESSAGE =
 	"Conta criada. Enviamos um codigo de 6 digitos para seu email.";
@@ -21,6 +22,7 @@ export default function LoginPage() {
 	);
 	const [email, setEmail] = useState("");
 	const [password, setPassword] = useState("");
+	const [turnstileToken, setTurnstileToken] = useState("");
 	const [isSubmitting, setIsSubmitting] = useState(false);
 	const [errorMessage, setErrorMessage] = useState("");
 	const [successMessage, setSuccessMessage] = useState("");
@@ -53,7 +55,7 @@ export default function LoginPage() {
 		setSuccessMessage("");
 		try {
 			if (mode === "signup") {
-				await signup({ email: cleanEmail, password });
+				await signup({ email: cleanEmail, password, turnstileToken });
 				window.sessionStorage?.setItem(
 					PENDING_VERIFICATION_EMAIL_KEY,
 					cleanEmail,
@@ -205,6 +207,14 @@ export default function LoginPage() {
 								required
 							/>
 						</div>
+
+						{isSignup && (
+							<TurnstileWidget
+								onSuccess={setTurnstileToken}
+								onError={() => setTurnstileToken("")}
+								onExpire={() => setTurnstileToken("")}
+							/>
+						)}
 
 						<button
 							type="submit"

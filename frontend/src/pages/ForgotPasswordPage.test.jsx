@@ -41,6 +41,7 @@ describe("ForgotPasswordPage", () => {
 
 		expect(authApiMock.requestPasswordReset).toHaveBeenCalledWith({
 			email: "cliente@example.com",
+			turnstileToken: "dummy-turnstile-token",
 		});
 		expect(screen.queryByText(/654321/)).toBeNull();
 		expect(screen.queryByLabelText("Email")).toBeNull();
@@ -53,11 +54,11 @@ describe("ForgotPasswordPage", () => {
 			target: { value: "NovaSenha123" },
 		});
 		expect(screen.queryByLabelText("Confirmar nova senha")).toBeNull();
-		fireEvent.click(screen.getByRole("button", { name: "Redefinir senha" }));
+		fireEvent.click(screen.getByRole("button", { name: "Salvar nova senha" }));
 
 		await waitFor(() => {
 			expect(
-				screen.getByText("Senha redefinida. Agora voce ja pode entrar."),
+				screen.getByText("Senha alterada com sucesso. Agora voce ja pode entrar."),
 			).toBeTruthy();
 		});
 

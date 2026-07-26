@@ -1,4 +1,5 @@
 const AuthService = require("../services/authService");
+const turnstileService = require("../services/turnstileService");
 const {
 	validateRegister,
 	validateLogin,
@@ -10,6 +11,15 @@ const {
 } = require("../validators/auth.schema");
 const jwt = require("jsonwebtoken");
 const { env } = require("../config/env");
+
+function extractTurnstileToken(request) {
+	return (
+		request.body?.turnstileToken ||
+		request.body?.cf_turnstile_response ||
+		request.headers?.["cf-turnstile-response"] ||
+		""
+	);
+}
 
 function toPublicUser(user) {
 	return {
@@ -41,6 +51,10 @@ function createSession(user) {
 exports.register = async (request, reply) => {
 	const payload = validateRegister(request.body);
 	const clientIp = request.ip || request.headers?.["x-forwarded-for"] || "127.0.0.1";
+	const turnstileToken = extractTurnstileToken(request);
+
+	await turnstileService.verifyToken(turnstileToken, clientIp, request.env);
+
 	const { user, verificationCode } = await AuthService.register(payload, request.env, clientIp);
 	return reply.code(201).send({
 		user: toPublicUser(user),
@@ -119,6 +133,11 @@ exports.verifyEmailCode = async (request, reply) => {
 
 exports.resendEmailCode = async (request, reply) => {
 	const payload = validateResendCode(request.body);
+	const clientIp = request.ip || request.headers?.["x-forwarded-for"] || "127.0.0.1";
+	const turnstileToken = extractTurnstileToken(request);
+
+	await turnstileService.verifyToken(turnstileToken, clientIp, request.env);
+
 	const result = await AuthService.resendEmailCode(payload, request.env);
 	return reply.send(result);
 };
@@ -126,9 +145,17 @@ exports.resendEmailCode = async (request, reply) => {
 exports.forgotPassword = async (request, reply) => {
 	try {
 		const payload = validateForgotPassword(request.body);
+		const clientIp = request.ip || request.headers?.["x-forwarded-for"] || "127.0.0.1";
+		const turnstileToken = extractTurnstileToken(request);
+
+		await turnstileService.verifyToken(turnstileToken, clientIp, request.env);
+
 		const result = await AuthService.requestPasswordReset(payload, request.env);
 		return reply.send(result);
 	} catch (error) {
+		if (error.code === "INVALID_TURNSTILE_TOKEN" || error.code === "TURNSTILE_SERVICE_ERROR" || error.code === "TURNSTILE_TIMEOUT") {
+			throw error;
+		}
 		console.error("[ForgotPassword] Erro no fluxo de recuperacao de senha:", error);
 		return reply.status(500).send({
 			error: "Erro ao processar a recuperacao de senha. Por favor, tente novamente mais tarde.",

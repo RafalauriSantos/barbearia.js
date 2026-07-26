@@ -31,6 +31,7 @@ const envSchema = z
 		BREVO_API_KEY: z.string().optional(),
 		AVATAR_BUCKET: z.string().default("barber-avatars"),
 		ADMIN_DEBUG_KEY: z.string().optional(),
+		TURNSTILE_SECRET_KEY: z.string().optional(),
 	})
 	.superRefine((env, ctx) => {
 		if (env.NODE_ENV === "production" && !env.JWT_SECRET) {
@@ -98,6 +99,7 @@ function setRuntimeEnv(rawEnv) {
 		BREVO_API_KEY: sourceEnv.BREVO_API_KEY,
 		AVATAR_BUCKET: sourceEnv.AVATAR_BUCKET,
 		ADMIN_DEBUG_KEY: sourceEnv.ADMIN_DEBUG_KEY,
+		TURNSTILE_SECRET_KEY: sourceEnv.TURNSTILE_SECRET_KEY,
 	});
 
 	runtimeEnv = {

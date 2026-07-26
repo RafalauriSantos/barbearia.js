@@ -3,6 +3,7 @@ import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import { resendEmailCode } from "@/lib/api/auth.api";
 import { BrandName } from "@/components/BrandName";
+import { TurnstileWidget } from "@/components/TurnstileWidget";
 
 const PENDING_VERIFICATION_EMAIL_KEY =
 	"gestor_barbearia_pending_verification_email";
@@ -28,6 +29,7 @@ export default function VerifyCodePage() {
 	const { verifyEmailCode } = useAuth();
 	const [email, setEmail] = useState(() => getPendingEmail());
 	const [code, setCode] = useState("");
+	const [turnstileToken, setTurnstileToken] = useState("");
 	const [status, setStatus] = useState("idle");
 	const [message, setMessage] = useState("");
 	const [isResending, setIsResending] = useState(false);
@@ -58,26 +60,29 @@ export default function VerifyCodePage() {
 		setStatus("loading");
 		setMessage("");
 		try {
-			const result = await verifyEmailCode({ email: email.trim(), code });
+			const result = await verifyEmailCode({ email, code });
 			setStatus("success");
 			clearPendingEmail();
+			setMessage("Email confirmado com sucesso.");
+
 			if (result?.accessToken) {
 				navigate("/app", { replace: true });
-				return;
+			} else {
+				navigate("/login", { replace: true });
 			}
-			setMessage("Conta ja confirmada. Entre com seu email e senha.");
 		} catch (error) {
 			setStatus("error");
-			setMessage(error.message || "Nao foi possivel confirmar a conta.");
+			setMessage(error.message || "Codigo invalido ou expirado.");
 		}
 	};
 
 	const handleResend = async () => {
 		if (!email || isResending || cooldown > 0) return;
+
 		setIsResending(true);
 		setMessage("");
 		try {
-			const result = await resendEmailCode({ email: email.trim() });
+			const result = await resendEmailCode({ email: email.trim(), turnstileToken });
 			if (result?.alreadyVerified) {
 				setStatus("success");
 				clearPendingEmail();
@@ -104,8 +109,8 @@ export default function VerifyCodePage() {
 	return (
 		<div className="h-[var(--app-height)] overflow-y-auto bg-background-deep px-4 py-6">
 			<div className="mx-auto flex min-h-[calc(var(--app-height)-48px)] w-full max-w-[480px] flex-col justify-center bg-background px-4">
-					<div className="rounded-lg border border-border bg-card p-5 text-center">
-						<p className="font-mono-ui text-[10px] uppercase text-foreground-faint">
+				<div className="rounded-lg border border-border bg-card p-5 text-center">
+					<p className="font-mono-ui text-[10px] uppercase text-foreground-faint">
 						Verificacao da conta
 					</p>
 					<h1 className="mt-2 text-foreground">
@@ -159,6 +164,12 @@ export default function VerifyCodePage() {
 							className="w-full rounded-md bg-foreground px-6 py-3 font-mono-ui text-sm text-primary-foreground disabled:opacity-60">
 							{status === "loading" ? "Confirmando..." : "Confirmar codigo"}
 						</button>
+
+						<TurnstileWidget
+							onSuccess={setTurnstileToken}
+							onError={() => setTurnstileToken("")}
+							onExpire={() => setTurnstileToken("")}
+						/>
 
 						<button
 							type="button"
