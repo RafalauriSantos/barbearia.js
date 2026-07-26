@@ -69,7 +69,18 @@ exports.list = async function (query, user) {
 	});
 };
 
+function assertAdminWrite(user) {
+	if (user?.role !== "admin") {
+		throw new AppError(
+			403,
+			"RECEIVABLES_FORBIDDEN",
+			"Apenas administradores podem gerenciar cobrancas.",
+		);
+	}
+}
+
 exports.create = async function (payload, user) {
+	assertAdminWrite(user);
 	const context = await resolveWriteBarber(user, payload.barbeiro_id);
 	if (payload.cliente_id) {
 		const client = await ClientsRepository.findFixedClientById(payload.cliente_id, {
@@ -87,6 +98,7 @@ exports.create = async function (payload, user) {
 };
 
 exports.update = async function (id, payload, user) {
+	assertAdminWrite(user);
 	const { receivable, context } = await ensureReceivable(id, user);
 	if (receivable.status !== "aberto") {
 		throw new AppError(409, "RECEIVABLE_CLOSED", "Apenas cobrancas abertas podem ser editadas.");
@@ -107,6 +119,7 @@ exports.update = async function (id, payload, user) {
 };
 
 exports.receive = async function (id, payload, user) {
+	assertAdminWrite(user);
 	const { receivable, context } = await ensureReceivable(id, user);
 	if (receivable.status === "pago") return receivable;
 	if (receivable.status !== "aberto") {
@@ -163,6 +176,7 @@ exports.receive = async function (id, payload, user) {
 };
 
 exports.cancel = async function (id, user) {
+	assertAdminWrite(user);
 	const { receivable, context } = await ensureReceivable(id, user);
 	if (receivable.agendamento_id) {
 		throw new AppError(

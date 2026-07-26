@@ -378,17 +378,24 @@ exports.updateAppointment = async function (id, updates, user) {
 	const existingStatus =
 		existing.status ||
 		(existing.status_pagamento === "pago" ? "paid" : existing.status_pagamento);
-	if (existingStatus === "paid") {
-		if (
-			updates &&
+
+	if (existingStatus === "paid" && updates) {
+		const isChangingStatus =
 			updates.status !== undefined &&
 			updates.status !== "paid" &&
-			updates.status !== "pago"
-		) {
+			updates.status !== "pago";
+		const isChangingFinancials =
+			updates.value !== undefined ||
+			updates.services !== undefined ||
+			updates.products !== undefined ||
+			updates.payment_method_id !== undefined ||
+			updates.forma_pagamento_id !== undefined;
+
+		if (isChangingStatus || isChangingFinancials) {
 			throw new AppError(
 				400,
-				"APPOINTMENT_PAID_READONLY",
-				"Nao e permitido alterar o status de um agendamento ja pago.",
+				"APPOINTMENT_PAID_FINANCIAL_EDIT_FORBIDDEN",
+				"Agendamentos pagos nao podem ter valores financeiros, servicos, produtos ou forma de pagamento alterados.",
 			);
 		}
 	}
