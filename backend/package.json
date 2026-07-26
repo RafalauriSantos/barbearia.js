@@ -8,7 +8,7 @@
 		"seed": "node scripts/seed.js",
 		"migrate": "knex migrate:latest",
 		"migrate:rollback": "knex migrate:rollback",
-		"test": "tap --no-coverage \"test/**/*.test.js\""
+		"test": "tap --no-coverage -j1 \"test/**/*.test.js\""
 	},
 	"dependencies": {
 		"@fastify/helmet": "^13.1.0",

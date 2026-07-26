@@ -143,7 +143,7 @@ t.test("Security Improvements Suite", async (t) => {
 		t.equal(attempts, 5);
 	});
 
-	t.test("Paid appointment financial edit allowed", async (t) => {
+	t.test("Paid appointment financial edit blocked (HTTP 400 APPOINTMENT_PAID_FINANCIAL_EDIT_FORBIDDEN)", async (t) => {
 		const authRepoPath = require.resolve("../src/repositories/authRepository");
 		const appointmentsRepoPath = require.resolve("../src/repositories/appointmentsRepository");
 
@@ -197,8 +197,10 @@ t.test("Security Improvements Suite", async (t) => {
 			headers: { Authorization: `Bearer ${token}` },
 			payload: { value: 100, status: "paid" },
 		});
-		
-		t.equal(res.statusCode, 200, "Should allow updating value of paid appointment");
+
+		t.equal(res.statusCode, 400, "Should block updating value of paid appointment");
+		const body = JSON.parse(res.payload);
+		t.equal(body.code, "APPOINTMENT_PAID_FINANCIAL_EDIT_FORBIDDEN");
 
 		await app.close();
 

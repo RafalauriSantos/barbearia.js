@@ -6,15 +6,21 @@ let client;
 function getSupabaseClient() {
 	if (client) return client;
 
-	const key = env.SUPABASE_SERVICE_KEY || env.SUPABASE_ANON_KEY;
+	const key =
+		env.SUPABASE_SERVICE_KEY ||
+		env.SUPABASE_ANON_KEY ||
+		(env.NODE_ENV === "test" ? "anon-test-key" : undefined);
+	const url =
+		env.SUPABASE_URL ||
+		(env.NODE_ENV === "test" ? "http://localhost" : undefined);
 
-	if (!env.SUPABASE_URL || !key) {
+	if (!url || !key) {
 		throw new Error(
 			"SUPABASE_URL and SUPABASE_SERVICE_KEY or SUPABASE_ANON_KEY are required for database operations",
 		);
 	}
 
-	client = createClient(env.SUPABASE_URL, key, {
+	client = createClient(url, key, {
 		auth: { persistSession: false },
 	});
 

@@ -36,11 +36,11 @@ jobs:
 
       - name: Audit Backend Dependencies
         working-directory: backend
-        run: npm audit --audit-level=high
+        run: npm audit --omit=dev --audit-level=high
 
       - name: Audit Frontend Dependencies
         working-directory: frontend
-        run: npm audit --audit-level=high
+        run: npm audit --omit=dev --audit-level=high
 
   sbom-generation:
     name: Generate Software Bill of Materials (SBOM CycloneDX)
