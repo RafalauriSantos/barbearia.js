@@ -1,4 +1,5 @@
 const ExpensesRepository = require("../repositories/expensesRepository");
+const AuditService = require("./auditService");
 const { AppError } = require("../lib/errors");
 
 function getBarbeariaContext(user) {
@@ -38,14 +39,33 @@ exports.listExpenses = async function ({ date, start_date, end_date } = {}, user
 };
 
 exports.createExpense = async function (payload, user) {
-	return ExpensesRepository.create(payload, assertAdminContext(user));
+	const expense = await ExpensesRepository.create(payload, assertAdminContext(user));
+	await AuditService.logResourceChange({
+		action: "EXPENSE_CREATED",
+		resourceType: "expense",
+		resourceId: expense.id,
+		user,
+		newValues: { description: expense.description, value: expense.value },
+	});
+	return expense;
 };
 
 exports.updateExpense = async function (id, updates, user) {
 	const context = assertAdminContext(user);
 	const existing = await ExpensesRepository.findById(id, context);
 	if (!existing) throw new AppError(404, "NOT_FOUND", "Expense not found");
-	return ExpensesRepository.update(id, updates, context);
+	const updated = await ExpensesRepository.update(id, updates, context);
+
+	await AuditService.logResourceChange({
+		action: "EXPENSE_UPDATED",
+		resourceType: "expense",
+		resourceId: id,
+		user,
+		oldValues: { description: existing.description, value: existing.value },
+		newValues: { description: updated.description, value: updated.value },
+	});
+
+	return updated;
 };
 
 exports.deleteExpense = async function (id, user) {
@@ -53,5 +73,14 @@ exports.deleteExpense = async function (id, user) {
 	const existing = await ExpensesRepository.findById(id, context);
 	if (!existing) throw new AppError(404, "NOT_FOUND", "Expense not found");
 	await ExpensesRepository.remove(id, context);
+
+	await AuditService.logResourceChange({
+		action: "EXPENSE_DELETED",
+		resourceType: "expense",
+		resourceId: id,
+		user,
+		oldValues: { description: existing.description, value: existing.value },
+	});
+
 	return true;
 };

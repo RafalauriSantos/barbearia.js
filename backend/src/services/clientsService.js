@@ -1,6 +1,7 @@
 const ClientsRepository = require("../repositories/clientsRepository");
 const BarbersRepository = require("../repositories/barbersRepository");
 const AppointmentsService = require("./appointmentsService");
+const AuditService = require("./auditService");
 const { AppError } = require("../lib/errors");
 
 function getBarbeariaContext(user, requestedBarberId) {
@@ -80,6 +81,14 @@ exports.createFixedClient = async function (payload, user) {
 	const context = await getWriteContext(user, payload.barbeiro_id);
 	const client = await ClientsRepository.createFixedClient(payload, context);
 
+	await AuditService.logResourceChange({
+		action: "CLIENT_CREATED",
+		resourceType: "client",
+		resourceId: client.id,
+		user,
+		newValues: { name: client.name, phone: client.phone },
+	});
+
 	const startDate = payload.start_date || payload.first_cut_date || todayInSaoPaulo();
 	const preferredTime = payload.preferred_time || payload.time || "17:30";
 
@@ -105,19 +114,39 @@ exports.createFixedClient = async function (payload, user) {
 
 exports.updateFixedClient = async function (id, payload, user) {
 	const context = getBarbeariaContext(user);
-	await ensureClient(id, context);
+	const existing = await ensureClient(id, context);
 	let updates = payload;
 	if (payload.barbeiro_id) {
 		const writeContext = await getWriteContext(user, payload.barbeiro_id);
 		updates = { ...payload, barbeiro_id: writeContext.barbeiroId };
 	}
-	return ClientsRepository.updateFixedClient(id, updates, context);
+	const updated = await ClientsRepository.updateFixedClient(id, updates, context);
+
+	await AuditService.logResourceChange({
+		action: "CLIENT_UPDATED",
+		resourceType: "client",
+		resourceId: id,
+		user,
+		oldValues: { name: existing.name, phone: existing.phone },
+		newValues: { name: updated.name, phone: updated.phone },
+	});
+
+	return updated;
 };
 
 exports.deleteFixedClient = async function (id, user) {
 	const context = getBarbeariaContext(user);
-	await ensureClient(id, context);
+	const existing = await ensureClient(id, context);
 	await ClientsRepository.removeFixedClient(id, context);
+
+	await AuditService.logResourceChange({
+		action: "CLIENT_DELETED",
+		resourceType: "client",
+		resourceId: id,
+		user,
+		oldValues: { name: existing.name, phone: existing.phone },
+	});
+
 	return true;
 };
 

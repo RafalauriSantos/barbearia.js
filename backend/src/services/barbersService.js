@@ -1,6 +1,7 @@
 const BarbersRepository = require("../repositories/barbersRepository");
 const AuthRepository = require("../repositories/authRepository");
 const InvitesService = require("./invitesService");
+const AuditService = require("./auditService");
 const { AppError } = require("../lib/errors");
 
 function assertAdmin(user) {
@@ -36,6 +37,14 @@ exports.createBarber = async function (payload, user) {
 		comissao_percent: payload.comissao_percent,
 	});
 
+	await AuditService.logResourceChange({
+		action: "BARBER_CREATED",
+		resourceType: "barber",
+		resourceId: barber.id,
+		user,
+		newValues: { nome: barber.nome, email: barber.email, comissao_percent: barber.comissao_percent },
+	});
+
 	if (payload.send_invite && payload.email) {
 		const invite = await InvitesService.createBarberInvite(
 			barber.id,
@@ -56,7 +65,23 @@ exports.updateBarber = async function (id, payload, user) {
 	);
 	if (!existing) throw new AppError(404, "NOT_FOUND", "Barbeiro nao encontrado.");
 
-	return BarbersRepository.update(id, user.barbearia_id, payload);
+	const updated = await BarbersRepository.update(id, user.barbearia_id, payload);
+
+	const action =
+		payload.comissao_percent !== undefined && payload.comissao_percent !== existing.comissao_percent ?
+			"COMMISSION_CHANGED"
+		:	"BARBER_UPDATED";
+
+	await AuditService.logResourceChange({
+		action,
+		resourceType: "barber",
+		resourceId: id,
+		user,
+		oldValues: { nome: existing.nome, email: existing.email, comissao_percent: existing.comissao_percent },
+		newValues: { nome: updated.nome, email: updated.email, comissao_percent: updated.comissao_percent },
+	});
+
+	return updated;
 };
 
 exports.deleteBarber = async function (id, user) {
@@ -89,10 +114,29 @@ exports.deleteBarber = async function (id, user) {
 	if (appointmentsCount > 0) {
 		await BarbersRepository.deletePendingInvites(id, user.barbearia_id);
 		await BarbersRepository.update(id, user.barbearia_id, { ativo: false });
+
+		await AuditService.logResourceChange({
+			action: "BARBER_DISABLED",
+			resourceType: "barber",
+			resourceId: id,
+			user,
+			oldValues: { ativo: true },
+			newValues: { ativo: false },
+		});
+
 		return { success: true, mode: "soft", message: "Barbeiro inativado com sucesso." };
 	} else {
 		await BarbersRepository.deletePendingInvites(id, user.barbearia_id);
 		await BarbersRepository.hardDelete(id, user.barbearia_id);
+
+		await AuditService.logResourceChange({
+			action: "BARBER_DELETED",
+			resourceType: "barber",
+			resourceId: id,
+			user,
+			oldValues: { nome: existing.nome, email: existing.email },
+		});
+
 		return { success: true, mode: "hard", message: "Barbeiro excluido com sucesso." };
 	}
 };

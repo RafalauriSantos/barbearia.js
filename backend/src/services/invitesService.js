@@ -7,6 +7,7 @@ const AuthRepository = require("../repositories/authRepository");
 const BarbersRepository = require("../repositories/barbersRepository");
 const InvitesRepository = require("../repositories/invitesRepository");
 const EmailService = require("./emailService");
+const AuditService = require("./auditService");
 
 function createToken() {
 	return crypto.randomBytes(32).toString("hex");
@@ -99,6 +100,14 @@ exports.createBarberInvite = async function (barbeiroId, payload, user, runtimeE
 	await BarbersRepository.update(barbeiroId, user.barbearia_id, { email });
 	await InvitesRepository.revokePendingForBarber(barbeiroId);
 
+	await AuditService.logResourceChange({
+		action: "INVITE_REVOKED",
+		resourceType: "invite",
+		resourceId: barbeiroId,
+		user,
+		metadata: { barbeiroId },
+	});
+
 	const token = createToken();
 	const tokenHash = hashToken(token);
 	const expiresAt = new Date(Date.now() + 1000 * 60 * 60 * 24 * 7).toISOString();
@@ -111,6 +120,14 @@ exports.createBarberInvite = async function (barbeiroId, payload, user, runtimeE
 		createdByUserId: user.id,
 	});
 	const inviteUrl = buildInviteUrl(token);
+
+	await AuditService.logResourceChange({
+		action: "INVITE_SENT",
+		resourceType: "invite",
+		resourceId: invite.id,
+		user,
+		newValues: { email, barbeiroId },
+	});
 
 	await EmailService.sendBarberInviteEmail({
 		to: email,

@@ -1,4 +1,5 @@
 const AuthService = require("../services/authService");
+const AuditService = require("../services/auditService");
 const turnstileService = require("../services/turnstileService");
 const {
 	validateRegister,
@@ -56,6 +57,18 @@ exports.register = async (request, reply) => {
 	await turnstileService.verifyToken(turnstileToken, clientIp, request.env);
 
 	const { user, verificationCode } = await AuthService.register(payload, request.env, clientIp);
+
+	await AuditService.record({
+		action: "USER_CREATED",
+		tenantId: user.barbearia_id,
+		userId: user.id,
+		userRole: user.role,
+		resourceType: "user",
+		resourceId: user.id,
+		newValues: { email: user.email, nome: user.nome, role: user.role },
+		request,
+	});
+
 	return reply.code(201).send({
 		user: toPublicUser(user),
 		email_verification_required: true,
@@ -68,14 +81,43 @@ exports.register = async (request, reply) => {
 exports.login = async (request, reply) => {
 	const payload = validateLogin(request.body);
 	const clientIp = request.ip || request.headers?.["x-forwarded-for"] || "127.0.0.1";
-	const user = await AuthService.verifyCredentials(
-		payload.email,
-		payload.password,
-		clientIp,
-	);
-	if (!user) return reply.code(401).send({ error: "Invalid credentials" });
 
-	return reply.send(createSession(user));
+	try {
+		const user = await AuthService.verifyCredentials(
+			payload.email,
+			payload.password,
+			clientIp,
+		);
+		if (!user) {
+			await AuditService.record({
+				action: "LOGIN_FAILED",
+				resourceType: "user",
+				request,
+				success: false,
+				failureReason: "Invalid credentials",
+				metadata: { email: payload.email },
+			});
+			return reply.code(401).send({ error: "Invalid credentials" });
+		}
+
+		await AuditService.logAuth({
+			action: "LOGIN_SUCCESS",
+			user,
+			request,
+		});
+
+		return reply.send(createSession(user));
+	} catch (err) {
+		await AuditService.record({
+			action: "LOGIN_FAILED",
+			resourceType: "user",
+			request,
+			success: false,
+			failureReason: err.message,
+			metadata: { email: payload.email },
+		});
+		throw err;
+	}
 };
 
 exports.refresh = async (request, reply) => {
@@ -151,6 +193,14 @@ exports.forgotPassword = async (request, reply) => {
 		await turnstileService.verifyToken(turnstileToken, clientIp, request.env);
 
 		const result = await AuthService.requestPasswordReset(payload, request.env);
+
+		await AuditService.record({
+			action: "PASSWORD_RESET_REQUESTED",
+			resourceType: "user",
+			request,
+			metadata: { email: payload.email },
+		});
+
 		return reply.send(result);
 	} catch (error) {
 		if (error.code === "INVALID_TURNSTILE_TOKEN" || error.code === "TURNSTILE_SERVICE_ERROR" || error.code === "TURNSTILE_TIMEOUT") {
@@ -168,11 +218,26 @@ exports.forgotPassword = async (request, reply) => {
 exports.resetPassword = async (request, reply) => {
 	const payload = validateResetPassword(request.body);
 	const result = await AuthService.resetPassword(payload);
+
+	await AuditService.record({
+		action: "PASSWORD_RESET_COMPLETED",
+		resourceType: "user",
+		request,
+		metadata: { email: payload.email },
+	});
+
 	return reply.send(result);
 };
 
 exports.logout = async (request, reply) => {
 	const user = request.currentUser || await AuthService.getCurrentUser(request.user.userId);
 	await AuthService.logout(user.id);
+
+	await AuditService.logAuth({
+		action: "LOGOUT",
+		user,
+		request,
+	});
+
 	return reply.send({ ok: true });
 };

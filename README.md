@@ -164,6 +164,25 @@ A aplicação adota a especificação moderna de segurança OWASP recomendada pa
 - `frame-ancestors 'none'`
 - `upgrade-insecure-requests` *(Apenas em Produção)*
 
+## 📋 Trilha de Auditoria Imutável (Audit Trail & OWASP Compliance)
+
+### **Objetivo e Funcionamento**
+Para atender aos requisitos de não-repúdio, rastreabilidade e segurança do OWASP ASVS V8, o sistema possui uma arquitetura desacoplada de auditoria baseada no padrão Append-Only ([backend/src/services/auditService.js](file:///c:/Users/Rafael%20lauri/tcc/backend/src/services/auditService.js) e [backend/src/repositories/auditRepository.js](file:///c:/Users/Rafael%20lauri/tcc/backend/src/repositories/auditRepository.js)).
+
+### **Imutabilidade e Regras da Tabela `audit_logs`:**
+- **Exclusivamente INSERT:** O repositório expõe apenas métodos de criação/leitura. Operações `UPDATE` ou `DELETE` não são implementadas.
+- **Campos Rasteados:** `id`, `created_at`, `tenant_id`, `user_id`, `user_role`, `action`, `resource_type`, `resource_id`, `old_values`, `new_values`, `ip_address`, `user_agent`, `request_id`, `success`, `failure_reason`, `metadata`.
+
+### **Políticas de Privacidade e Higienização de Dados:**
+O repositório executa a higienização profunda automática (`sanitizeValue`), garantindo que **senhas, hashes de senha, tokens JWT, refresh tokens, OTPs, Turnstile Tokens, Authorization headers e segredos** nunca sejam gravados em texto claro ou nos metadados da auditoria (`[REDACTED]`).
+
+### **Eventos Auditados:**
+- **Autenticação:** `LOGIN_SUCCESS`, `LOGIN_FAILED`, `LOGOUT`, `PASSWORD_RESET_REQUESTED`, `PASSWORD_RESET_COMPLETED`, `USER_CREATED`.
+- **Gestão de Barbeiros e Equipe:** `BARBER_CREATED`, `BARBER_UPDATED`, `BARBER_DISABLED`, `BARBER_DELETED`, `COMMISSION_CHANGED`.
+- **Clientes & Atendimentos:** `CLIENT_CREATED`, `CLIENT_UPDATED`, `CLIENT_DELETED`.
+- **Catálogo & Financeiro:** `SERVICE_CREATED`, `SERVICE_UPDATED`, `SERVICE_DELETED`, `PRODUCT_CREATED`, `PRODUCT_UPDATED`, `PRODUCT_DELETED`, `EXPENSE_CREATED`, `EXPENSE_UPDATED`, `EXPENSE_DELETED`, `RECEIVABLE_RECEIVED`.
+- **Convites:** `INVITE_SENT`, `INVITE_REVOKED`.
+
 ## Estrutura do repositório
 
 - `backend/` - API Hono, rotas, testes automatizados e integração com banco

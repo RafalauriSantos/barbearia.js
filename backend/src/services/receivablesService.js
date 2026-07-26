@@ -3,6 +3,7 @@ const BarbersRepository = require("../repositories/barbersRepository");
 const PaymentMethodsRepository = require("../repositories/paymentMethodsRepository");
 const ClientsRepository = require("../repositories/clientsRepository");
 const AppointmentsService = require("./appointmentsService");
+const AuditService = require("./auditService");
 const { AppError } = require("../lib/errors");
 
 function todayInSaoPaulo() {
@@ -120,6 +121,7 @@ exports.receive = async function (id, payload, user) {
 	}
 	const paymentDate = payload.payment_date || todayInSaoPaulo();
 
+	let updatedResult;
 	if (receivable.agendamento_id) {
 		await AppointmentsService.updateAppointment(
 			receivable.agendamento_id,
@@ -130,23 +132,34 @@ exports.receive = async function (id, payload, user) {
 			},
 			user,
 		);
-		return ReceivablesRepository.findById(id, context);
+		updatedResult = await ReceivablesRepository.findById(id, context);
+	} else {
+		const feePercent = Number(method.fee_percent || 0);
+		const feeValue = roundMoney((receivable.value * feePercent) / 100);
+		updatedResult = await ReceivablesRepository.update(
+			id,
+			{
+				status: "pago",
+				payment_method_id: method.id,
+				payment_fee_percent: feePercent,
+				payment_fee_value: feeValue,
+				net_value: roundMoney(receivable.value - feeValue),
+				payment_date: paymentDate,
+			},
+			context,
+		);
 	}
 
-	const feePercent = Number(method.fee_percent || 0);
-	const feeValue = roundMoney((receivable.value * feePercent) / 100);
-	return ReceivablesRepository.update(
-		id,
-		{
-			status: "pago",
-			payment_method_id: method.id,
-			payment_fee_percent: feePercent,
-			payment_fee_value: feeValue,
-			net_value: roundMoney(receivable.value - feeValue),
-			payment_date: paymentDate,
-		},
-		context,
-	);
+	await AuditService.logResourceChange({
+		action: "RECEIVABLE_RECEIVED",
+		resourceType: "receivable",
+		resourceId: id,
+		user,
+		oldValues: { status: receivable.status },
+		newValues: { status: "pago", payment_method_id: method.id, payment_date: paymentDate },
+	});
+
+	return updatedResult;
 };
 
 exports.cancel = async function (id, user) {
