@@ -45,35 +45,55 @@ app.use("*", async (c, next) => {
 	return corsMiddleware(c, next);
 });
 
-// Edge Rate Limiting Middlewares for Cloudflare Workers / Hono
-const { createRateLimiter } = require("./middleware/rateLimiter");
+// Helper to extract client IP safely from Cloudflare Edge headers
+function getClientIp(c) {
+	return (
+		c.req.header("CF-Connecting-IP") ||
+		c.req.header("x-real-ip") ||
+		c.req.header("x-forwarded-for")?.split(",")[0]?.trim() ||
+		"127.0.0.1"
+	);
+}
 
-// Strict Rate Limiter for Authentication & Security endpoints: 15 requests / min
-const strictAuthRateLimiter = createRateLimiter({
-	windowMs: 60 * 1000,
-	max: 15,
-	message: "Muitas tentativas de autenticação. Por favor, aguarde 1 minuto.",
-	code: "AUTH_RATE_LIMIT_EXCEEDED",
-	skip: (c) => {
-		const nodeEnv = c.env ? c.env.NODE_ENV : process.env.NODE_ENV;
-		return nodeEnv === "test" && c.req.header("x-skip-rate-limit") === "true";
-	},
+// Native Cloudflare Rate Limiter Middleware for Auth Endpoints (/auth/*)
+app.use("/auth/*", async (c, next) => {
+	const limiter = c.env?.AUTH_LIMITER;
+	if (limiter && typeof limiter.limit === "function") {
+		const clientIp = getClientIp(c);
+		const result = await limiter.limit({ key: clientIp });
+		if (result && result.success === false) {
+			c.header("Retry-After", "60");
+			return c.json(
+				{
+					error: "Muitas tentativas de autenticação. Por favor, aguarde 1 minuto.",
+					code: "AUTH_RATE_LIMIT_EXCEEDED",
+				},
+				429,
+			);
+		}
+	}
+	await next();
 });
 
-// Global Rate Limiter for all API endpoints: 100 requests / min
-const globalApiRateLimiter = createRateLimiter({
-	windowMs: 60 * 1000,
-	max: 100,
-	message: "Muitas requisições ao servidor. Por favor, aguarde alguns instantes.",
-	code: "GLOBAL_RATE_LIMIT_EXCEEDED",
-	skip: (c) => {
-		const nodeEnv = c.env ? c.env.NODE_ENV : process.env.NODE_ENV;
-		return nodeEnv === "test" && c.req.header("x-skip-rate-limit") === "true";
-	},
+// Native Cloudflare Rate Limiter Middleware for Global API Endpoints (/*)
+app.use("*", async (c, next) => {
+	const limiter = c.env?.GLOBAL_LIMITER;
+	if (limiter && typeof limiter.limit === "function") {
+		const clientIp = getClientIp(c);
+		const result = await limiter.limit({ key: clientIp });
+		if (result && result.success === false) {
+			c.header("Retry-After", "60");
+			return c.json(
+				{
+					error: "Muitas requisições ao servidor. Por favor, aguarde alguns instantes.",
+					code: "GLOBAL_RATE_LIMIT_EXCEEDED",
+				},
+				429,
+			);
+		}
+	}
+	await next();
 });
-
-app.use("/auth/*", strictAuthRateLimiter);
-app.use("*", globalApiRateLimiter);
 
 // Adapter to bridge Fastify controllers and middlewares (preHandlers) to Hono
 function adaptRoute(fastifyHandler, options = {}) {
