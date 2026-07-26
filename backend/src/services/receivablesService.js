@@ -112,7 +112,9 @@ exports.receive = async function (id, payload, user) {
 		throw new AppError(409, "RECEIVABLE_CLOSED", "Esta cobranca nao esta aberta.");
 	}
 
-	const method = await PaymentMethodsRepository.findById(payload.payment_method_id);
+	const method = await PaymentMethodsRepository.findById(payload.payment_method_id, {
+		barbeariaId: context.barbeariaId,
+	});
 	if (!method || !method.active || method.code === "fiado") {
 		throw new AppError(400, "PAYMENT_METHOD_INVALID", "Forma de pagamento invalida.");
 	}

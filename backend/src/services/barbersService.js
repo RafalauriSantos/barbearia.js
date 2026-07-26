@@ -1,4 +1,5 @@
 const BarbersRepository = require("../repositories/barbersRepository");
+const AuthRepository = require("../repositories/authRepository");
 const InvitesService = require("./invitesService");
 const { AppError } = require("../lib/errors");
 
@@ -74,14 +75,23 @@ exports.deleteBarber = async function (id, user) {
 		);
 	}
 
+	// Session Revocation Defense: invalidate active JWT sessions for deactivated user
+	if (existing.usuario_id) {
+		const linkedUser = await AuthRepository.findById(existing.usuario_id);
+		if (linkedUser) {
+			const nextVersion = Number(linkedUser.token_version || 1) + 1;
+			await AuthRepository.updateTokenVersion(existing.usuario_id, nextVersion);
+		}
+	}
+
 	const appointmentsCount = await BarbersRepository.countAppointments(id);
 
 	if (appointmentsCount > 0) {
-		await BarbersRepository.deletePendingInvites(id);
+		await BarbersRepository.deletePendingInvites(id, user.barbearia_id);
 		await BarbersRepository.update(id, user.barbearia_id, { ativo: false });
 		return { success: true, mode: "soft", message: "Barbeiro inativado com sucesso." };
 	} else {
-		await BarbersRepository.deletePendingInvites(id);
+		await BarbersRepository.deletePendingInvites(id, user.barbearia_id);
 		await BarbersRepository.hardDelete(id, user.barbearia_id);
 		return { success: true, mode: "hard", message: "Barbeiro excluido com sucesso." };
 	}

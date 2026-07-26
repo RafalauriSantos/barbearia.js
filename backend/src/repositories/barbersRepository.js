@@ -164,11 +164,17 @@ exports.hardDelete = async function (id, barbeariaId) {
 	if (error) throw error;
 };
 
-exports.deletePendingInvites = async function (barberId) {
-	const { error } = await supabase
+exports.deletePendingInvites = async function (barberId, barbeariaId) {
+	let query = supabase
 		.from("convites_barbeiros")
 		.delete()
 		.eq("barbeiro_id", barberId)
 		.is("aceito_em", null);
+
+	if (barbeariaId) {
+		query = query.eq("barbearia_id", barbeariaId);
+	}
+
+	const { error } = await query;
 	if (error) throw error;
 };
