@@ -9,6 +9,7 @@ EMAIL_PROVIDER = "brevo"
 EMAIL_FROM = "Marque’s Barbearia <rafa69lauri@gmail.com>"
 EMAIL_BRAND_NAME = "Marque’s Barbearia"
 SUPABASE_URL = "https://zniehugopmvoutxnpgox.supabase.co"
+SENTRY_DSN = ""
 
 [observability]
 enabled = true

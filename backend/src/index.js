@@ -6,6 +6,7 @@ const supabase = require("./lib/supabase");
 const { AppError } = require("./lib/errors");
 const { ZodError } = require("zod");
 const { getSecurityHeaders } = require("./middleware/securityHeaders");
+const { initSentry, Sentry } = require("./lib/sentry");
 
 const app = new Hono();
 
@@ -78,6 +79,7 @@ app.use("*", async (c, next) => {
 		envInitialized = true;
 		try {
 			supabase.ensureConfigured();
+			initSentry(c.env);
 		} catch (e) {
 			console.error("Supabase config check error:", e);
 		}
@@ -395,6 +397,22 @@ app.onError((err, c) => {
 			timestamp: new Date().toISOString(),
 		}),
 	);
+
+	if (c.env?.SENTRY_DSN || process.env.SENTRY_DSN) {
+		try {
+			const sendPromise = Sentry.withScope((scope) => {
+				if (reqId) scope.setTag("requestId", reqId);
+				scope.setExtra("path", c.req.path);
+				scope.setExtra("method", c.req.method);
+				return Sentry.captureException(err);
+			});
+			if (c.executionCtx && typeof c.executionCtx.waitUntil === "function" && sendPromise) {
+				c.executionCtx.waitUntil(Promise.resolve(sendPromise));
+			}
+		} catch (sentryErr) {
+			console.error("[SENTRY CAPTURE ERROR]", sentryErr);
+		}
+	}
 
 	return c.json(
 		{ error: "Internal Server Error", code: "INTERNAL_ERROR" },
