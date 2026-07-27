@@ -115,15 +115,9 @@ apiClient.interceptors.request.use((config) => {
 	const token = getAccessToken();
 	config._sessionAccessToken = token;
 	config._sessionRefreshToken = getRefreshToken();
-	config.headers = config.headers || {};
 	if (token) {
+		config.headers = config.headers || {};
 		config.headers.Authorization = `Bearer ${token}`;
-	}
-	if (!config.headers["x-request-id"] && !config.headers["X-Request-ID"]) {
-		config.headers["X-Request-ID"] =
-			typeof crypto !== "undefined" && typeof crypto.randomUUID === "function" ?
-				crypto.randomUUID()
-			:	`req-fe-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 	}
 	return config;
 });
