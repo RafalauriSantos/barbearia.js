@@ -16,7 +16,7 @@
 		"@sentry/cloudflare": "^10.68.0",
 		"@supabase/supabase-js": "^2.105.1",
 		"bcryptjs": "^2.4.3",
-		"hono": "^4.0.0",
+		"hono": "^4.12.32",
 		"jsonwebtoken": "^9.0.0",
 		"knex": "^3.1.0",
 		"pg": "^8.20.0",
