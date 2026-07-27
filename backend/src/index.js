@@ -9,6 +9,44 @@ const { getSecurityHeaders } = require("./middleware/securityHeaders");
 
 const app = new Hono();
 
+// Dynamic CORS configuration (MUST BE FIRST FOR PREFLIGHT OPTIONS)
+app.use("*", async (c, next) => {
+	const originEnv = c.env ? c.env.CORS_ORIGIN : null;
+	const nodeEnv = c.env ? c.env.NODE_ENV : "development";
+	
+	let allowedOrigin;
+	if (nodeEnv !== "production") {
+		allowedOrigin = (origin) => origin || "*";
+	} else if (!originEnv || originEnv === "true" || originEnv === true) {
+		allowedOrigin = "*";
+	} else {
+		const originsList = String(originEnv).split(",").map(o => o.trim()).filter(Boolean);
+		allowedOrigin = (origin) => originsList.includes(origin) ? origin : null;
+	}
+
+	const corsMiddleware = cors({
+		origin: allowedOrigin,
+		allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
+		allowHeaders: [
+			"Content-Type",
+			"Authorization",
+			"X-Request-ID",
+			"x-request-id",
+			"X-Requested-With",
+			"Accept",
+			"Origin",
+		],
+		exposeHeaders: [
+			"Content-Type",
+			"Authorization",
+			"X-Request-ID",
+			"x-request-id",
+		],
+		maxAge: 86400,
+	});
+	return corsMiddleware(c, next);
+});
+
 // X-Request-ID & Correlation Tracing Middleware
 app.use("*", async (c, next) => {
 	const reqId =
@@ -55,30 +93,6 @@ app.use("*", async (c, next) => {
 	for (const [key, value] of Object.entries(secHeaders)) {
 		c.header(key, value);
 	}
-});
-
-// Dynamic CORS configuration using the env Proxy
-app.use("*", async (c, next) => {
-	const originEnv = c.env ? c.env.CORS_ORIGIN : null;
-	const nodeEnv = c.env ? c.env.NODE_ENV : "development";
-	
-	let allowedOrigin;
-	if (nodeEnv !== "production") {
-		allowedOrigin = (origin) => origin || "*";
-	} else if (!originEnv || originEnv === "true" || originEnv === true) {
-		allowedOrigin = "*";
-	} else {
-		const originsList = String(originEnv).split(",").map(o => o.trim()).filter(Boolean);
-		allowedOrigin = (origin) => originsList.includes(origin) ? origin : null;
-	}
-
-	const corsMiddleware = cors({
-		origin: allowedOrigin,
-		allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
-		allowHeaders: ["Content-Type", "Authorization", "X-Request-ID", "x-request-id"],
-		exposeHeaders: ["Content-Type", "Authorization", "X-Request-ID", "x-request-id"],
-	});
-	return corsMiddleware(c, next);
 });
 
 // Set to track logged development warnings once per binding
