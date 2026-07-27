@@ -113,6 +113,9 @@ function createBindingRateLimiterMiddleware(options) {
 	const { bindingName, errorCode, errorMessage, retryAfterSeconds = 60 } = options;
 
 	return async function rateLimiterMiddleware(c, next) {
+		if (c.req.method === "OPTIONS") {
+			return next();
+		}
 		const nodeEnv = c.env?.NODE_ENV || process.env.NODE_ENV || "development";
 		const limiter = c.env?.[bindingName];
 		const hasValidBinding = limiter && typeof limiter.limit === "function";
