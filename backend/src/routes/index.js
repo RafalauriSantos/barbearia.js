@@ -2,7 +2,16 @@ const supabase = require("../lib/supabase");
 const { env } = require("../config/env");
 
 module.exports = async function (fastify, opts) {
-	// Health
+	// Health & Index
+	fastify.get("/", async () => ({
+		ok: true,
+		service: "Marque's Barbearia API",
+		version: "1.0.0",
+		status: "online",
+	}));
+	fastify.get("/robots.txt", async (request, reply) => {
+		reply.type("text/plain").send("User-agent: *\nDisallow: /\n");
+	});
 	fastify.get("/health", async () => ({ ok: true }));
 	fastify.get("/health/db", async () => {
 		const { error } = await supabase
