@@ -1,0 +1,13 @@
+.git
+.gitignore
+.github
+.agents
+node_modules
+*/node_modules
+.output
+dist
+coverage
+*.log
+.env
+.env.local
+.dev.vars
