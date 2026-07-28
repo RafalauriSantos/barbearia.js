@@ -113,4 +113,5 @@ module.exports = {
 	sanitizeSentryEvent,
 	maskSensitiveFields,
 	initSentry,
+	withSentry: Sentry.withSentry || Sentry.default?.withSentry,
 };

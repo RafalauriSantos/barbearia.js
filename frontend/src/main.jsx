@@ -4,10 +4,13 @@ import App from "./App";
 import "./index.css";
 import { initializeTheme } from "@/lib/theme";
 
-if (import.meta.env.PROD && import.meta.env.VITE_SENTRY_DSN) {
+const defaultFrontendDsn = "https://b349c3438d23a32c6c5c0cb6b0290646@o4511809902542848.ingest.us.sentry.io/4511810008186880";
+const sentryDsn = import.meta.env.VITE_SENTRY_DSN || defaultFrontendDsn;
+
+if (import.meta.env.PROD && sentryDsn) {
 	try {
 		Sentry.init({
-			dsn: import.meta.env.VITE_SENTRY_DSN,
+			dsn: sentryDsn,
 			environment: "production",
 			tracesSampleRate: 0.1,
 			beforeSend(event) {
