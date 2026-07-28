@@ -11,7 +11,12 @@
     "test": "vitest run tests/",
     "prepare": "husky",
     "gitleaks": "node scripts/run-gitleaks.js",
-    "gitleaks:detect": "node scripts/run-gitleaks.js detect"
+    "gitleaks:detect": "node scripts/run-gitleaks.js detect",
+    "docker:up": "docker compose up -d --build",
+    "docker:down": "docker compose down",
+    "docker:logs": "docker compose logs -f",
+    "docker:ps": "docker compose ps",
+    "docker:restart": "docker compose restart"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.105.1",

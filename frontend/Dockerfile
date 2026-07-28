@@ -1,5 +1,8 @@
 FROM node:20-alpine
 
+# Install wget for container healthchecks
+RUN apk add --no-cache wget
+
 # Set working directory
 WORKDIR /app
 

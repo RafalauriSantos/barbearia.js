@@ -203,3 +203,22 @@ cd backend
 npm install
 npm run dev
 ```
+
+### Rodando com Docker (DX Recomendado)
+
+Se preferir rodar toda a aplicação (Frontend + Backend) em um ambiente containerizado isolado com um único comando:
+
+```bash
+# Subir a stack inteira em segundo plano
+npm run docker:up
+
+# Acompanhar os logs dos containers
+npm run docker:logs
+
+# Verificar o status da saúde dos containers (healthchecks)
+npm run docker:ps
+
+# Desligar a stack
+npm run docker:down
+```
+
