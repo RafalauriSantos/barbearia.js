@@ -4,8 +4,7 @@ import App from "./App";
 import "./index.css";
 import { initializeTheme } from "@/lib/theme";
 
-const defaultFrontendDsn = "https://b349c3438d23a32c6c5c0cb6b0290646@o4511809902542848.ingest.us.sentry.io/4511810008186880";
-const sentryDsn = import.meta.env.VITE_SENTRY_DSN || defaultFrontendDsn;
+const sentryDsn = import.meta.env.VITE_SENTRY_DSN;
 
 if (import.meta.env.PROD && sentryDsn) {
 	try {

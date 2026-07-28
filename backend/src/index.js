@@ -423,12 +423,10 @@ app.onError((err, c) => {
 // Export the default handler for Cloudflare Workers
 const { withSentry, sanitizeSentryEvent } = require("./lib/sentry");
 
-const defaultDsn = "https://b349c3438d23a32c6c5c0cb6b0290646@o4511809902542848.ingest.us.sentry.io/4511810008186880";
-
 module.exports = typeof withSentry === "function"
 	? withSentry(
 			(env) => ({
-				dsn: env?.SENTRY_DSN || defaultDsn,
+				dsn: env?.SENTRY_DSN || process.env.SENTRY_DSN,
 				tracesSampleRate: 0.1,
 				beforeSend: sanitizeSentryEvent,
 			}),
