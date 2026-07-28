@@ -14,6 +14,7 @@ Recentemente, a infraestrutura passou por uma migração arquitetural profunda (
 - Foto de perfil dos barbeiros na agenda, com editor de enquadramento
 - **Novo:** Sistema de Modais via React Portal (`ReactDOM.createPortal`) com Focus Trap, trava de scroll e restauração determinística de viewport para teclados mobile (iOS Safari / Android).
 - **Novo:** Hardening de segurança no servidor com **Rate Limiting** (proteção contra força bruta) e **Cabeçalhos de Segurança HTTP (Helmet)**.
+- **Novo:** Observabilidade em tempo real com **Sentry** na borda (`@sentry/cloudflare` + `@sentry/react`), com mascaramento LGPD automático e gestão de segredos via Cloudflare Secrets.
 - **Novo:** Sobrescrita dinâmica de valores de agendamentos com preservação de preços customizados no backend.
 - **Novo:** Motor de sincronização offline (PWA) resiliente, com fila de requisições retidas no `localStorage`.
 - **Novo:** Cache persistente aprimorado com abertura de sessão usando dados em cache para mascarar o tempo de rede.
@@ -30,6 +31,7 @@ Recentemente, a infraestrutura passou por uma migração arquitetural profunda (
 - Aplicação do **Padrão Adapter** para migrar controladores Node.js (Fastify) para o runtime V8 da Cloudflare (Hono), mantendo as regras de negócio isoladas.
 - Backend estruturado em camadas iterativas (routes/controllers/services/repositories).
 - Proteção contra ataques de força bruta com Rate Limiting e injeção de cabeçalhos OWASP via Helmet (`X-Frame-Options`, `nosniff`, `Referrer-Policy`).
+- Observabilidade de alta performance no Edge com amostragem de telemetria, zero ruído e restrição estrita a ambientes de produção.
 - Integração com Supabase/Postgres via Connection Pooling para suportar o ambiente Serverless.
 - Frontend React com rotas protegidas (`AuthGate`) e cliente HTTP centralizado com interceptores dinâmicos.
 - Suíte de testes de integração E2E extremamente rápida (Vitest) rodando requisições em memória.
@@ -37,19 +39,44 @@ Recentemente, a infraestrutura passou por uma migração arquitetural profunda (
 
 ## Stack
 
-- **Backend:** Cloudflare Workers + Hono + Fastify + Knex + Postgres (Supabase) + Zod
-- **Frontend:** React + Vite + Cloudflare Pages + React Router v6
-- **Testes:** Vitest + Node Tap
+- **Backend:** Cloudflare Workers + Hono + Fastify + Knex + Postgres (Supabase) + Zod + `@sentry/cloudflare`
+- **Frontend:** React + Vite + Cloudflare Pages + React Router v6 + `@sentry/react`
+- **Testes:** Vitest + Node Tap + Playwright E2E
 
 ## Decisões de arquitetura
 
 - **Edge Computing:** Hospedagem descentralizada na Cloudflare para unificar CDN estática e execução de API com máxima proximidade do usuário final.
+- **Observabilidade Não-Bloqueante:** Processamento assíncrono de eventos no Cloudflare Workers via `c.executionCtx.waitUntil(...)`. Falhas no provedor de telemetria (Sentry) jamais afetam ou atrasam a resposta HTTP entregue ao usuário (**0ms de latência perceptível**).
 - **Arquitetura de Modais via Portal:** Isolamento de overlays do fluxo DOM padrão renderizando diretamente em `document.body` via React Portals, eliminando clipping de `overflow: hidden` e bugs de viewport com teclado no iOS Safari.
 - **Segurança Defensiva e Hardening:** Injeção de cabeçalhos de segurança OWASP e controle estrito de Rate Limiting nativo na borda para Cloudflare Workers / Hono (`AUTH_RATE_LIMIT_EXCEEDED` e `GLOBAL_RATE_LIMIT_EXCEEDED`).
-- **Micro-tarefas e Níveis:** Migração de arquitetura realizada de forma estruturada e sequencial, garantindo estabilidade antes de avançar para a próxima fase técnica.
 - **Criptografia Híbrida:** Adaptação da segurança de senhas na borda mantendo o suporte ao Argon2id legado e implementando Bcryptjs via WebAssembly/APIs nativas.
 - **Gerenciamento de Estado Customizado:** Utilização de um motor próprio de cache em memória (`Map`) e `localStorage` no frontend, evitando bibliotecas pesadas de terceiros (como Redux) para focar na resiliência offline do PWA.
 - **Comunicação de E-mails:** Uso exclusivo da API HTTP da Brevo (`fetch`) no Edge, descartando o Nodemailer, pois portas SMTP são bloqueadas na arquitetura de borda.
+
+## 👁️ Observabilidade e Telemetria em Produção (Sentry + Cloudflare Workers)
+
+### **Arquitetura e Coleta**
+A aplicação utiliza o SDK oficial `@sentry/cloudflare` no backend e `@sentry/react` no frontend para captura em tempo real de exceções e diagnósticos de saúde.
+
+### **Estratégia de Filtragem e Economia de Cota (Zero Ruído)**
+Para evitar o consumo desnecessário da cota gratuita e garantir foco em incidentes reais, a captura de eventos segue a seguinte matriz:
+- **`CAPTURAR (100%)`**: Exceções HTTP 500 não tratadas, quedas de banco de dados (Supabase), falhas de integração externa (Asaas, Brevo, Cloudflare) e erros de código V8 (`TypeError`, `ReferenceError`).
+- **`SAMPLING (1 em cada 50)`**: Erros HTTP 429 (Rate Limit) para detectar picos de ataques de força bruta no login/OTP sem sobrecarregar o plano.
+- **`IGNORAR (0%)`**: Erros HTTP 400, 401, 403, 404, 409 e 422 esperados de regras de negócio ou formulário.
+- **`RESTRIÇÃO DE AMBIENTE`**: A telemetria é enviada **exclusivamente em produção** (`NODE_ENV=production`).
+
+### **Privacidade e Mascaramento Automático LGPD**
+Todos os eventos passam pelo filtro `beforeSend` (`sanitizeSentryEvent`), que mascara automaticamente qualquer ocorrência de:
+- `senha`, `password`, `user_password`
+- `jwt`, `token`, `secret`, `bearer`
+- `otp`, `auth`, `credentials`, `api_key`, `turnstile`
+- `cpf`, `credit_card`
+- Cabeçalhos `Authorization`, `Cookie` e `Set-Cookie`
+
+### **Gestão de Segredos e Variáveis de Ambiente**
+- **Backend (Cloudflare Worker):** O DSN do Sentry é armazenado de forma criptografada via Cloudflare Secrets (`npx wrangler secret put SENTRY_DSN`).
+- **Frontend (Vite PWA):** Consome a variável pública `VITE_SENTRY_DSN`.
+- **Documentação de Variáveis:** Consulte o guia completo em [docs/ENVIRONMENT_VARIABLES.md](docs/ENVIRONMENT_VARIABLES.md).
 
 ## 🛡️ Proteção contra Abuso e Rate Limiting na Borda (Cloudflare Workers)
 
@@ -77,26 +104,6 @@ A aplicação utiliza a infraestrutura nativa da Cloudflare na borda para sincro
   As bindings `AUTH_LIMITER` e `GLOBAL_LIMITER` são **obrigatórias**. Caso alguma binding não esteja configurada no ambiente publicável, o servidor adota a política **FAIL-CLOSED**, registrando um erro crítico no console e rejeitando requisições com HTTP `500` (`SECURITY_BINDING_MISSING`). Isso garante que a aplicação jamais rode desprotegida por falha de deploy.
 - **Ambiente de Desenvolvimento (`NODE_ENV=development`):**  
   Caso as bindings nativas da Cloudflare não estejam presentes no dev server local, o sistema registra um aviso único no console (`[DEV WARN]`) e permite o fluxo (`FAIL-SAFE DEV`), garantindo agilidade no desenvolvimento local sem travar testes manuais.
-
-### **Checklist Pré-Deploy e Regras WAF Recomendadas**
-1. **Verificação de Bindings no `wrangler.toml`:**
-   ```toml
-   [[unsafe.bindings]]
-   name = "AUTH_LIMITER"
-   type = "ratelimit"
-   namespace_id = "1001"
-   simple = { limit = 15, period = 60 }
-
-   [[unsafe.bindings]]
-   name = "GLOBAL_LIMITER"
-   type = "ratelimit"
-   namespace_id = "1002"
-   simple = { limit = 100, period = 60 }
-   ```
-2. **Regra de Borda no WAF (Cloudflare Dashboard):**
-   - **Caminho:** `/auth/*`
-   - **Limite:** 20 requisições / 1 minuto por IP.
-   - **Ação:** `Block` ou `Managed Challenge`.
 
 ## 🔐 Bloqueio de Conta por Identidade do Usuário (User Login Lockout)
 
@@ -128,18 +135,14 @@ Para proteger a plataforma contra cadastros em massa automatizados (*Spam Signup
   - Endpoints autenticados (Protegidos por validação JWT Bearer Token)
 
 ### **Arquitetura e Validação Server-Side:**
-1. **Frontend Component:** Componente isolado `<TurnstileWidget />` ([frontend/src/components/TurnstileWidget.jsx](file:///c:/Users/Rafael%20lauri/tcc/frontend/src/components/TurnstileWidget.jsx)) que carrega o script oficial assíncrono da Cloudflare e gera o token de resposta.
-2. **Backend Service:** Serviço isolado `turnstileService.verifyToken()` ([backend/src/services/turnstileService.js](file:///c:/Users/Rafael%20lauri/tcc/backend/src/services/turnstileService.js)) que efetua requisição HTTP POST para `https://challenges.cloudflare.com/turnstile/v0/siteverify` com a `TURNSTILE_SECRET_KEY` antes de qualquer toque no banco de dados Supabase ou chamada ao serviço de e-mails Brevo.
+1. **Frontend Component:** Componente isolado `<TurnstileWidget />` ([frontend/src/components/TurnstileWidget.jsx](frontend/src/components/TurnstileWidget.jsx)) que carrega o script oficial assíncrono da Cloudflare e gera o token de resposta.
+2. **Backend Service:** Serviço isolado `turnstileService.verifyToken()` ([backend/src/services/turnstileService.js](backend/src/services/turnstileService.js)) que efetua requisição HTTP POST para `https://challenges.cloudflare.com/turnstile/v0/siteverify` com a `TURNSTILE_SECRET_KEY` antes de qualquer toque no banco de dados Supabase ou chamada ao serviço de e-mails Brevo.
 3. **Garantia Anti-Bypass:** Se o token for omitido, expirado ou recusado pela Cloudflare, a requisição é rejeitada na hora com `400 Bad Request` (`INVALID_TURNSTILE_TOKEN`).
-
-### **Variáveis de Ambiente Necessárias:**
-- **Frontend (`.env`):** `VITE_TURNSTILE_SITE_KEY`
-- **Backend (`wrangler.toml` / `.dev.vars`):** `TURNSTILE_SECRET_KEY`
 
 ## 🛡️ Cabeçalhos de Segurança OWASP & Content Security Policy (CSP)
 
 ### **Objetivo e Funcionamento**
-A aplicação adota a especificação moderna de segurança OWASP recomendada para Cloudflare Workers, Hono e PWA React ([backend/src/middleware/securityHeaders.js](file:///c:/Users/Rafael%20lauri/tcc/backend/src/middleware/securityHeaders.js)).
+A aplicação adota a especificação moderna de segurança OWASP recomendada para Cloudflare Workers, Hono e PWA React ([backend/src/middleware/securityHeaders.js](backend/src/middleware/securityHeaders.js)).
 
 ### **Cabeçalhos HTTP Injetados em Todas as Respostas:**
 - `X-Content-Type-Options: nosniff`: Impede interpretação incorreta de MIME-types.
@@ -150,67 +153,23 @@ A aplicação adota a especificação moderna de segurança OWASP recomendada pa
 - `X-DNS-Prefetch-Control: off`: Desativa pré-carregamento especulativo de DNS.
 - `Strict-Transport-Security: max-age=31536000; includeSubDomains; preload` *(Apenas em Produção sobre HTTPS)*: Força comunicação segura por 1 ano.
 
-### **Diretivas da Content Security Policy (CSP):**
-- `default-src 'self'`
-- `script-src 'self' https://challenges.cloudflare.com` *(Em dev: inclui `'unsafe-inline' 'unsafe-eval'` para HMR Vite)*
-- `style-src 'self' 'unsafe-inline' https://fonts.googleapis.com`
-- `font-src 'self' https://fonts.gstatic.com data:`
-- `img-src 'self' data: blob: https://*.supabase.co`
-- `connect-src 'self' https://*.supabase.co https://challenges.cloudflare.com https://api.brevo.com` *(Em dev: inclui `http://localhost:* ws://localhost:*`)*
-- `frame-src 'self' https://challenges.cloudflare.com`
-- `object-src 'none'`
-- `base-uri 'self'`
-- `form-action 'self'`
-- `frame-ancestors 'none'`
-- `upgrade-insecure-requests` *(Apenas em Produção)*
-
 ## 📋 Trilha de Auditoria Imutável (Audit Trail & OWASP Compliance)
 
 ### **Objetivo e Funcionamento**
-Para atender aos requisitos de não-repúdio, rastreabilidade e segurança do OWASP ASVS V8, o sistema possui uma arquitetura desacoplada de auditoria baseada no padrão Append-Only ([backend/src/services/auditService.js](file:///c:/Users/Rafael%20lauri/tcc/backend/src/services/auditService.js) e [backend/src/repositories/auditRepository.js](file:///c:/Users/Rafael%20lauri/tcc/backend/src/repositories/auditRepository.js)).
+Para atender aos requisitos de não-repúdio, rastreabilidade e segurança do OWASP ASVS V8, o sistema possui uma arquitetura desacoplada de auditoria baseada no padrão Append-Only ([backend/src/services/auditService.js](backend/src/services/auditService.js) e [backend/src/repositories/auditRepository.js](backend/src/repositories/auditRepository.js)).
 
 ### **Imutabilidade e Regras da Tabela `audit_logs`:**
 - **Exclusivamente INSERT:** O repositório expõe apenas métodos de criação/leitura. Operações `UPDATE` ou `DELETE` não são implementadas.
 - **Campos Rasteados:** `id`, `created_at`, `tenant_id`, `user_id`, `user_role`, `action`, `resource_type`, `resource_id`, `old_values`, `new_values`, `ip_address`, `user_agent`, `request_id`, `success`, `failure_reason`, `metadata`.
 
-### **Políticas de Privacidade e Higienização de Dados:**
-O repositório executa a higienização profunda automática (`sanitizeValue`), garantindo que **senhas, hashes de senha, tokens JWT, refresh tokens, OTPs, Turnstile Tokens, Authorization headers e segredos** nunca sejam gravados em texto claro ou nos metadados da auditoria (`[REDACTED]`).
-
-### **Eventos Auditados:**
-- **Autenticação:** `LOGIN_SUCCESS`, `LOGIN_FAILED`, `LOGOUT`, `PASSWORD_RESET_REQUESTED`, `PASSWORD_RESET_COMPLETED`, `USER_CREATED`.
-- **Gestão de Barbeiros e Equipe:** `BARBER_CREATED`, `BARBER_UPDATED`, `BARBER_DISABLED`, `BARBER_DELETED`, `COMMISSION_CHANGED`.
-- **Clientes & Atendimentos:** `CLIENT_CREATED`, `CLIENT_UPDATED`, `CLIENT_DELETED`.
-- **Catálogo & Financeiro:** `SERVICE_CREATED`, `SERVICE_UPDATED`, `SERVICE_DELETED`, `PRODUCT_CREATED`, `PRODUCT_UPDATED`, `PRODUCT_DELETED`, `EXPENSE_CREATED`, `EXPENSE_UPDATED`, `EXPENSE_DELETED`, `RECEIVABLE_RECEIVED`.
-- **Convites:** `INVITE_SENT`, `INVITE_REVOKED`.
-
 ## 🛡️ CI/CD Pipeline Hardening & Supply Chain Security (OWASP SAMM & SLSA)
 
 ### **Fluxos de Automação e Segurança Implementados:**
-- **CodeQL SAST ([.github/workflows/codeql.yml](file:///c:/Users/Rafael%20lauri/tcc/.github/workflows/codeql.yml)):** Análise estática automatizada em JavaScript/TypeScript com execução em PRs, pushes para `main` e cron diário.
-- **Secret Scanning com Gitleaks ([.github/workflows/secret-scanning.yml](file:///c:/Users/Rafael%20lauri/tcc/.github/workflows/secret-scanning.yml) e [.gitleaks.toml](file:///c:/Users/Rafael%20lauri/tcc/.gitleaks.toml)):** Bloqueio preventivo contra vazamentos de segredos (JWT, Supabase keys, Cloudflare Tokens, Turnstile secrets, Brevo API Keys, GitHub PATs e arquivos `.env`).
-- **Auditoria de Dependências & Dependabot ([.github/dependabot.yml](file:///c:/Users/Rafael%20lauri/tcc/.github/dependabot.yml) e [.github/workflows/security-audit.yml](file:///c:/Users/Rafael%20lauri/tcc/.github/workflows/security-audit.yml)):** Verificação periódica de vulnerabilidades críticas/altas no `npm` e atualizações automatizadas.
-- **Geração de SBOM CycloneDX ([.github/workflows/security-audit.yml](file:///c:/Users/Rafael%20lauri/tcc/.github/workflows/security-audit.yml)):** Emissão e publicação de relatórios Software Bill of Materials para o backend e frontend.
-- **Auditoria de Licenças Open Source:** Verificação automática contra licenças não-comerciais/copyleft incompatíveis (AGPL, GPL).
-- **Proteção dos Deploys de Produção ([.github/workflows/deploy.yml](file:///c:/Users/Rafael%20lauri/tcc/.github/workflows/deploy.yml)):** Restrição estrita de deploys à branch `main`, impedindo acesso a segredos por Pull Requests de forks.
-
-### 🔑 Git Pre-Commit Hook (Prevenção Local de Vazamento de Segredos)
-
-O projeto possui um **Pre-commit Hook com Husky e Gitleaks** ([scripts/run-gitleaks.js](file:///c:/Users/Rafael%20lauri/tcc/scripts/run-gitleaks.js)) configurado para escanear automaticamente os arquivos preparados (`staged`) antes de cada `git commit`.
-
-#### **Como funciona o Hook Local:**
-1. Ao executar `git commit`, o Husky aciona o script `.husky/pre-commit`.
-2. O Gitleaks analisa as modificações staged contra as regras definidas em [.gitleaks.toml](file:///c:/Users/Rafael%20lauri/tcc/.gitleaks.toml).
-3. Se qualquer credencial ou chave for detectada, o commit é imediatamente **bloqueado** (código de saída `!= 0`), impedindo que o segredo seja gravado no histórico Git.
-
-#### **Comandos Úteis:**
-- **Escanear arquivos staged manualmente:**
-  ```bash
-  npm run gitleaks
-  ```
-- **Escanear o histórico completo do repositório:**
-  ```bash
-  npm run gitleaks:detect
-  ```
+- **CodeQL SAST ([.github/workflows/codeql.yml](.github/workflows/codeql.yml)):** Análise estática automatizada em JavaScript/TypeScript com execução em PRs, pushes para `main` e cron diário.
+- **Secret Scanning com Gitleaks ([.github/workflows/secret-scanning.yml](.github/workflows/secret-scanning.yml) e [.gitleaks.toml](.gitleaks.toml)):** Bloqueio preventivo contra vazamentos de segredos (JWT, Supabase keys, Cloudflare Tokens, Turnstile secrets, Brevo API Keys, GitHub PATs e arquivos `.env`).
+- **Auditoria de Dependências & Dependabot ([.github/dependabot.yml](.github/dependabot.yml) e [.github/workflows/security-audit.yml](.github/workflows/security-audit.yml)):** Verificação periódica de vulnerabilidades críticas/altas no `npm` e atualizações automatizadas.
+- **Geração de SBOM CycloneDX ([.github/workflows/security-audit.yml](.github/workflows/security-audit.yml)):** Emissão e publicação de relatórios Software Bill of Materials para o backend e frontend.
+- **Proteção dos Deploys de Produção ([.github/workflows/deploy.yml](.github/workflows/deploy.yml)):** Restrição estrita de deploys à branch `main`, impedindo acesso a segredos por Pull Requests de forks.
 
 ## Estrutura do repositório
 
@@ -243,3 +202,4 @@ Requisitos: Node.js 20+, conta no Supabase e conta na Cloudflare (para o Wrangle
 cd backend
 npm install
 npm run dev
+```
