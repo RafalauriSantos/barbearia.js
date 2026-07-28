@@ -13,6 +13,7 @@
     "gitleaks": "node scripts/run-gitleaks.js",
     "gitleaks:detect": "node scripts/run-gitleaks.js detect",
     "docker:up": "docker compose up -d --build",
+    "docker:db": "docker compose --profile db up -d",
     "docker:down": "docker compose down",
     "docker:logs": "docker compose logs -f",
     "docker:ps": "docker compose ps",

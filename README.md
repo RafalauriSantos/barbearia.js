@@ -212,6 +212,9 @@ Se preferir rodar toda a aplicação (Frontend + Backend) em um ambiente contain
 # Subir a stack inteira em segundo plano
 npm run docker:up
 
+# Subir banco PostgreSQL 16 local opcional para desenvolvimento offline
+npm run docker:db
+
 # Acompanhar os logs dos containers
 npm run docker:logs
 
