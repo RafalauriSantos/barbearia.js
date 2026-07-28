@@ -4,29 +4,50 @@ const {
 	sanitizeSentryEvent,
 	maskSensitiveFields,
 	initSentry,
+	resetRateLimitCounter,
 	withSentry,
 } = require("../src/lib/sentry");
 
 test("Sentry Sanitizer Suite", (t) => {
-	t.test("masks sensitive fields in object payload", (st) => {
+	t.beforeEach(() => {
+		resetRateLimitCounter();
+	});
+
+	t.test("masks sensitive fields matching comprehensive regex pattern", (st) => {
 		const raw = {
 			email: "user@example.com",
 			senha: "super-secret-password-123",
-			token: "bearer-xyz-jwt-token",
-			nested: {
-				user_password: "my-password",
-				safeField: 42,
-				alreadyNull: null,
+			user_password: "my-password",
+			jwt: "bearer-xyz-jwt-token",
+			bearer: "bearer-token-secret",
+			otp: "123456",
+			auth_credentials: "user:pass",
+			api_key: "ak_live_12345",
+			turnstile_token: "0.XXXX.YYYY",
+			cpf_number: "123.456.789-00",
+			credit_card_num: "4111-2222-3333-4444",
+			safeField: 42,
+			alreadyNull: null,
+			nestedObj: {
+				nonSensitiveProp: "all-good",
 			},
 		};
 
 		const sanitized = maskSensitiveFields(raw);
 		st.equal(sanitized.email, "user@example.com");
 		st.equal(sanitized.senha, "[FILTERED]");
-		st.equal(sanitized.token, "[FILTERED]");
-		st.equal(sanitized.nested.user_password, "[FILTERED]");
-		st.equal(sanitized.nested.safeField, 42);
-		st.equal(sanitized.nested.alreadyNull, null);
+		st.equal(sanitized.user_password, "[FILTERED]");
+		st.equal(sanitized.jwt, "[FILTERED]");
+		st.equal(sanitized.bearer, "[FILTERED]");
+		st.equal(sanitized.otp, "[FILTERED]");
+		st.equal(sanitized.auth_credentials, "[FILTERED]");
+		st.equal(sanitized.api_key, "[FILTERED]");
+		st.equal(sanitized.turnstile_token, "[FILTERED]");
+		st.equal(sanitized.cpf_number, "[FILTERED]");
+		st.equal(sanitized.credit_card_num, "[FILTERED]");
+		st.equal(sanitized.safeField, 42);
+		st.equal(sanitized.alreadyNull, null);
+		st.equal(sanitized.nestedObj.nonSensitiveProp, "all-good");
 		st.end();
 	});
 
@@ -35,36 +56,53 @@ test("Sentry Sanitizer Suite", (t) => {
 		st.equal(maskSensitiveFields("normal text"), "normal text");
 		st.equal(maskSensitiveFields(123), 123);
 
-		const validJsonString = JSON.stringify({ senha: "123" });
-		st.equal(maskSensitiveFields(validJsonString), JSON.stringify({ senha: "[FILTERED]" }));
+		const validJsonString = JSON.stringify({ senha: "123", api_key: "secret" });
+		st.equal(
+			maskSensitiveFields(validJsonString),
+			JSON.stringify({ senha: "[FILTERED]", api_key: "[FILTERED]" }),
+		);
+
+		const validJsonArrayString = JSON.stringify([{ senha: "123" }, { otp: "456" }]);
+		st.equal(
+			maskSensitiveFields(validJsonArrayString),
+			JSON.stringify([{ senha: "[FILTERED]" }, { otp: "[FILTERED]" }]),
+		);
 
 		const arrayPayload = [{ token: "abc" }, { ok: true }];
 		st.same(maskSensitiveFields(arrayPayload), [{ token: "[FILTERED]" }, { ok: true }]);
 		st.end();
 	});
 
-	t.test("sanitizes HTTP headers, body, extra and handles null event or empty sub-objects", (st) => {
+	t.test("sanitizes HTTP headers, body, extra, fingerprint and handles null event or empty sub-objects", (st) => {
 		st.equal(sanitizeSentryEvent(null), null);
 
 		const eventEmptyObj = {
 			request: {},
 		};
-		st.ok(sanitizeSentryEvent(eventEmptyObj));
+		const sanitizedEmpty = sanitizeSentryEvent(eventEmptyObj);
+		st.ok(sanitizedEmpty);
+		st.same(sanitizedEmpty.fingerprint, ["{{ default }}", "UnknownError", "global"]);
 
 		const event = {
 			request: {
+				url: "https://api.barber.com/auth/login",
 				headers: {
 					authorization: "Bearer secret-jwt-token",
 					cookie: "session=xyz123",
 					"set-cookie": "session=xyz123",
+					"x-api-key": "secret-key",
 					"content-type": "application/json",
 				},
 				data: {
 					senha: "secret-password",
+					otp: "654321",
 				},
 			},
 			extra: {
 				secretToken: "123",
+			},
+			exception: {
+				values: [{ type: "DatabaseError" }],
 			},
 		};
 
@@ -72,15 +110,46 @@ test("Sentry Sanitizer Suite", (t) => {
 		st.equal(sanitizedEvent.request.headers.authorization, "[FILTERED]");
 		st.equal(sanitizedEvent.request.headers.cookie, "[FILTERED]");
 		st.equal(sanitizedEvent.request.headers["set-cookie"], "[FILTERED]");
+		st.equal(sanitizedEvent.request.headers["x-api-key"], "[FILTERED]");
 		st.equal(sanitizedEvent.request.headers["content-type"], "application/json");
 		st.equal(sanitizedEvent.request.data.senha, "[FILTERED]");
+		st.equal(sanitizedEvent.request.data.otp, "[FILTERED]");
 		st.equal(sanitizedEvent.extra.secretToken, "[FILTERED]");
+		st.same(sanitizedEvent.fingerprint, ["{{ default }}", "DatabaseError", "https://api.barber.com/auth/login"]);
 		st.end();
 	});
 
-	t.test("initSentry handles missing DSN, test env, and valid/invalid scenarios", (st) => {
+	t.test("samples HTTP 429 Rate Limit events (1 every 50 events)", (st) => {
+		const rateLimitEvent = {
+			tags: { status_code: 429 },
+			request: { url: "https://api.barber.com/auth/login" },
+		};
+
+		// 1st 429 event -> CAPTURED
+		st.ok(sanitizeSentryEvent(rateLimitEvent));
+
+		// 2nd to 50th 429 events -> IGNORED (null)
+		for (let i = 2; i <= 50; i++) {
+			st.equal(sanitizeSentryEvent(rateLimitEvent), null, `Event ${i} should be ignored`);
+		}
+
+		// 51st 429 event -> CAPTURED again
+		st.ok(sanitizeSentryEvent(rateLimitEvent));
+		st.end();
+	});
+
+	t.test("initSentry enforces strict production environment check", (st) => {
 		st.equal(initSentry(null), null);
 		st.equal(initSentry({ SENTRY_DSN: "", NODE_ENV: "production" }), null);
+
+		// Non-production environments MUST return null
+		st.equal(
+			initSentry({
+				SENTRY_DSN: "https://public@sentry.example.com/1",
+				NODE_ENV: "development",
+			}),
+			null,
+		);
 		st.equal(
 			initSentry({
 				SENTRY_DSN: "https://public@sentry.example.com/1",
@@ -89,7 +158,7 @@ test("Sentry Sanitizer Suite", (t) => {
 			null,
 		);
 
-		// Test branch when Sentry.init is valid
+		// Production environment branch
 		const origInit = Sentry.init;
 		Sentry.init = (opts) => ({ initialized: true, opts });
 		const res = initSentry({

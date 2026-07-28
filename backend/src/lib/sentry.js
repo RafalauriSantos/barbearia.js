@@ -1,43 +1,60 @@
 const Sentry = require("@sentry/cloudflare");
 
+const SENSITIVE_PATTERN =
+	/(password|jwt|token|secret|bearer|otp|auth|credentials|api[_-]?key|turnstile|cookie|senha|cpf|credit[_-]?card)/i;
+
+let rateLimitCounter = 0;
+
 /**
- * Sanitizes event data before sending to Sentry to prevent PII/secret leaks.
+ * Sanitizes event data before sending to Sentry to prevent PII/secret leaks
+ * and applies rate limit sampling and fingerprinting.
  * @param {import('@sentry/types').Event} event
  * @returns {import('@sentry/types').Event | null}
  */
 function sanitizeSentryEvent(event) {
 	if (!event) return null;
 
-	// 1. Sanitize Request Headers
+	// 1. Rate Limit Sampling (429 Status Code - Sample 1 out of 50 events)
+	const isRateLimit = event.tags && String(event.tags.status_code) === "429";
+	if (isRateLimit) {
+		rateLimitCounter++;
+		if (rateLimitCounter % 50 !== 1) {
+			return null;
+		}
+	}
+
+	// 2. Sanitize Request Headers
 	if (event.request && event.request.headers) {
 		const headers = event.request.headers;
 		for (const key of Object.keys(headers)) {
-			const lowerKey = key.toLowerCase();
-			if (
-				lowerKey === "authorization" ||
-				lowerKey === "cookie" ||
-				lowerKey === "set-cookie"
-			) {
+			if (SENSITIVE_PATTERN.test(key)) {
 				headers[key] = "[FILTERED]";
 			}
 		}
 	}
 
-	// 2. Sanitize Request Data / Body
+	// 3. Sanitize Request Data / Body
 	if (event.request && event.request.data) {
 		event.request.data = maskSensitiveFields(event.request.data);
 	}
 
-	// 3. Sanitize Extra / Context Data
+	// 4. Sanitize Extra / Context Data
 	if (event.extra) {
 		event.extra = maskSensitiveFields(event.extra);
 	}
+
+	// 5. Automatic Deduplication / Fingerprinting
+	event.fingerprint = [
+		"{{ default }}",
+		event.exception?.values?.[0]?.type || "UnknownError",
+		event.request?.url || "global",
+	];
 
 	return event;
 }
 
 /**
- * Recursively masks sensitive key values (senha, password, token, secret, jwt, etc.)
+ * Recursively masks sensitive key values matching SENSITIVE_PATTERN.
  */
 function maskSensitiveFields(data) {
 	if (!data) return data;
@@ -51,25 +68,13 @@ function maskSensitiveFields(data) {
 	}
 	if (typeof data !== "object") return data;
 
-	const sensitiveKeys = [
-		"senha",
-		"password",
-		"token",
-		"secret",
-		"jwt",
-		"authorization",
-		"credit_card",
-		"cpf",
-	];
-
 	if (Array.isArray(data)) {
 		return data.map(maskSensitiveFields);
 	}
 
 	const copy = { ...data };
 	for (const key of Object.keys(copy)) {
-		const lowerKey = key.toLowerCase();
-		if (sensitiveKeys.some((s) => lowerKey.includes(s))) {
+		if (SENSITIVE_PATTERN.test(key)) {
 			copy[key] = "[FILTERED]";
 		} else if (typeof copy[key] === "object" && copy[key] !== null) {
 			copy[key] = maskSensitiveFields(copy[key]);
@@ -79,13 +84,14 @@ function maskSensitiveFields(data) {
 }
 
 /**
- * Initializes Sentry for Cloudflare Worker context safely.
+ * Initializes Sentry for Cloudflare Worker context safely in production.
  */
 function initSentry(env) {
 	const dsn = env?.SENTRY_DSN || process.env.SENTRY_DSN;
 	const nodeEnv = env?.NODE_ENV || process.env.NODE_ENV || "development";
 
-	if (!dsn || nodeEnv === "test") {
+	// Restrict telemetry sending strictly to production
+	if (!dsn || nodeEnv !== "production") {
 		return null;
 	}
 
@@ -108,10 +114,15 @@ function initSentry(env) {
 	}
 }
 
+function resetRateLimitCounter() {
+	rateLimitCounter = 0;
+}
+
 module.exports = {
 	Sentry,
 	sanitizeSentryEvent,
 	maskSensitiveFields,
 	initSentry,
+	resetRateLimitCounter,
 	withSentry: Sentry.withSentry,
 };
