@@ -4,6 +4,7 @@ const {
 	sanitizeSentryEvent,
 	maskSensitiveFields,
 	initSentry,
+	withSentry,
 } = require("../src/lib/sentry");
 
 test("Sentry Sanitizer Suite", (t) => {
@@ -120,6 +121,7 @@ test("Sentry Sanitizer Suite", (t) => {
 		);
 		Sentry.init = origInit;
 
+		st.ok(typeof withSentry === "function" || withSentry === null);
 		st.end();
 	});
 
