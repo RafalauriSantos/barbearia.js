@@ -23,25 +23,28 @@ async function verifyToken(token, remoteIp, runtimeEnv) {
 
 	const nodeEnv = runtimeEnv?.NODE_ENV || env.NODE_ENV;
 
-	if (!token || typeof token !== "string" || token.trim().length === 0) {
-		throw new AppError(
-			400,
-			"INVALID_TURNSTILE_TOKEN",
-			"Verificação anti-bot é obrigatória. Por favor, complete o desafio.",
-		);
-	}
-
-	// In test/development environment without production secrets or with test tokens, allow dev testing
-	if ((nodeEnv === "test" || nodeEnv === "development") && (!runtimeEnv?.TURNSTILE_SECRET_KEY || runtimeEnv?.TURNSTILE_SECRET_KEY === DUMMY_PASS_SECRET || token === "dummy-turnstile-token")) {
-		return true;
-	}
-
 	// Immediate evaluation for official dummy fail key
 	if (secretKey === DUMMY_FAIL_SECRET || token === "dummy-fail-token") {
 		throw new AppError(
 			400,
 			"INVALID_TURNSTILE_TOKEN",
 			"Verificação anti-bot falhou. Por favor, tente novamente.",
+		);
+	}
+
+	// In test/development environment without explicit production secret keys, allow dev testing
+	if (
+		(nodeEnv === "test" || nodeEnv === "development") &&
+		(secretKey === DUMMY_PASS_SECRET || !runtimeEnv?.TURNSTILE_SECRET_KEY)
+	) {
+		return true;
+	}
+
+	if (!token || typeof token !== "string" || token.trim().length === 0) {
+		throw new AppError(
+			400,
+			"INVALID_TURNSTILE_TOKEN",
+			"Verificação anti-bot é obrigatória. Por favor, complete o desafio.",
 		);
 	}
 

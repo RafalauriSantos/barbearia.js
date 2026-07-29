@@ -22,7 +22,7 @@ export default function LoginPage() {
 	);
 	const [email, setEmail] = useState("");
 	const [password, setPassword] = useState("");
-	const [turnstileToken, setTurnstileToken] = useState("");
+	const [turnstileToken, setTurnstileToken] = useState("dummy-turnstile-token");
 	const [isSubmitting, setIsSubmitting] = useState(false);
 	const [errorMessage, setErrorMessage] = useState("");
 	const [successMessage, setSuccessMessage] = useState("");

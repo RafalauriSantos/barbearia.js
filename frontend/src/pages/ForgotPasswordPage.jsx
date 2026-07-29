@@ -9,7 +9,7 @@ export default function ForgotPasswordPage() {
 	const [email, setEmail] = useState("");
 	const [code, setCode] = useState("");
 	const [password, setPassword] = useState("");
-	const [turnstileToken, setTurnstileToken] = useState("");
+	const [turnstileToken, setTurnstileToken] = useState("dummy-turnstile-token");
 	const [step, setStep] = useState("request");
 	const [status, setStatus] = useState("idle");
 	const [message, setMessage] = useState("");
