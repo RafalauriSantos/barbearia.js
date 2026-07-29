@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from "react";
 
-const OFFICIAL_TEST_SITE_KEY = "1x00000000000000000000AA";
 const SCRIPT_ID = "cf-turnstile-script";
 const SCRIPT_URL =
 	"https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit";
@@ -20,31 +19,24 @@ export function TurnstileWidget({
 	const envKey = import.meta.env?.VITE_TURNSTILE_SITE_KEY;
 	const validEnvKey = (envKey && envKey !== "undefined" && envKey.trim().length > 0) ? envKey.trim() : null;
 	const validPropKey = (siteKey && siteKey !== "undefined" && siteKey.trim().length > 0) ? siteKey.trim() : null;
-	const activeSiteKey = validPropKey || validEnvKey || OFFICIAL_TEST_SITE_KEY;
+	const activeSiteKey = validPropKey || validEnvKey;
+
+	const isLocalDev =
+		!activeSiteKey ||
+		import.meta.env?.MODE === "test" ||
+		(typeof process !== "undefined" && process.env?.NODE_ENV === "test") ||
+		(typeof window !== "undefined" && window.__VITEST_ENVIRONMENT__) ||
+		(typeof window !== "undefined" && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"));
 
 	useEffect(() => {
-		const isDevOrTest =
-			import.meta.env?.MODE === "test" ||
-			(typeof process !== "undefined" && process.env?.NODE_ENV === "test") ||
-			(typeof window !== "undefined" && window.__VITEST_ENVIRONMENT__) ||
-			activeSiteKey === OFFICIAL_TEST_SITE_KEY ||
-			(typeof window !== "undefined" && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"));
-
-		// Vitest or Node test environment bypass
-		if (import.meta.env?.MODE === "test" || (typeof process !== "undefined" && process.env?.NODE_ENV === "test") || (typeof window !== "undefined" && window.__VITEST_ENVIRONMENT__)) {
+		// In local dev/test mode without explicit production keys, bypass external iframe completely
+		if (isLocalDev) {
 			setStatus("ready");
 			if (onSuccess) onSuccess("dummy-turnstile-token");
 			return;
 		}
 
 		let isMounted = true;
-
-		function handleDevFallback() {
-			if (isMounted) {
-				setStatus("ready");
-				if (onSuccess) onSuccess("dummy-turnstile-token");
-			}
-		}
 
 		function renderWidget() {
 			if (!containerRef.current || !window.turnstile) return;
@@ -62,10 +54,6 @@ export function TurnstileWidget({
 					},
 					"error-callback": (err) => {
 						if (isMounted) {
-							if (isDevOrTest) {
-								handleDevFallback();
-								return;
-							}
 							setStatus("error");
 							if (onError) onError(err);
 						}
@@ -78,10 +66,6 @@ export function TurnstileWidget({
 				if (isMounted) setStatus("ready");
 			} catch (err) {
 				if (isMounted) {
-					if (isDevOrTest) {
-						handleDevFallback();
-						return;
-					}
 					setStatus("error");
 					if (onError) onError(err);
 				}
@@ -108,9 +92,10 @@ export function TurnstileWidget({
 				}
 			};
 
-			const handleError = () => {
-				if (isMounted && isDevOrTest) {
-					handleDevFallback();
+			const handleError = (err) => {
+				if (isMounted) {
+					setStatus("error");
+					if (onError) onError(err);
 				}
 			};
 
@@ -141,7 +126,15 @@ export function TurnstileWidget({
 				}
 			}
 		};
-	}, [activeSiteKey, theme, onSuccess, onError, onExpire]);
+	}, [activeSiteKey, isLocalDev, theme, onSuccess, onError, onExpire]);
+
+	if (isLocalDev) {
+		return (
+			<div className={`turnstile-wrapper my-3 ${className}`}>
+				<div ref={containerRef} data-testid="turnstile-container" className="hidden" />
+			</div>
+		);
+	}
 
 	return (
 		<div className={`turnstile-wrapper my-3 ${className}`}>
