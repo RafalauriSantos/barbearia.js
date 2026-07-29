@@ -24,5 +24,5 @@ EXPOSE 3333
 # Environment defaults
 ENV NODE_ENV=development
 
-# Command to start Vite dev server
-CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0", "--port", "3333"]
+# Command to start Vite dev server with forced dependency optimization for containerized dev
+CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0", "--port", "3333", "--force"]
