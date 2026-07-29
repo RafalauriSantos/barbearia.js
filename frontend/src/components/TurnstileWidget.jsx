@@ -23,6 +23,13 @@ export function TurnstileWidget({
 	const activeSiteKey = validPropKey || validEnvKey || OFFICIAL_TEST_SITE_KEY;
 
 	useEffect(() => {
+		const isDevOrTest =
+			import.meta.env?.MODE === "test" ||
+			(typeof process !== "undefined" && process.env?.NODE_ENV === "test") ||
+			(typeof window !== "undefined" && window.__VITEST_ENVIRONMENT__) ||
+			activeSiteKey === OFFICIAL_TEST_SITE_KEY ||
+			(typeof window !== "undefined" && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"));
+
 		// Vitest or Node test environment bypass
 		if (import.meta.env?.MODE === "test" || (typeof process !== "undefined" && process.env?.NODE_ENV === "test") || (typeof window !== "undefined" && window.__VITEST_ENVIRONMENT__)) {
 			setStatus("ready");
@@ -31,6 +38,13 @@ export function TurnstileWidget({
 		}
 
 		let isMounted = true;
+
+		function handleDevFallback() {
+			if (isMounted) {
+				setStatus("ready");
+				if (onSuccess) onSuccess("dummy-turnstile-token");
+			}
+		}
 
 		function renderWidget() {
 			if (!containerRef.current || !window.turnstile) return;
@@ -48,6 +62,10 @@ export function TurnstileWidget({
 					},
 					"error-callback": (err) => {
 						if (isMounted) {
+							if (isDevOrTest) {
+								handleDevFallback();
+								return;
+							}
 							setStatus("error");
 							if (onError) onError(err);
 						}
@@ -60,6 +78,10 @@ export function TurnstileWidget({
 				if (isMounted) setStatus("ready");
 			} catch (err) {
 				if (isMounted) {
+					if (isDevOrTest) {
+						handleDevFallback();
+						return;
+					}
 					setStatus("error");
 					if (onError) onError(err);
 				}
@@ -86,11 +108,19 @@ export function TurnstileWidget({
 				}
 			};
 
+			const handleError = () => {
+				if (isMounted && isDevOrTest) {
+					handleDevFallback();
+				}
+			};
+
 			script.addEventListener("load", handleLoad);
+			script.addEventListener("error", handleError);
 
 			return () => {
 				isMounted = false;
 				script.removeEventListener("load", handleLoad);
+				script.removeEventListener("error", handleError);
 				if (widgetIdRef.current !== null && window.turnstile) {
 					try {
 						window.turnstile.remove(widgetIdRef.current);
