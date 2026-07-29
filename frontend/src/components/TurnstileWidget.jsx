@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 
-const OFFICIAL_TEST_SITE_KEY = "1x0000000000000000000000000000000AA";
+const OFFICIAL_TEST_SITE_KEY = "1x00000000000000000000AA";
 const SCRIPT_ID = "cf-turnstile-script";
 const SCRIPT_URL =
 	"https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit";

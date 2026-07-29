@@ -23,17 +23,17 @@ async function verifyToken(token, remoteIp, runtimeEnv) {
 
 	const nodeEnv = runtimeEnv?.NODE_ENV || env.NODE_ENV;
 
-	// In test/development environment with dummy test token
-	if ((nodeEnv === "test" || nodeEnv === "development") && token === "dummy-turnstile-token") {
-		return true;
-	}
-
 	if (!token || typeof token !== "string" || token.trim().length === 0) {
 		throw new AppError(
 			400,
 			"INVALID_TURNSTILE_TOKEN",
 			"Verificação anti-bot é obrigatória. Por favor, complete o desafio.",
 		);
+	}
+
+	// In test/development environment without production secrets or with test tokens, allow dev testing
+	if ((nodeEnv === "test" || nodeEnv === "development") && (!runtimeEnv?.TURNSTILE_SECRET_KEY || runtimeEnv?.TURNSTILE_SECRET_KEY === DUMMY_PASS_SECRET || token === "dummy-turnstile-token")) {
+		return true;
 	}
 
 	// Immediate evaluation for official dummy fail key
