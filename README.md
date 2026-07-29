@@ -209,8 +209,11 @@ npm run dev
 Se preferir rodar toda a aplicação (Frontend + Backend) em um ambiente containerizado isolado com um único comando:
 
 ```bash
-# Subir a stack inteira em segundo plano
+# Subir a stack inteira em segundo plano e abrir http://localhost:3333 automaticamente
 npm run docker:up
+
+# Abrir o aplicativo no navegador padrão
+npm run docker:open
 
 # Subir banco PostgreSQL 16 local opcional para desenvolvimento offline
 npm run docker:db
