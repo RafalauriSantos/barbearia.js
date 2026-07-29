@@ -8,6 +8,11 @@ import { Component, lazy, Suspense, useEffect } from "react";
 import { warmUpApi } from "@/lib/api/client";
 import { APP_NAME } from "@/lib/brand";
 import LandingPage from "./pages/LandingPage";
+import LoginPage from "./pages/LoginPage";
+import ForgotPasswordPage from "./pages/ForgotPasswordPage";
+import VerifyEmailPage from "./pages/VerifyEmailPage";
+import VerifyCodePage from "./pages/VerifyCodePage";
+import AcceptInvitePage from "./pages/AcceptInvitePage";
 
 const AuthGate = lazy(() => import("./components/AuthGate"));
 const AppPage = lazy(() => import("./pages/AppPage"));
@@ -18,11 +23,6 @@ const FinancialPage = lazy(() => import("./pages/FinancialPage"));
 const ExpensesPage = lazy(() => import("./pages/ExpensesPage"));
 const TeamPage = lazy(() => import("./pages/TeamPage"));
 const NotFound = lazy(() => import("./pages/NotFound"));
-const LoginPage = lazy(() => import("./pages/LoginPage"));
-const VerifyEmailPage = lazy(() => import("./pages/VerifyEmailPage"));
-const VerifyCodePage = lazy(() => import("./pages/VerifyCodePage"));
-const ForgotPasswordPage = lazy(() => import("./pages/ForgotPasswordPage"));
-const AcceptInvitePage = lazy(() => import("./pages/AcceptInvitePage"));
 
 const SITE_URL = "https://barbearia-app.pages.dev";
 const LANDING_TITLE = `${APP_NAME} | Sistema de agenda e caixa para barbearias`;
