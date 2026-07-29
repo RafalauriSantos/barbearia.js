@@ -6,7 +6,7 @@ const SCRIPT_URL =
 	"https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit";
 
 export function TurnstileWidget({
-	siteKey = import.meta.env?.VITE_TURNSTILE_SITE_KEY || OFFICIAL_TEST_SITE_KEY,
+	siteKey,
 	onSuccess,
 	onError,
 	onExpire,
@@ -16,6 +16,11 @@ export function TurnstileWidget({
 	const containerRef = useRef(null);
 	const widgetIdRef = useRef(null);
 	const [status, setStatus] = useState("loading"); // 'loading' | 'ready' | 'error'
+
+	const envKey = import.meta.env?.VITE_TURNSTILE_SITE_KEY;
+	const validEnvKey = (envKey && envKey !== "undefined" && envKey.trim().length > 0) ? envKey.trim() : null;
+	const validPropKey = (siteKey && siteKey !== "undefined" && siteKey.trim().length > 0) ? siteKey.trim() : null;
+	const activeSiteKey = validPropKey || validEnvKey || OFFICIAL_TEST_SITE_KEY;
 
 	useEffect(() => {
 		// Vitest or Node test environment bypass
@@ -36,7 +41,7 @@ export function TurnstileWidget({
 				}
 
 				widgetIdRef.current = window.turnstile.render(containerRef.current, {
-					sitekey: siteKey,
+					sitekey: activeSiteKey,
 					theme,
 					callback: (token) => {
 						if (isMounted && onSuccess) onSuccess(token);
@@ -106,7 +111,7 @@ export function TurnstileWidget({
 				}
 			}
 		};
-	}, [siteKey, theme, onSuccess, onError, onExpire]);
+	}, [activeSiteKey, theme, onSuccess, onError, onExpire]);
 
 	return (
 		<div className={`turnstile-wrapper my-3 ${className}`}>
