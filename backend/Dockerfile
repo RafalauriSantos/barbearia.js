@@ -15,6 +15,9 @@ RUN npm ci
 # Copy remaining source code
 COPY --chown=node:node . .
 
+# Ensure node user owns /app directory and node_modules
+RUN mkdir -p /app/node_modules && chown -R node:node /app
+
 # Switch to non-root user
 USER node
 

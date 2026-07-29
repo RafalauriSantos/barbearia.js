@@ -15,6 +15,9 @@ RUN npm ci
 # Copy remaining source code
 COPY --chown=node:node . .
 
+# Ensure node user owns /app directory and node_modules
+RUN mkdir -p /app/node_modules && chown -R node:node /app
+
 # Switch to non-root user
 USER node
 
@@ -24,5 +27,5 @@ EXPOSE 3333
 # Environment defaults
 ENV NODE_ENV=development
 
-# Command to start Vite dev server with forced dependency optimization for containerized dev
-CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0", "--port", "3333", "--force"]
+# Command to start Vite dev server without xdg-open for containerized dev
+CMD ["npx", "vite", "--host", "0.0.0.0", "--port", "3333"]
