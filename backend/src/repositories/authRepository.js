@@ -243,22 +243,48 @@ exports.updatePassword = async function (
 ) {
 	const updates = {
 		senha_hash: password_hash,
-		tentativas_login_falhas: 0,
-		bloqueado_ate: null,
 		...(markEmailVerified ?
 			{ email_verificado_em: new Date().toISOString() }
 		:	{}),
 		...(tokenVersion !== undefined ? { token_version: tokenVersion } : {}),
 	};
 
-	const { data, error } = await supabase
-		.from("usuarios")
-		.update(updates)
-		.eq("id", userId)
-		.select()
-		.single();
-	if (error) throw error;
-	return toAuthUser(data);
+	try {
+		const { data, error } = await supabase
+			.from("usuarios")
+			.update({
+				...updates,
+				tentativas_login_falhas: 0,
+				bloqueado_ate: null,
+			})
+			.eq("id", userId)
+			.select()
+			.single();
+
+		if (error) {
+			if (error.code === "PGRST204" || (error.message && error.message.includes("column"))) {
+				const { data: fallbackData, error: fallbackError } = await supabase
+					.from("usuarios")
+					.update(updates)
+					.eq("id", userId)
+					.select()
+					.single();
+				if (fallbackError) throw fallbackError;
+				return toAuthUser(fallbackData);
+			}
+			throw error;
+		}
+		return toAuthUser(data);
+	} catch (err) {
+		const { data: fallbackData, error: fallbackError } = await supabase
+			.from("usuarios")
+			.update(updates)
+			.eq("id", userId)
+			.select()
+			.single();
+		if (fallbackError) throw fallbackError;
+		return toAuthUser(fallbackData);
+	}
 };
 
 exports.updateTokenVersion = async function (userId, version) {
