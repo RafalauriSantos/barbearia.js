@@ -14,7 +14,6 @@ export function TurnstileWidget({
 }) {
 	const containerRef = useRef(null);
 	const widgetIdRef = useRef(null);
-	const [status, setStatus] = useState("loading"); // 'loading' | 'ready' | 'error'
 
 	const envKey = import.meta.env?.VITE_TURNSTILE_SITE_KEY;
 	const validEnvKey = (envKey && envKey !== "undefined" && envKey.trim().length > 0) ? envKey.trim() : null;
@@ -23,16 +22,22 @@ export function TurnstileWidget({
 
 	const isLocalDev =
 		!activeSiteKey ||
+		import.meta.env?.DEV ||
+		import.meta.env?.MODE === "development" ||
 		import.meta.env?.MODE === "test" ||
-		(typeof process !== "undefined" && process.env?.NODE_ENV === "test") ||
+		(typeof process !== "undefined" && (process.env?.NODE_ENV === "development" || process.env?.NODE_ENV === "test")) ||
 		(typeof window !== "undefined" && window.__VITEST_ENVIRONMENT__) ||
 		(typeof window !== "undefined" && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"));
 
+	const [status, setStatus] = useState(isLocalDev ? "ready" : "loading"); // 'loading' | 'ready' | 'error'
+
 	useEffect(() => {
-		// In local dev/test mode without explicit production keys, bypass external iframe completely
+		// In local dev/test mode, issue dummy token immediately and bypass external iframe completely
 		if (isLocalDev) {
 			setStatus("ready");
-			if (onSuccess) onSuccess("dummy-turnstile-token");
+			if (onSuccess) {
+				onSuccess("dummy-turnstile-token");
+			}
 			return;
 		}
 
