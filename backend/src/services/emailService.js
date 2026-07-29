@@ -1,52 +1,42 @@
+const { AppError } = require("../lib/errors");
 const { env } = require("../config/env");
 
-const BREVO_SEND_EMAIL_URL = "https://api.brevo.com/v3/smtp/email";
-const DEFAULT_BRAND_NAME = "Marque’s Barbearia";
+const DEFAULT_BRAND_NAME = "Agenddar";
+const BREVO_API_URL = "https://api.brevo.com/v3/smtp/email";
 
-function escapeHtml(value) {
-	return String(value)
-		.replace(/&/g, "&amp;")
-		.replace(/</g, "&lt;")
-		.replace(/>/g, "&gt;")
-		.replace(/"/g, "&quot;")
-		.replace(/'/g, "&#39;");
-}
-
-function buildEmailTemplate({ title, body, cta, code }) {
-	const safeTitle = escapeHtml(title);
-	const safeBody = escapeHtml(body);
-	const ctaHtml =
-		cta ?
-			`
-			<p style="margin:0 0 18px;">
-				<a href="${escapeHtml(cta.url)}" style="display:inline-block;background:#00d37a;color:#0b0b0b;text-decoration:none;font-weight:700;font-size:13px;letter-spacing:0.3px;padding:12px 18px;border-radius:8px;">
-					${escapeHtml(cta.label)}
-				</a>
-			</p>
-			<p style="margin:0 0 18px;color:#8a8a8a;font-size:12px;line-height:1.6;word-break:break-all;">
-				Se o botao nao abrir, copie este link:<br />
-				<a href="${escapeHtml(cta.url)}" style="color:#5dcaa5;">${escapeHtml(cta.url)}</a>
-			</p>
-		`
-		:	"";
+function buildEmailTemplate({ title, body, code, ctaUrl, ctaText }) {
 	const codeHtml =
 		code ?
 			`
-			<div style="margin:0 0 18px;border:1px solid #2a2a2a;border-radius:8px;background:#0f0f0f;padding:12px;text-align:center;">
-				<span style="font-size:22px;letter-spacing:6px;color:#ffffff;font-weight:700;">${escapeHtml(code)}</span>
-			</div>
-		`
+		<div style="margin:24px 0;text-align:center;">
+			<span style="display:inline-block;padding:12px 24px;font-family:monospace;font-size:28px;font-weight:bold;letter-spacing:6px;color:#18181b;background-color:#f4f4f5;border-radius:8px;border:1px solid #e4e4e7;">
+				${code}
+			</span>
+		</div>
+	`
+		:	"";
+
+	const ctaHtml =
+		ctaUrl && ctaText ?
+			`
+		<div style="margin:24px 0;text-align:center;">
+			<a href="${ctaUrl}" style="display:inline-block;padding:12px 24px;font-family:sans-serif;font-size:14px;font-weight:bold;color:#ffffff;background-color:#18181b;border-radius:6px;text-decoration:none;">
+				${ctaText}
+			</a>
+		</div>
+	`
 		:	"";
 
 	return `
-		<div style="background:#0b0b0b;padding:24px 16px;font-family:Arial, sans-serif;">
-			<table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="max-width:520px;margin:0 auto;background:#111;border:1px solid #2a2a2a;border-radius:12px;">
+		<div style="font-family:sans-serif;max-width:500px;margin:0 auto;padding:20px;color:#18181b;background-color:#ffffff;">
+			<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border:1px solid #e4e4e7;border-radius:8px;padding:32px;">
 				<tr>
-					<td style="padding:24px;">
-						<p style="margin:0 0 12px;color:#e5e5e5;font-size:14px;">Ola,</p>
-						<h1 style="margin:0 0 8px;color:#ffffff;font-size:20px;line-height:1.2;">${safeTitle}</h1>
-						<p style="margin:0 0 16px;color:#b5b5b5;font-size:14px;line-height:1.6;">
-							${safeBody}
+					<td>
+						<h1 style="margin:0 0 16px;font-size:20px;font-weight:bold;color:#18181b;text-align:center;">
+							${title}
+						</h1>
+						<p style="margin:0 0 16px;font-size:14px;line-height:1.6;color:#3f3f46;">
+							${body}
 						</p>
 						${codeHtml}
 						${ctaHtml}
@@ -153,48 +143,43 @@ function buildBrevoPayload(message, runtimeEnv) {
 	return payload;
 }
 
-// Nodemailer SMTP transport removed for Cloudflare Workers compatibility
-
 async function fetchWithTimeout(url, options, runtimeEnv) {
 	const controller = new AbortController();
 	const timeoutMs = Number(getEnvValue("EMAIL_TIMEOUT_MS", runtimeEnv)) || 10000;
-	const timeout = setTimeout(() => controller.abort(), timeoutMs);
+	const timer = setTimeout(() => controller.abort(), timeoutMs);
 
 	try {
-		return await fetch(url, { ...options, signal: controller.signal });
+		const response = await fetch(url, {
+			...options,
+			signal: controller.signal,
+		});
+		return response;
 	} catch (error) {
 		if (error.name === "AbortError") {
-			throw new Error(
-				`Brevo email API timed out after ${timeoutMs}ms`,
-			);
+			throw new Error(`Email provider request timed out after ${timeoutMs}ms`);
 		}
-
 		throw error;
 	} finally {
-		clearTimeout(timeout);
+		clearTimeout(timer);
 	}
 }
 
 async function sendViaBrevo(message, runtimeEnv) {
-	if (typeof fetch !== "function") {
-		throw new Error("Brevo email API requires Node.js 18+ with global fetch");
-	}
-
-	if (!hasBrevoConfig(runtimeEnv)) {
-		throw new Error("BREVO_API_KEY is required when EMAIL_PROVIDER=brevo");
+	const apiKey = getEnvValue("BREVO_API_KEY", runtimeEnv);
+	if (!apiKey) {
+		throw new Error("BREVO_API_KEY environment variable is missing");
 	}
 
 	const payload = buildBrevoPayload(message, runtimeEnv);
-	const apiKey = getEnvValue("BREVO_API_KEY", runtimeEnv);
 
-	console.log(`[Brevo Email] Iniciando envio para: ${JSON.stringify(payload.to.map(r => r.email))} - Assunto: "${payload.subject}"`);
+	console.log(`[Brevo Email] Enviando e-mail via API da Brevo para: ${JSON.stringify(payload.to)}`);
 
 	let response;
 	try {
-		response = await fetchWithTimeout(BREVO_SEND_EMAIL_URL, {
+		response = await fetchWithTimeout(BREVO_API_URL, {
 			method: "POST",
 			headers: {
-				accept: "application/json",
+				"accept": "application/json",
 				"api-key": apiKey,
 				"content-type": "application/json",
 			},
@@ -262,56 +247,43 @@ exports.sendCustomEmail = async function ({ to, subject, text }, runtimeEnv) {
 		to,
 		subject,
 		text,
-		html: buildEmailTemplate({
-			title: subject,
-			body: text,
-		}),
 	};
-
-	return sendEmail(message, { label: "[custom-email]", value: text }, runtimeEnv);
+	return sendEmail(message, undefined, runtimeEnv);
 };
 
-exports.sendVerificationCodeEmail = async function ({ to, code, shopName }, runtimeEnv) {
+exports.sendVerificationCodeEmail = async function ({
+	to,
+	code,
+	shopName,
+}, runtimeEnv) {
 	const brandName = getBrandName(shopName, runtimeEnv);
 	const message = {
 		from: getSenderAddress(runtimeEnv),
 		to,
 		subject: `Codigo de confirmacao - ${brandName}`,
-		text: [
-			"Ola.",
-			"",
-			`Use este codigo para confirmar seu email no ${brandName}:`,
-			code,
-			"",
-			"Se voce nao criou essa conta, ignore este email.",
-		].join("\n"),
 		html: buildEmailTemplate({
-			title: "Confirme seu email",
-			body: `Use este codigo para confirmar seu email no ${brandName}:`,
+			title: "Confirme seu cadastro",
+			body: `Use este codigo de 6 digitos para confirmar seu cadastro no ${brandName}:`,
 			code,
 		}),
 	};
 
 	return sendEmail(message, {
-		label: "[email-verification-code]",
+		label: "[verification-code]",
 		value: code,
 	}, runtimeEnv);
 };
 
-exports.sendPasswordResetCodeEmail = async function ({ to, code, shopName }, runtimeEnv) {
+exports.sendPasswordResetCodeEmail = async function ({
+	to,
+	code,
+	shopName,
+}, runtimeEnv) {
 	const brandName = getBrandName(shopName, runtimeEnv);
 	const message = {
 		from: getSenderAddress(runtimeEnv),
 		to,
 		subject: `Codigo para redefinir senha - ${brandName}`,
-		text: [
-			"Ola.",
-			"",
-			`Use este codigo para redefinir sua senha no ${brandName}:`,
-			code,
-			"",
-			"Se voce nao pediu essa redefinicao, ignore este email.",
-		].join("\n"),
 		html: buildEmailTemplate({
 			title: "Redefina sua senha",
 			body: `Use este codigo para redefinir sua senha no ${brandName}:`,
@@ -334,26 +306,16 @@ exports.sendVerificationEmail = async function ({
 	const message = {
 		from: getSenderAddress(runtimeEnv),
 		to,
-		subject: `Confirme seu acesso ao ${brandName}`,
-		text: [
-			"Ola.",
-			"",
-			`Confirme seu email para liberar o acesso ao ${brandName}:`,
-			verificationUrl,
-			"",
-			"Se voce nao criou essa conta, ignore este email.",
-		].join("\n"),
+		subject: `Confirme seu cadastro no ${brandName}`,
 		html: buildEmailTemplate({
-			title: "Confirme seu email",
-			body: `Clique no botao abaixo para liberar o acesso ao ${brandName}.`,
-			cta: { label: "Confirmar email", url: verificationUrl },
+			title: "Bem-vindo ao " + brandName,
+			body: `Clique no botao abaixo para confirmar seu email e ativar sua conta no ${brandName}:`,
+			ctaUrl: verificationUrl,
+			ctaText: "Confirmar meu Email",
 		}),
 	};
 
-	return sendEmail(message, {
-		label: "[email-verification]",
-		value: verificationUrl,
-	}, runtimeEnv);
+	return sendEmail(message, undefined, runtimeEnv);
 };
 
 exports.sendBarberInviteEmail = async function ({
@@ -367,29 +329,13 @@ exports.sendBarberInviteEmail = async function ({
 		from: getSenderAddress(runtimeEnv),
 		to,
 		subject: `Convite para acessar ${brandName}`,
-		text: [
-			"Ola.",
-			"",
-			`Voce foi convidado para acessar a agenda como barbeiro${barberName ? ` (${barberName})` : ""}.`,
-			"Use o link abaixo para criar seu acesso:",
-			inviteUrl,
-			"",
-			"Se voce nao esperava este convite, ignore este email.",
-		].join("\n"),
 		html: buildEmailTemplate({
 			title: "Convite para a agenda",
-			body: `Voce foi convidado para acessar a agenda como barbeiro${barberName ? ` (${barberName})` : ""}.`,
-			cta: { label: "Criar acesso", url: inviteUrl },
+			body: `Voce foi convidado para acessar a agenda como barbeiro${barberName ? ` (${barberName})` : ""}.<br/><br/>Se o botao nao abrir, copie este link:<br/><a href="${inviteUrl}">${inviteUrl}</a>`,
+			ctaUrl: inviteUrl,
+			ctaText: "Criar acesso",
 		}),
 	};
 
 	return sendEmail(message, { label: "[barber-invite]", value: inviteUrl }, runtimeEnv);
-};
-
-exports._private = {
-	buildBrevoPayload,
-	getBrandName,
-	getSenderAddress,
-	parseEmailAddress,
-	parseRecipients,
 };
