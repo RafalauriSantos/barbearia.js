@@ -1,6 +1,6 @@
 const supabase = require("../lib/supabase");
 
-function isMissingPaymentSnapshotColumn(error) {
+function isMissingPaymentSnapshotColumn(error: any): boolean {
 	const text = `${error?.code || ""} ${error?.message || ""} ${
 		error?.details || ""
 	}`;
@@ -12,12 +12,17 @@ function isMissingPaymentSnapshotColumn(error) {
 	].some((column) => text.includes(column));
 }
 
-exports.findPaidAppointments = async function ({
+export async function findPaidAppointments({
 	barbeariaId,
 	barbeiroId,
 	startDate,
 	endDate,
-}) {
+}: {
+	barbeariaId: string;
+	barbeiroId?: string;
+	startDate?: string;
+	endDate?: string;
+}): Promise<any[]> {
 	let query = supabase
 		.from("agendamentos")
 		.select(
@@ -62,10 +67,15 @@ exports.findPaidAppointments = async function ({
 	}
 	if (error) throw error;
 	return data || [];
-};
+}
 
-exports.findPaidManualReceivables = async function (filters) {
+export async function findPaidManualReceivables(filters: any): Promise<any[]> {
 	const ReceivablesRepository = require("./receivablesRepository");
 	const rows = await ReceivablesRepository.findPaidManual(filters);
 	return rows.map(ReceivablesRepository.toFinancialRow);
+}
+
+module.exports = {
+	findPaidAppointments,
+	findPaidManualReceivables,
 };

@@ -1,26 +1,26 @@
-const { randomUUID } = require("crypto");
+import { randomUUID } from "crypto";
 const supabase = require("../lib/supabase");
-const { AppError } = require("../lib/errors");
+import { AppError } from "../lib/errors";
 
-function paymentStatusToApi(status) {
+function paymentStatusToApi(status?: string | null): string {
 	if (status === "pago") return "paid";
 	if (status === "fiado") return "fiado";
 	return "normal";
 }
 
-function paymentStatusToDatabase(status) {
+function paymentStatusToDatabase(status?: string | null): string {
 	if (status === "paid") return "pago";
 	if (status === "fiado") return "fiado";
 	return "pendente";
 }
 
-function firstService(row) {
+function firstService(row: any) {
 	return Array.isArray(row.agendamento_servicos) ?
 			row.agendamento_servicos[0]
 		:	null;
 }
 
-function normalizeItemList(items = []) {
+export function normalizeItemList(items: any[] = []): any[] {
 	return (Array.isArray(items) ? items : [])
 		.map((item) => ({
 			id: item.servico_id || item.produto_id || item.id,
@@ -40,7 +40,7 @@ function normalizeItemList(items = []) {
 		.filter((item) => item.id);
 }
 
-function normalizeServices(payload = {}) {
+function normalizeServices(payload: Record<string, any> = {}) {
 	const provided =
 		Object.prototype.hasOwnProperty.call(payload, "services") ||
 		Object.prototype.hasOwnProperty.call(payload, "service_id");
@@ -67,7 +67,7 @@ function normalizeServices(payload = {}) {
 	return { provided: true, items: [] };
 }
 
-function normalizeProducts(payload = {}) {
+function normalizeProducts(payload: Record<string, any> = {}) {
 	const provided = Object.prototype.hasOwnProperty.call(payload, "products");
 	if (!provided) return { provided: false, items: [] };
 	return {
@@ -76,14 +76,14 @@ function normalizeProducts(payload = {}) {
 	};
 }
 
-function sumItems(items = []) {
+function sumItems(items: any[] = []): number {
 	return items.reduce(
 		(sum, item) => sum + Number(item.price || 0) * Number(item.quantity || 1),
 		0,
 	);
 }
 
-function toApi(row) {
+function toApi(row: any) {
 	const service = firstService(row);
 	const services = normalizeItemList(row.agendamento_servicos || []);
 	const products = normalizeItemList(row.agendamento_produtos || []);
@@ -119,7 +119,7 @@ function toApi(row) {
 	};
 }
 
-function toAppointmentDatabase(payload) {
+function toAppointmentDatabase(payload: Record<string, any>) {
 	const clientName = payload.client_name || payload.cliente_nome;
 	const date = payload.day_key || payload.data;
 	const time = payload.time_slot || payload.hora;
@@ -166,249 +166,14 @@ function toAppointmentDatabase(payload) {
 	};
 }
 
-function stripPaymentSnapshotPayload(payload = {}) {
-	const {
-		payment_fee_percent,
-		payment_fee_value,
-		net_value,
-		...legacyPayload
-	} = payload;
-	return legacyPayload;
-}
-
-function isMissingPaymentSnapshotColumn(error) {
-	const text = `${error?.code || ""} ${error?.message || ""} ${
-		error?.details || ""
-	}`;
-	return [
-		"taxa_pagamento_percentual",
-		"taxa_pagamento_valor",
-		"valor_liquido",
-	].some((column) => text.includes(column));
-}
-
-function isMissingProductSnapshotColumn(error) {
-	const text = `${error?.code || ""} ${error?.message || ""} ${
-		error?.details || ""
-	}`;
-	return [
-		"tipo_compra",
-		"custo_unitario",
-		"fornecedor",
-		"comissao_venda_percentual",
-	].some((column) => text.includes(column));
-}
-
-function isMissingProductStockColumn(error) {
-	const text = `${error?.code || ""} ${error?.message || ""} ${
-		error?.details || ""
-	}`;
-	return text.includes("quantidade_estoque");
-}
-
-function stripProductSnapshotRows(rows) {
-	return rows.map(
-		({
-			tipo_compra,
-			custo_unitario,
-			fornecedor,
-			comissao_venda_percentual,
-			...legacyRow
-		}) => legacyRow,
-	);
-}
-
-function toQuantityMap(items = []) {
-	const quantities = new Map();
-	for (const item of items) {
-		const productId = item.produto_id || item.id;
-		if (!productId) continue;
-		quantities.set(
-			productId,
-			Number(quantities.get(productId) || 0) + Number(item.quantidade || item.quantity || 1),
-		);
-	}
-	return quantities;
-}
-
-async function getAppointmentProductQuantities(appointmentId) {
-	const { data, error } = await supabase
-		.from("agendamento_produtos")
-		.select("produto_id,quantidade")
-		.eq("agendamento_id", appointmentId);
-	if (error) throw error;
-	return toQuantityMap(data || []);
-}
-
-async function adjustProductStock(previousQuantities, nextQuantities) {
-	const productIds = new Set([
-		...Array.from(previousQuantities.keys()),
-		...Array.from(nextQuantities.keys()),
-	]);
-
-	for (const productId of productIds) {
-		const previous = Number(previousQuantities.get(productId) || 0);
-		const next = Number(nextQuantities.get(productId) || 0);
-		const delta = next - previous;
-		if (!delta) continue;
-
-		const { data, error } = await supabase
-			.from("produtos")
-			.select("quantidade_estoque")
-			.eq("id", productId)
-			.maybeSingle();
-		if (error && isMissingProductStockColumn(error)) return;
-		if (error) throw error;
-
-		const currentStock = Number(data?.quantidade_estoque || 0);
-		const nextStock = Math.max(currentStock - delta, 0);
-		const result = await supabase
-			.from("produtos")
-			.update({ quantidade_estoque: nextStock })
-			.eq("id", productId);
-		if (result.error && isMissingProductStockColumn(result.error)) return;
-		if (result.error) throw result.error;
-	}
-}
-
-async function upsertAppointmentService(appointmentId, payload) {
-	const { provided, items } = normalizeServices(payload);
-	if (!provided) return;
-
-	await supabase
-		.from("agendamento_servicos")
-		.delete()
-		.eq("agendamento_id", appointmentId);
-	if (items.length === 0) return;
-
-	const rows = items.map((item) => {
-		const quantity = Number(item.quantity || 1) || 1;
-		const price = Number(item.price || 0);
-		return {
-			agendamento_id: appointmentId,
-			servico_id: item.id,
-			nome_servico: item.name || "Servico",
-			preco_unitario: price,
-			quantidade: quantity,
-			subtotal: price * quantity,
-		};
-	});
-
-	const { error } = await supabase.from("agendamento_servicos").insert(rows);
-	if (error) throw error;
-}
-
-async function upsertAppointmentProducts(appointmentId, payload) {
-	const { provided, items } = normalizeProducts(payload);
-	if (!provided) return;
-	const previousQuantities = await getAppointmentProductQuantities(appointmentId);
-	const nextQuantities = toQuantityMap(
-		items.map((item) => ({
-			produto_id: item.id,
-			quantidade: item.quantity,
-		})),
-	);
-
-	await supabase
-		.from("agendamento_produtos")
-		.delete()
-		.eq("agendamento_id", appointmentId);
-	if (items.length === 0) {
-		await adjustProductStock(previousQuantities, nextQuantities);
-		return;
-	}
-
-	const rows = items.map((item) => {
-		const quantity = Number(item.quantity || 1) || 1;
-		const price = Number(item.price || 0);
-		const cost = Number(item.cost_price || 0);
-		return {
-			agendamento_id: appointmentId,
-			produto_id: item.id,
-			nome_produto: item.name || "Produto",
-			preco_unitario: price,
-			quantidade: quantity,
-			subtotal: price * quantity,
-			tipo_compra: item.purchase_type || "avista",
-			custo_unitario: cost,
-			fornecedor: item.supplier_name || null,
-			comissao_venda_percentual: Number(
-				item.seller_commission_percent || 0,
-			),
-		};
-	});
-
-	const { error } = await supabase.from("agendamento_produtos").insert(rows);
-	if (error && isMissingProductSnapshotColumn(error)) {
-		const legacyResult = await supabase
-			.from("agendamento_produtos")
-			.insert(stripProductSnapshotRows(rows));
-		if (legacyResult.error) throw legacyResult.error;
-		await adjustProductStock(previousQuantities, nextQuantities);
-		return;
-	}
-	if (error) throw error;
-	await adjustProductStock(previousQuantities, nextQuantities);
-}
-
-exports.findAll = async function ({ date, barbeariaId, barbeiroId } = {}) {
-	let query = supabase
-		.from("agendamentos")
-		.select(
-			"*, agendamento_servicos(*), agendamento_produtos(*), barbeiros(nome), formas_pagamento(codigo,nome)",
-		)
-		.eq("barbearia_id", barbeariaId);
-	if (date) query = query.eq("data", date);
-	if (barbeiroId) query = query.eq("barbeiro_id", barbeiroId);
-
-	const { data, error } = await query.order("data", { ascending: true });
-	if (error) throw error;
-	return (data || []).map(toApi);
-};
-
-exports.findById = async function (id, { barbeariaId } = {}) {
-	let query = supabase
-		.from("agendamentos")
-		.select(
-			"*, agendamento_servicos(*), agendamento_produtos(*), barbeiros(nome), formas_pagamento(codigo,nome)",
-		)
-		.eq("id", id);
-	if (barbeariaId) query = query.eq("barbearia_id", barbeariaId);
-
-	const { data, error } = await query.single();
-	if (error && error.code !== "PGRST116") throw error;
-	return data ? toApi(data) : null;
-};
-
-exports.findConflict = async function ({
-	barbeariaId,
-	barbeiroId,
-	date,
-	time,
-	excludeId,
-}) {
-	let query = supabase
-		.from("agendamentos")
-		.select("id")
-		.eq("barbearia_id", barbeariaId)
-		.eq("barbeiro_id", barbeiroId)
-		.eq("data", date)
-		.eq("hora", time)
-		.neq("status_atendimento", "cancelado");
-	if (excludeId) query = query.neq("id", excludeId);
-	const { data, error } = await query.limit(1).maybeSingle();
-	if (error) throw error;
-	return data || null;
-};
-
-function toAtomicItems(items) {
+function toAtomicItems(items: any[]) {
 	return items.map((item) => ({
 		id: item.id,
 		quantity: Number(item.quantity || 1),
 	}));
 }
 
-function mapAtomicError(error) {
+function mapAtomicError(error: any) {
 	const message = `${error?.code || ""} ${error?.message || ""} ${
 		error?.details || ""
 	}`;
@@ -440,7 +205,7 @@ function mapAtomicError(error) {
 	return error;
 }
 
-async function saveAtomic({ appointment, services, products, userId }) {
+async function saveAtomic({ appointment, services, products, userId }: any) {
 	const { data, error } = await supabase.rpc("salvar_agendamento_atomico", {
 		p_agendamento: appointment,
 		p_servicos: services,
@@ -451,9 +216,65 @@ async function saveAtomic({ appointment, services, products, userId }) {
 	return data;
 }
 
-exports.create = async function (
-	payload,
-	{ barbeariaId, barbeiroId, userId } = {},
+export async function findAll({ date, barbeariaId, barbeiroId }: { date?: string; barbeariaId: string; barbeiroId?: string }) {
+	let query = supabase
+		.from("agendamentos")
+		.select(
+			"*, agendamento_servicos(*), agendamento_produtos(*), barbeiros(nome), formas_pagamento(codigo,nome)",
+		)
+		.eq("barbearia_id", barbeariaId);
+	if (date) query = query.eq("data", date);
+	if (barbeiroId) query = query.eq("barbeiro_id", barbeiroId);
+
+	const { data, error } = await query.order("data", { ascending: true });
+	if (error) throw error;
+	return (data || []).map(toApi);
+}
+
+export async function findById(id: string, { barbeariaId }: { barbeariaId?: string } = {}) {
+	let query = supabase
+		.from("agendamentos")
+		.select(
+			"*, agendamento_servicos(*), agendamento_produtos(*), barbeiros(nome), formas_pagamento(codigo,nome)",
+		)
+		.eq("id", id);
+	if (barbeariaId) query = query.eq("barbearia_id", barbeariaId);
+
+	const { data, error } = await query.single();
+	if (error && error.code !== "PGRST116") throw error;
+	return data ? toApi(data) : null;
+}
+
+export async function findConflict({
+	barbeariaId,
+	barbeiroId,
+	date,
+	time,
+	excludeId,
+}: {
+	barbeariaId: string;
+	barbeiroId: string;
+	date: string;
+	time: string;
+	excludeId?: string;
+}) {
+	let query = supabase
+		.from("agendamentos")
+		.select("id")
+		.eq("barbearia_id", barbeariaId)
+		.eq("barbeiro_id", barbeiroId)
+		.eq("data", date)
+		.eq("hora", time)
+		.neq("status_atendimento", "cancelado");
+	if (excludeId) query = query.neq("id", excludeId);
+	const { data, error } = await query.limit(1).maybeSingle();
+	if (error) throw error;
+	return data || null;
+}
+
+export async function create(
+	payload: Record<string, any>,
+	{ barbeariaId, barbeiroId, userId }: { barbeariaId: string; barbeiroId?: string; userId?: string } = { barbeariaId: "" },
 ) {
 	const { items: serviceItems } = normalizeServices(payload);
 	const { items: productItems } = normalizeProducts(payload);
@@ -476,10 +297,10 @@ exports.create = async function (
 		products: toAtomicItems(productItems),
 		userId,
 	});
-	return exports.findById(appointmentId, { barbeariaId });
-};
+	return findById(appointmentId, { barbeariaId });
+}
 
-exports.update = async function (id, updates, { barbeariaId, userId } = {}) {
+export async function update(id: string, updates: Record<string, any>, { barbeariaId, userId }: { barbeariaId: string; userId?: string } = { barbeariaId: "" }) {
 	const { provided: servicesProvided, items: serviceItems } =
 		normalizeServices(updates);
 	const { provided: productsProvided, items: productItems } =
@@ -502,16 +323,24 @@ exports.update = async function (id, updates, { barbeariaId, userId } = {}) {
 		products: productsProvided ? toAtomicItems(productItems) : null,
 		userId,
 	});
-	return exports.findById(appointmentId, { barbeariaId });
-};
+	return findById(appointmentId, { barbeariaId });
+}
 
-exports.remove = async function (id, { barbeariaId }) {
+export async function remove(id: string, { barbeariaId }: { barbeariaId: string }) {
 	const { error } = await supabase.rpc("excluir_agendamento_atomico", {
 		p_agendamento_id: id,
 		p_barbearia_id: barbeariaId,
 	});
 	if (error) throw mapAtomicError(error);
 	return true;
-};
+}
 
-exports._private = { normalizeItemList };
+module.exports = {
+	findAll,
+	findById,
+	findConflict,
+	create,
+	update,
+	remove,
+	_private: { normalizeItemList },
+};

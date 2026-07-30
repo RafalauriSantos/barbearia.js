@@ -1,6 +1,23 @@
 const supabase = require("../lib/supabase");
 
-async function attachPendingInvites(barbers) {
+export interface ApiBarberRow {
+	id: string;
+	nome: string;
+	name: string;
+	cargo: string;
+	active: boolean;
+	ativo: boolean;
+	foto_url: string | null;
+	photo_url: string | null;
+	comissao_percent: number;
+	email: string | null;
+	barbearia_id: string;
+	usuario_id: string | null;
+	convite_pendente?: any;
+	access_status: string;
+}
+
+async function attachPendingInvites(barbers: any[]) {
 	if (!barbers.length) return barbers;
 
 	const ids = barbers.map((barber) => barber.id);
@@ -41,7 +58,7 @@ async function attachPendingInvites(barbers) {
 	});
 }
 
-function toApi(row) {
+function toApi(row: any): ApiBarberRow | null {
 	if (!row) return null;
 	return {
 		id: row.id,
@@ -61,7 +78,7 @@ function toApi(row) {
 	};
 }
 
-exports.findAllByBarbearia = async function (barbeariaId) {
+export async function findAllByBarbearia(barbeariaId: string): Promise<ApiBarberRow[]> {
 	const { data, error } = await supabase
 		.from("barbeiros")
 		.select(
@@ -72,9 +89,9 @@ exports.findAllByBarbearia = async function (barbeariaId) {
 		.order("nome", { ascending: true });
 	if (error) throw error;
 	return attachPendingInvites((data || []).map(toApi));
-};
+}
 
-exports.findByIdInBarbearia = async function (id, barbeariaId) {
+export async function findByIdInBarbearia(id: string, barbeariaId: string): Promise<ApiBarberRow | null> {
 	const { data, error } = await supabase
 		.from("barbeiros")
 		.select(
@@ -86,9 +103,9 @@ exports.findByIdInBarbearia = async function (id, barbeariaId) {
 		.maybeSingle();
 	if (error && error.code !== "PGRST116") throw error;
 	return toApi(data);
-};
+}
 
-exports.create = async function ({ barbeariaId, nome, email, comissao_percent }) {
+export async function create({ barbeariaId, nome, email, comissao_percent }: { barbeariaId: string; nome: string; email?: string | null; comissao_percent?: number }): Promise<ApiBarberRow | null> {
 	const { data, error } = await supabase
 		.from("barbeiros")
 		.insert({
@@ -104,10 +121,10 @@ exports.create = async function ({ barbeariaId, nome, email, comissao_percent })
 		.single();
 	if (error) throw error;
 	return toApi(data);
-};
+}
 
-exports.update = async function (id, barbeariaId, updates) {
-	const row = {};
+export async function update(id: string, barbeariaId: string, updates: Record<string, any>): Promise<ApiBarberRow | null> {
+	const row: Record<string, any> = {};
 	if (updates.nome !== undefined) row.nome = updates.nome;
 	if (updates.email !== undefined) row.email = updates.email || null;
 	if (updates.comissao_percent !== undefined) {
@@ -126,9 +143,9 @@ exports.update = async function (id, barbeariaId, updates) {
 		.single();
 	if (error) throw error;
 	return toApi(data);
-};
+}
 
-exports.linkUser = async function (id, barbeariaId, userId, email) {
+export async function linkUser(id: string, barbeariaId: string, userId: string, email?: string): Promise<ApiBarberRow | null> {
 	const { data, error } = await supabase
 		.from("barbeiros")
 		.update({
@@ -144,27 +161,27 @@ exports.linkUser = async function (id, barbeariaId, userId, email) {
 		.maybeSingle();
 	if (error && error.code !== "PGRST116") throw error;
 	return toApi(data);
-};
+}
 
-exports.countAppointments = async function (barberId) {
+export async function countAppointments(barberId: string): Promise<number> {
 	const { count, error } = await supabase
 		.from("agendamentos")
 		.select("id", { count: "exact", head: true })
 		.eq("barbeiro_id", barberId);
 	if (error) throw error;
 	return count || 0;
-};
+}
 
-exports.hardDelete = async function (id, barbeariaId) {
+export async function hardDelete(id: string, barbeariaId: string): Promise<void> {
 	const { error } = await supabase
 		.from("barbeiros")
 		.delete()
 		.eq("id", id)
 		.eq("barbearia_id", barbeariaId);
 	if (error) throw error;
-};
+}
 
-exports.deletePendingInvites = async function (barberId, barbeariaId) {
+export async function deletePendingInvites(barberId: string, barbeariaId?: string): Promise<void> {
 	let query = supabase
 		.from("convites_barbeiros")
 		.delete()
@@ -177,4 +194,15 @@ exports.deletePendingInvites = async function (barberId, barbeariaId) {
 
 	const { error } = await query;
 	if (error) throw error;
+}
+
+module.exports = {
+	findAllByBarbearia,
+	findByIdInBarbearia,
+	create,
+	update,
+	linkUser,
+	countAppointments,
+	hardDelete,
+	deletePendingInvites,
 };

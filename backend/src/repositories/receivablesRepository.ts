@@ -1,11 +1,11 @@
 const supabase = require("../lib/supabase");
 
-function toNumber(value) {
+function toNumber(value: any): number {
 	const number = Number(value || 0);
 	return Number.isFinite(number) ? number : 0;
 }
 
-function toApi(row) {
+export function toApi(row: any) {
 	if (!row) return null;
 	return {
 		id: row.id,
@@ -41,13 +41,20 @@ function toApi(row) {
 const selectFields =
 	"*, barbeiros(id,nome,comissao_percent), formas_pagamento(id,codigo,nome), agendamentos(id,hora)";
 
-exports.findAll = async function ({
+export async function findAll({
 	barbeariaId,
 	barbeiroId,
 	status = "aberto",
 	startDate,
 	endDate,
 	search,
+}: {
+	barbeariaId: string;
+	barbeiroId?: string;
+	status?: string;
+	startDate?: string;
+	endDate?: string;
+	search?: string;
 }) {
 	let query = supabase
 		.from("contas_receber")
@@ -72,9 +79,9 @@ exports.findAll = async function ({
 	const { data, error } = await query.order(dateColumn, { ascending: false });
 	if (error) throw error;
 	return (data || []).map(toApi);
-};
+}
 
-exports.findById = async function (id, { barbeariaId, barbeiroId }) {
+export async function findById(id: string, { barbeariaId, barbeiroId }: { barbeariaId: string; barbeiroId?: string }) {
 	let query = supabase
 		.from("contas_receber")
 		.select(selectFields)
@@ -84,9 +91,9 @@ exports.findById = async function (id, { barbeariaId, barbeiroId }) {
 	const { data, error } = await query.maybeSingle();
 	if (error) throw error;
 	return toApi(data);
-};
+}
 
-exports.createManual = async function (payload, context) {
+export async function createManual(payload: Record<string, any>, context: { barbeariaId: string; barbeiroId?: string; userId?: string }) {
 	const { data, error } = await supabase
 		.from("contas_receber")
 		.insert({
@@ -107,9 +114,9 @@ exports.createManual = async function (payload, context) {
 		.single();
 	if (error) throw error;
 	return toApi(data);
-};
+}
 
-exports.update = async function (id, updates, { barbeariaId, barbeiroId }) {
+export async function update(id: string, updates: Record<string, any>, { barbeariaId, barbeiroId }: { barbeariaId: string; barbeiroId?: string }) {
 	const row = {
 		...(updates.client_name !== undefined ? { nome_cliente: updates.client_name } : {}),
 		...(updates.description !== undefined ? { descricao: updates.description } : {}),
@@ -145,9 +152,9 @@ exports.update = async function (id, updates, { barbeariaId, barbeiroId }) {
 	const { data, error } = await query.select(selectFields).single();
 	if (error) throw error;
 	return toApi(data);
-};
+}
 
-exports.upsertFromAppointment = async function (appointment, { userId } = {}) {
+export async function upsertFromAppointment(appointment: Record<string, any>, { userId }: { userId?: string } = {}) {
 	const row = {
 		barbearia_id: appointment.barbearia_id,
 		barbeiro_id: appointment.barbeiro_id || null,
@@ -175,9 +182,9 @@ exports.upsertFromAppointment = async function (appointment, { userId } = {}) {
 		.single();
 	if (error) throw error;
 	return toApi(data);
-};
+}
 
-exports.updateByAppointment = async function (appointmentId, updates) {
+export async function updateByAppointment(appointmentId: string, updates: Record<string, any>) {
 	const row = {
 		...(updates.status !== undefined ? { status: updates.status } : {}),
 		...(updates.payment_method_id !== undefined ?
@@ -200,9 +207,9 @@ exports.updateByAppointment = async function (appointmentId, updates) {
 		.maybeSingle();
 	if (error) throw error;
 	return toApi(data);
-};
+}
 
-exports.findPaidManual = async function ({ barbeariaId, barbeiroId, startDate, endDate }) {
+export async function findPaidManual({ barbeariaId, barbeiroId, startDate, endDate }: { barbeariaId: string; barbeiroId?: string; startDate?: string; endDate?: string }) {
 	let query = supabase
 		.from("contas_receber")
 		.select(selectFields)
@@ -215,9 +222,9 @@ exports.findPaidManual = async function ({ barbeariaId, barbeiroId, startDate, e
 	const { data, error } = await query.order("data_pagamento", { ascending: true });
 	if (error) throw error;
 	return data || [];
-};
+}
 
-exports.toFinancialRow = function (row) {
+export function toFinancialRow(row: any) {
 	return {
 		id: `receivable:${row.id}`,
 		total: toNumber(row.valor),
@@ -235,4 +242,15 @@ exports.toFinancialRow = function (row) {
 		agendamento_produtos: [],
 		source: "manual_receivable",
 	};
+}
+
+module.exports = {
+	findAll,
+	findById,
+	createManual,
+	update,
+	upsertFromAppointment,
+	updateByAppointment,
+	findPaidManual,
+	toFinancialRow,
 };

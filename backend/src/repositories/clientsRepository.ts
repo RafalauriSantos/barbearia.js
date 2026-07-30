@@ -1,11 +1,11 @@
 const supabase = require("../lib/supabase");
 
-function toNumber(value) {
+function toNumber(value: any): number {
 	const numeric = Number(value || 0);
 	return Number.isFinite(numeric) ? numeric : 0;
 }
 
-function addDays(dayKey, days) {
+function addDays(dayKey?: string | null, days?: number): string | null {
 	if (!dayKey) return null;
 	const [year, month, day] = String(dayKey).split("-").map(Number);
 	if (!year || !month || !day) return null;
@@ -17,20 +17,20 @@ function addDays(dayKey, days) {
 	return `${yyyy}-${mm}-${dd}`;
 }
 
-function parsePreferredTime(observacoes) {
+function parsePreferredTime(observacoes?: string | null): string | null {
 	if (!observacoes) return null;
 	const match = String(observacoes).match(/\[horario_fixo:(\d{2}:\d{2})\]/);
 	return match ? match[1] : null;
 }
 
-function cleanNotes(observacoes) {
+function cleanNotes(observacoes?: string | null): string {
 	if (!observacoes) return "";
 	return String(observacoes)
 		.replace(/\[horario_fixo:\d{2}:\d{2}\]/g, "")
 		.trim();
 }
 
-function todayInSaoPaulo() {
+function todayInSaoPaulo(): string {
 	return new Intl.DateTimeFormat("en-CA", {
 		timeZone: "America/Sao_Paulo",
 		year: "numeric",
@@ -39,13 +39,13 @@ function todayInSaoPaulo() {
 	}).format(new Date());
 }
 
-function sortCuts(cuts = []) {
+function sortCuts(cuts: any[] = []): any[] {
 	return [...cuts].sort((first, second) => {
 		return String(second.data).localeCompare(String(first.data));
 	});
 }
 
-function toCutApi(row) {
+function toCutApi(row: any) {
 	const appointment = row.agendamentos || null;
 	return {
 		id: row.id,
@@ -67,7 +67,7 @@ function toCutApi(row) {
 	};
 }
 
-function toClientApi(row) {
+function toClientApi(row: any) {
 	const cuts = sortCuts(row.cliente_cortes || []).map(toCutApi);
 	const cutsCount = cuts.length;
 	const paidCutsCount = cuts.filter((cut) => cut.paid).length;
@@ -82,11 +82,11 @@ function toClientApi(row) {
 	const today = todayInSaoPaulo();
 	const nextAppointment = (row.agendamentos || [])
 		.filter(
-			(appointment) =>
+			(appointment: any) =>
 				appointment.status_atendimento !== "cancelado" &&
 				String(appointment.data) >= today,
 		)
-		.sort((first, second) =>
+		.sort((first: any, second: any) =>
 			`${first.data} ${first.hora}`.localeCompare(`${second.data} ${second.hora}`),
 		)[0];
 	const nextApptTime = nextAppointment ? String(nextAppointment.hora || "").slice(0, 5) : null;
@@ -128,7 +128,7 @@ function toClientApi(row) {
 	};
 }
 
-function toWaitlistApi(row) {
+function toWaitlistApi(row: any) {
 	return {
 		id: row.id,
 		name: row.nome,
@@ -143,7 +143,7 @@ function toWaitlistApi(row) {
 	};
 }
 
-function toClientDatabase(payload) {
+function toClientDatabase(payload: Record<string, any>) {
 	let observacoes = payload.notes !== undefined ? cleanNotes(payload.notes || "") : undefined;
 	if (payload.preferred_time) {
 		const tag = `[horario_fixo:${String(payload.preferred_time).slice(0, 5)}]`;
@@ -168,7 +168,7 @@ function toClientDatabase(payload) {
 	};
 }
 
-function toCutDatabase(payload) {
+function toCutDatabase(payload: Record<string, any>) {
 	return {
 		...(payload.date !== undefined ? { data: payload.date } : {}),
 		...(payload.paid !== undefined ? { pago: payload.paid } : {}),
@@ -180,7 +180,7 @@ function toCutDatabase(payload) {
 	};
 }
 
-function toWaitlistDatabase(payload) {
+function toWaitlistDatabase(payload: Record<string, any>) {
 	return {
 		...(payload.name !== undefined ? { nome: payload.name } : {}),
 		...(payload.phone !== undefined ? { telefone: payload.phone || null } : {}),
@@ -195,7 +195,7 @@ function toWaitlistDatabase(payload) {
 	};
 }
 
-exports.findFixedClients = async function ({ barbeariaId, barbeiroId }) {
+export async function findFixedClients({ barbeariaId, barbeiroId }: { barbeariaId: string; barbeiroId?: string }) {
 	let query = supabase
 		.from("clientes")
 		.select("*, cliente_cortes(*,agendamentos(id,hora,status_pagamento,forma_pagamento_id,data_pagamento,prazo_fiado_data)), barbeiros(nome), agendamentos(id,data,hora,status_atendimento)")
@@ -205,9 +205,9 @@ exports.findFixedClients = async function ({ barbeariaId, barbeiroId }) {
 	const { data, error } = await query.order("nome", { ascending: true });
 	if (error) throw error;
 	return (data || []).map(toClientApi);
-};
+}
 
-exports.findFixedClientById = async function (id, { barbeariaId, barbeiroId }) {
+export async function findFixedClientById(id: string, { barbeariaId, barbeiroId }: { barbeariaId: string; barbeiroId?: string }) {
 	let query = supabase
 		.from("clientes")
 		.select("*, cliente_cortes(*,agendamentos(id,hora,status_pagamento,forma_pagamento_id,data_pagamento,prazo_fiado_data)), barbeiros(nome), agendamentos(id,data,hora,status_atendimento)")
@@ -217,9 +217,9 @@ exports.findFixedClientById = async function (id, { barbeariaId, barbeiroId }) {
 	const { data, error } = await query.maybeSingle();
 	if (error) throw error;
 	return data ? toClientApi(data) : null;
-};
+}
 
-exports.createFixedClient = async function (payload, { barbeariaId, barbeiroId }) {
+export async function createFixedClient(payload: Record<string, any>, { barbeariaId, barbeiroId }: { barbeariaId: string; barbeiroId?: string }) {
 	const row = {
 		barbearia_id: barbeariaId,
 		barbeiro_id: barbeiroId,
@@ -237,9 +237,9 @@ exports.createFixedClient = async function (payload, { barbeariaId, barbeiroId }
 		.single();
 	if (error) throw error;
 	return toClientApi(data);
-};
+}
 
-exports.updateFixedClient = async function (id, updates, { barbeariaId, barbeiroId }) {
+export async function updateFixedClient(id: string, updates: Record<string, any>, { barbeariaId, barbeiroId }: { barbeariaId: string; barbeiroId?: string }) {
 	let query = supabase
 		.from("clientes")
 		.update(toClientDatabase(updates))
@@ -251,9 +251,9 @@ exports.updateFixedClient = async function (id, updates, { barbeariaId, barbeiro
 		.single();
 	if (error) throw error;
 	return toClientApi(data);
-};
+}
 
-exports.removeFixedClient = async function (id, { barbeariaId, barbeiroId }) {
+export async function removeFixedClient(id: string, { barbeariaId, barbeiroId }: { barbeariaId: string; barbeiroId?: string }) {
 	let query = supabase
 		.from("clientes")
 		.update({ ativo: false })
@@ -263,9 +263,9 @@ exports.removeFixedClient = async function (id, { barbeariaId, barbeiroId }) {
 	const { error } = await query;
 	if (error) throw error;
 	return true;
-};
+}
 
-exports.createClientCut = async function (clientId, payload, { barbeariaId }) {
+export async function createClientCut(clientId: string, payload: Record<string, any>, { barbeariaId }: { barbeariaId: string }) {
 	const row = {
 		cliente_id: clientId,
 		barbearia_id: barbeariaId,
@@ -282,9 +282,9 @@ exports.createClientCut = async function (clientId, payload, { barbeariaId }) {
 		.single();
 	if (error) throw error;
 	return toCutApi(data);
-};
+}
 
-exports.findClientCutById = async function (clientId, cutId, { barbeariaId }) {
+export async function findClientCutById(clientId: string, cutId: string, { barbeariaId }: { barbeariaId: string }) {
 	const { data, error } = await supabase
 		.from("cliente_cortes")
 		.select("*,agendamentos(id,hora,status_pagamento,forma_pagamento_id,data_pagamento,prazo_fiado_data)")
@@ -294,13 +294,13 @@ exports.findClientCutById = async function (clientId, cutId, { barbeariaId }) {
 		.maybeSingle();
 	if (error) throw error;
 	return data ? toCutApi(data) : null;
-};
+}
 
-exports.updateClientCut = async function (
-	clientId,
-	cutId,
-	updates,
-	{ barbeariaId },
+export async function updateClientCut(
+	clientId: string,
+	cutId: string,
+	updates: Record<string, any>,
+	{ barbeariaId }: { barbeariaId: string },
 ) {
 	const { data, error } = await supabase
 		.from("cliente_cortes")
@@ -312,9 +312,9 @@ exports.updateClientCut = async function (
 		.single();
 	if (error) throw error;
 	return toCutApi(data);
-};
+}
 
-exports.removeClientCut = async function (clientId, cutId, { barbeariaId }) {
+export async function removeClientCut(clientId: string, cutId: string, { barbeariaId }: { barbeariaId: string }) {
 	const { error } = await supabase
 		.from("cliente_cortes")
 		.delete()
@@ -323,9 +323,9 @@ exports.removeClientCut = async function (clientId, cutId, { barbeariaId }) {
 		.eq("barbearia_id", barbeariaId);
 	if (error) throw error;
 	return true;
-};
+}
 
-exports.findWaitlist = async function ({ barbeariaId, barbeiroId }) {
+export async function findWaitlist({ barbeariaId, barbeiroId }: { barbeariaId: string; barbeiroId?: string }) {
 	let query = supabase
 		.from("lista_espera")
 		.select("*, barbeiros(nome)")
@@ -335,9 +335,9 @@ exports.findWaitlist = async function ({ barbeariaId, barbeiroId }) {
 	const { data, error } = await query.order("criado_em", { ascending: true });
 	if (error) throw error;
 	return (data || []).map(toWaitlistApi);
-};
+}
 
-exports.createWaitlistEntry = async function (payload, { barbeariaId, barbeiroId }) {
+export async function createWaitlistEntry(payload: Record<string, any>, { barbeariaId, barbeiroId }: { barbeariaId: string; barbeiroId?: string }) {
 	const row = {
 		barbearia_id: barbeariaId,
 		barbeiro_id: barbeiroId,
@@ -354,9 +354,9 @@ exports.createWaitlistEntry = async function (payload, { barbeariaId, barbeiroId
 		.single();
 	if (error) throw error;
 	return toWaitlistApi(data);
-};
+}
 
-exports.findWaitlistEntryById = async function (id, { barbeariaId, barbeiroId }) {
+export async function findWaitlistEntryById(id: string, { barbeariaId, barbeiroId }: { barbeariaId: string; barbeiroId?: string }) {
 	let query = supabase
 		.from("lista_espera")
 		.select("*, barbeiros(nome)")
@@ -366,9 +366,9 @@ exports.findWaitlistEntryById = async function (id, { barbeariaId, barbeiroId })
 	const { data, error } = await query.maybeSingle();
 	if (error) throw error;
 	return data ? toWaitlistApi(data) : null;
-};
+}
 
-exports.updateWaitlistEntry = async function (id, updates, { barbeariaId, barbeiroId }) {
+export async function updateWaitlistEntry(id: string, updates: Record<string, any>, { barbeariaId, barbeiroId }: { barbeariaId: string; barbeiroId?: string }) {
 	let query = supabase
 		.from("lista_espera")
 		.update(toWaitlistDatabase(updates))
@@ -378,9 +378,9 @@ exports.updateWaitlistEntry = async function (id, updates, { barbeariaId, barbei
 	const { data, error } = await query.select("*, barbeiros(nome)").single();
 	if (error) throw error;
 	return toWaitlistApi(data);
-};
+}
 
-exports.removeWaitlistEntry = async function (id, { barbeariaId, barbeiroId }) {
+export async function removeWaitlistEntry(id: string, { barbeariaId, barbeiroId }: { barbeariaId: string; barbeiroId?: string }) {
 	let query = supabase
 		.from("lista_espera")
 		.update({ status: "cancelado" })
@@ -390,4 +390,21 @@ exports.removeWaitlistEntry = async function (id, { barbeariaId, barbeiroId }) {
 	const { error } = await query;
 	if (error) throw error;
 	return true;
+}
+
+module.exports = {
+	findFixedClients,
+	findFixedClientById,
+	createFixedClient,
+	updateFixedClient,
+	removeFixedClient,
+	createClientCut,
+	findClientCutById,
+	updateClientCut,
+	removeClientCut,
+	findWaitlist,
+	createWaitlistEntry,
+	findWaitlistEntryById,
+	updateWaitlistEntry,
+	removeWaitlistEntry,
 };
