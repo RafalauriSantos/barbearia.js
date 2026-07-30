@@ -1,51 +1,51 @@
 import { apiClient } from "./client";
 
-export async function login(credentials) {
+export async function login(credentials: Record<string, unknown>) {
 	const response = await apiClient.post("/auth/login", credentials);
 	return response.data;
 }
 
-export async function refreshSession(refreshToken) {
+export async function refreshSession(refreshToken: string) {
 	const response = await apiClient.post("/auth/refresh", { refreshToken });
 	return response.data;
 }
 
-export async function register(credentials) {
+export async function register(credentials: Record<string, unknown>) {
 	const response = await apiClient.post("/auth/register", credentials);
 	return response.data;
 }
 
-export async function verifyEmail(token) {
+export async function verifyEmail(token: string) {
 	const response = await apiClient.post("/auth/verify-email", { token });
 	return response.data;
 }
 
-export async function verifyEmailCode(payload) {
+export async function verifyEmailCode(payload: Record<string, unknown>) {
 	const response = await apiClient.post("/auth/verify-code", payload);
 	return response.data;
 }
 
-export async function resendEmailCode(payload) {
+export async function resendEmailCode(payload: Record<string, unknown>) {
 	const response = await apiClient.post("/auth/resend-code", payload);
 	return response.data;
 }
 
-export async function requestPasswordReset(payload) {
+export async function requestPasswordReset(payload: Record<string, unknown>) {
 	const response = await apiClient.post("/auth/forgot-password", payload);
 	return response.data;
 }
 
-export async function resetPassword(payload) {
+export async function resetPassword(payload: Record<string, unknown>) {
 	const response = await apiClient.post("/auth/reset-password", payload);
 	return response.data;
 }
 
-export async function getInvite(token) {
+export async function getInvite(token: string) {
 	const response = await apiClient.get(`/invites/${token}`);
 	return response.data;
 }
 
-export async function acceptInvite(token, payload) {
+export async function acceptInvite(token: string, payload: Record<string, unknown>) {
 	const response = await apiClient.post(`/invites/${token}/accept`, payload);
 	return response.data;
 }

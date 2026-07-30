@@ -1,4 +1,4 @@
-import axios from "axios";
+import axios, { AxiosError, InternalAxiosRequestConfig } from "axios";
 import {
 	clearSessionTokens,
 	getAccessToken,
@@ -6,16 +6,16 @@ import {
 	setAccessToken,
 } from "@/lib/auth";
 
-export const API_BASE_URL =
+export const API_BASE_URL: string =
 	import.meta.env.VITE_API_URL || "http://localhost:3000";
-export const API_TIMEOUT_MS = Number(
+export const API_TIMEOUT_MS: number = Number(
 	import.meta.env.VITE_API_TIMEOUT_MS || 75000,
 );
 export const SESSION_EXPIRED_EVENT = "gestor-barbearia:session-expired";
 const NETWORK_ERROR_MESSAGE =
 	"Sem conexao com a internet ou a API esta indisponivel. Tente novamente.";
 
-function isNetworkError(error) {
+function isNetworkError(error: any): boolean {
 	if (error?.response) return false;
 	const code = String(error?.code || "").toUpperCase();
 	const message = String(error?.message || "").toLowerCase();
@@ -30,7 +30,7 @@ function isNetworkError(error) {
 	);
 }
 
-function expireSession() {
+function expireSession(): void {
 	clearSessionTokens();
 	if (typeof window !== "undefined") {
 		window.dispatchEvent(new Event(SESSION_EXPIRED_EVENT));
@@ -38,7 +38,12 @@ function expireSession() {
 }
 
 export class AppApiError extends Error {
-	constructor(message, status, details, retryAfter) {
+	public status?: number;
+	public details?: any;
+	public kind: "network" | "http";
+	public retryAfter?: number;
+
+	constructor(message: string, status?: number, details?: any, retryAfter?: unknown) {
 		super(message);
 		this.name = "AppApiError";
 		this.status = status;
@@ -48,7 +53,7 @@ export class AppApiError extends Error {
 	}
 }
 
-function toAppApiError(error, fallbackMessage) {
+function toAppApiError(error: any, fallbackMessage?: string): AppApiError {
 	if (error instanceof AppApiError) return error;
 
 	if (isNetworkError(error)) {
@@ -88,10 +93,16 @@ export const apiClient = axios.create({
 	timeout: API_TIMEOUT_MS,
 });
 
-const refreshRequests = new Map();
-let warmUpRequest = null;
+interface CustomAxiosRequestConfig extends InternalAxiosRequestConfig {
+	_sessionAccessToken?: string;
+	_sessionRefreshToken?: string;
+	_retry?: boolean;
+}
 
-export function warmUpApi() {
+const refreshRequests = new Map<string, Promise<any>>();
+let warmUpRequest: Promise<any> | null = null;
+
+export function warmUpApi(): Promise<any> {
 	if (import.meta.env.MODE === "test") {
 		return Promise.resolve(null);
 	}
@@ -111,7 +122,7 @@ export function warmUpApi() {
 	return warmUpRequest;
 }
 
-apiClient.interceptors.request.use((config) => {
+apiClient.interceptors.request.use((config: CustomAxiosRequestConfig) => {
 	const token = getAccessToken();
 	config._sessionAccessToken = token;
 	config._sessionRefreshToken = getRefreshToken();
@@ -124,7 +135,7 @@ apiClient.interceptors.request.use((config) => {
 
 apiClient.interceptors.response.use(
 	(response) => response,
-	async (error) => {
+	async (error: AxiosError & { config?: CustomAxiosRequestConfig }) => {
 		const status = error?.response?.status;
 		const originalRequest = error?.config;
 		const refreshToken = originalRequest?._sessionRefreshToken || "";

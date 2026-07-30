@@ -1,5 +1,15 @@
-import { useEffect, useRef } from "react";
+import React, { useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
+
+export interface BaseModalProps {
+	isOpen?: boolean;
+	onClose?: () => void;
+	title?: React.ReactNode;
+	eyebrow?: React.ReactNode;
+	children?: React.ReactNode;
+	maxWidthClass?: string;
+	variant?: "bottom-sheet" | "centered";
+}
 
 export function BaseModal({
 	isOpen = true,
@@ -8,14 +18,14 @@ export function BaseModal({
 	eyebrow,
 	children,
 	maxWidthClass = "max-w-[520px]",
-	variant = "bottom-sheet", // 'bottom-sheet' | 'centered'
-}) {
-	const overlayRef = useRef(null);
-	const containerRef = useRef(null);
-	const previousFocusRef = useRef(null);
-	const savedScrollYRef = useRef(0);
-	const savedVisualViewportHeightRef = useRef(null);
-	const originalOverflowRef = useRef("");
+	variant = "bottom-sheet",
+}: BaseModalProps) {
+	const overlayRef = useRef<HTMLDivElement>(null);
+	const containerRef = useRef<HTMLDivElement>(null);
+	const previousFocusRef = useRef<Element | null>(null);
+	const savedScrollYRef = useRef<number>(0);
+	const savedVisualViewportHeightRef = useRef<number | null>(null);
+	const originalOverflowRef = useRef<string>("");
 	const onCloseRef = useRef(onClose);
 
 	useEffect(() => {
@@ -25,8 +35,8 @@ export function BaseModal({
 	// Função centralizada para fechar com desalocacao limpa de foco e viewport
 	const executeClose = () => {
 		// 1. Desfoca ativamente qualquer campo focado para recolher o teclado
-		if (document.activeElement && typeof document.activeElement.blur === "function") {
-			document.activeElement.blur();
+		if (document.activeElement && typeof (document.activeElement as HTMLElement).blur === "function") {
+			(document.activeElement as HTMLElement).blur();
 		}
 
 		// 2. Notifica o manipulador de fechamento pai
@@ -44,8 +54,8 @@ export function BaseModal({
 
 		return () => {
 			// Ao desmontar: Desfocar ativamente qualquer input dentro do modal
-			if (document.activeElement && typeof document.activeElement.blur === "function") {
-				document.activeElement.blur();
+			if (document.activeElement && typeof (document.activeElement as HTMLElement).blur === "function") {
+				(document.activeElement as HTMLElement).blur();
 			}
 
 			// Função de restauração sincronizada de viewport e scroll
@@ -63,15 +73,15 @@ export function BaseModal({
 				document.body.style.overflow = originalOverflowRef.current;
 
 				// Restaura o foco para o elemento anterior
-				if (previousFocusRef.current && typeof previousFocusRef.current.focus === "function") {
-					previousFocusRef.current.focus();
+				if (previousFocusRef.current && typeof (previousFocusRef.current as HTMLElement).focus === "function") {
+					(previousFocusRef.current as HTMLElement).focus();
 				}
 			};
 
 			if (window.visualViewport) {
 				const handleViewportChange = () => {
-					window.visualViewport.removeEventListener("resize", handleViewportChange);
-					window.visualViewport.removeEventListener("scroll", handleViewportChange);
+					window.visualViewport?.removeEventListener("resize", handleViewportChange);
+					window.visualViewport?.removeEventListener("scroll", handleViewportChange);
 					requestAnimationFrame(restorePosition);
 				};
 				window.visualViewport.addEventListener("resize", handleViewportChange, { once: true });
@@ -86,7 +96,7 @@ export function BaseModal({
 
 	// 2. Focus Trap & Tecla ESC / Voltar
 	useEffect(() => {
-		const handleKeyDown = (e) => {
+		const handleKeyDown = (e: KeyboardEvent) => {
 			if (e.key === "Escape") {
 				executeClose();
 				return;
@@ -94,7 +104,7 @@ export function BaseModal({
 
 			if (e.key === "Tab") {
 				if (!containerRef.current) return;
-				const focusableElements = containerRef.current.querySelectorAll(
+				const focusableElements = containerRef.current.querySelectorAll<HTMLElement>(
 					'a[href], area[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), button:not([disabled]), iframe, object, embed, [tabindex="0"], [contenteditable]'
 				);
 				if (focusableElements.length === 0) return;
@@ -120,7 +130,7 @@ export function BaseModal({
 
 		// Foco inicial seguro no container ou primeiro input
 		if (containerRef.current && !containerRef.current.contains(document.activeElement)) {
-			const focusableElements = containerRef.current.querySelectorAll(
+			const focusableElements = containerRef.current.querySelectorAll<HTMLElement>(
 				'a[href], area[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), button:not([disabled]), iframe, object, embed, [tabindex="0"], [contenteditable]'
 			);
 			if (focusableElements.length > 0) {
@@ -150,7 +160,7 @@ export function BaseModal({
 	return createPortal(
 		<div
 			ref={overlayRef}
-			tabIndex="-1"
+			tabIndex={-1}
 			className={`fixed inset-0 z-[9999] flex ${alignmentClasses} bg-black/75 backdrop-blur-sm`}
 			onClick={(e) => {
 				if (e.target === overlayRef.current) {
@@ -159,7 +169,7 @@ export function BaseModal({
 			}}>
 			<div
 				ref={containerRef}
-				tabIndex="-1"
+				tabIndex={-1}
 				className={modalClasses}
 				onClick={(e) => e.stopPropagation()}>
 				{(title || eyebrow || onClose) && (

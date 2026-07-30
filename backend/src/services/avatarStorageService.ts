@@ -1,10 +1,10 @@
-const { randomUUID } = require("crypto");
-const { AppError } = require("../lib/errors");
-const { env } = require("../config/env");
+import { randomUUID } from "crypto";
+import { AppError } from "../lib/errors";
+import { env } from "../config/env";
 const supabase = require("../lib/supabase");
 
 const MAX_AVATAR_BYTES = 2 * 1024 * 1024;
-const MIME_TO_EXTENSION = {
+const MIME_TO_EXTENSION: Record<string, string> = {
 	"image/jpeg": "jpg",
 	"image/png": "png",
 	"image/webp": "webp",
@@ -12,7 +12,13 @@ const MIME_TO_EXTENSION = {
 
 let bucketReady = false;
 
-function parseDataUrl(dataUrl) {
+interface ParsedAvatar {
+	buffer: Buffer;
+	mimeType: string;
+	extension: string;
+}
+
+function parseDataUrl(dataUrl: string): ParsedAvatar {
 	const match = String(dataUrl || "").match(
 		/^data:(image\/(?:jpeg|png|webp));base64,([A-Za-z0-9+/=\s]+)$/u,
 	);
@@ -43,7 +49,7 @@ function parseDataUrl(dataUrl) {
 	};
 }
 
-async function ensureBucket() {
+async function ensureBucket(): Promise<void> {
 	if (bucketReady) return;
 
 	const { error } = await supabase.storage.createBucket(env.AVATAR_BUCKET, {
@@ -63,11 +69,17 @@ async function ensureBucket() {
 	bucketReady = true;
 }
 
-exports.uploadBarberAvatar = async function ({
+export interface UploadBarberAvatarPayload {
+	barbeariaId: string;
+	barbeiroId: string;
+	dataUrl: string;
+}
+
+export async function uploadBarberAvatar({
 	barbeariaId,
 	barbeiroId,
 	dataUrl,
-}) {
+}: UploadBarberAvatarPayload): Promise<string> {
 	const { buffer, mimeType, extension } = parseDataUrl(dataUrl);
 	await ensureBucket();
 
@@ -87,4 +99,6 @@ exports.uploadBarberAvatar = async function ({
 		.getPublicUrl(filePath);
 
 	return data.publicUrl;
-};
+}
+
+module.exports = { uploadBarberAvatar };

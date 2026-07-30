@@ -1,21 +1,26 @@
-const { AppError } = require("../lib/errors");
-const { env } = require("../config/env");
+import { AppError } from "../lib/errors";
+import { env } from "../config/env";
 
 const CLOUDFLARE_TURNSTILE_VERIFY_URL =
 	"https://challenges.cloudflare.com/turnstile/v0/siteverify";
 
 // Official Cloudflare testing keys
-const DUMMY_PASS_SECRET = "1x0000000000000000000000000000000AA";
-const DUMMY_FAIL_SECRET = "2x0000000000000000000000000000000AA";
+export const DUMMY_PASS_SECRET = "1x0000000000000000000000000000000AA";
+export const DUMMY_FAIL_SECRET = "2x0000000000000000000000000000000AA";
+
+export interface TurnstileRuntimeEnv {
+	TURNSTILE_SECRET_KEY?: string;
+	NODE_ENV?: string;
+}
 
 /**
  * Validates a Cloudflare Turnstile token server-side.
- * @param {string} token - The response token from Turnstile widget
- * @param {string} [remoteIp] - Optional client IP address
- * @param {object} [runtimeEnv] - Optional Cloudflare Worker environment object (c.env)
- * @returns {Promise<boolean>}
  */
-async function verifyToken(token, remoteIp, runtimeEnv) {
+export async function verifyToken(
+	token?: string | null,
+	remoteIp?: string | null,
+	runtimeEnv?: TurnstileRuntimeEnv,
+): Promise<boolean> {
 	const secretKey =
 		runtimeEnv?.TURNSTILE_SECRET_KEY ||
 		env.TURNSTILE_SECRET_KEY ||
@@ -82,7 +87,7 @@ async function verifyToken(token, remoteIp, runtimeEnv) {
 			);
 		}
 
-		const data = await response.json();
+		const data: any = await response.json();
 
 		if (!data.success) {
 			const errorCodes = data["error-codes"] || [];
@@ -100,7 +105,7 @@ async function verifyToken(token, remoteIp, runtimeEnv) {
 		}
 
 		return true;
-	} catch (error) {
+	} catch (error: any) {
 		if (error instanceof AppError) {
 			throw error;
 		}
