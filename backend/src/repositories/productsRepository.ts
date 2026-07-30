@@ -1,6 +1,20 @@
 const supabase = require("../lib/supabase");
 
-function toApi(row) {
+export interface ApiProductItem {
+	id: string;
+	name: string;
+	price: number;
+	purchase_type: string;
+	cost_price: number;
+	supplier_name: string;
+	seller_commission_percent: number;
+	stock_quantity: number;
+	estimated_profit: number;
+	active: boolean;
+	barbearia_id: string;
+}
+
+function toApi(row: any): ApiProductItem {
 	const price = Number(row.preco || 0);
 	const costPrice = Number(row.custo || 0);
 	return {
@@ -18,7 +32,7 @@ function toApi(row) {
 	};
 }
 
-function toDatabase(payload) {
+function toDatabase(payload: Record<string, any>): Record<string, any> {
 	return {
 		...(payload.name !== undefined ? { nome: payload.name } : {}),
 		...(payload.price !== undefined ? { preco: Number(payload.price) } : {}),
@@ -45,7 +59,7 @@ function toDatabase(payload) {
 	};
 }
 
-exports.findAll = async function ({ barbeariaId }) {
+export async function findAll({ barbeariaId }: { barbeariaId: string }): Promise<ApiProductItem[]> {
 	const { data, error } = await supabase
 		.from("produtos")
 		.select("*")
@@ -54,9 +68,9 @@ exports.findAll = async function ({ barbeariaId }) {
 		.order("nome", { ascending: true });
 	if (error) throw error;
 	return (data || []).map(toApi);
-};
+}
 
-exports.findById = async function (id, { barbeariaId }) {
+export async function findById(id: string, { barbeariaId }: { barbeariaId: string }): Promise<ApiProductItem | null> {
 	const { data, error } = await supabase
 		.from("produtos")
 		.select("*")
@@ -65,9 +79,12 @@ exports.findById = async function (id, { barbeariaId }) {
 		.single();
 	if (error && error.code !== "PGRST116") throw error;
 	return data ? toApi(data) : null;
-};
+}
 
-exports.create = async function (payload, { barbeariaId }) {
+export async function create(
+	payload: Record<string, any>,
+	{ barbeariaId }: { barbeariaId: string },
+): Promise<ApiProductItem> {
 	const row = {
 		barbearia_id: barbeariaId,
 		nome: payload.name,
@@ -86,9 +103,13 @@ exports.create = async function (payload, { barbeariaId }) {
 		.single();
 	if (error) throw error;
 	return toApi(data);
-};
+}
 
-exports.update = async function (id, updates, { barbeariaId }) {
+export async function update(
+	id: string,
+	updates: Record<string, any>,
+	{ barbeariaId }: { barbeariaId: string },
+): Promise<ApiProductItem> {
 	const { data, error } = await supabase
 		.from("produtos")
 		.update(toDatabase(updates))
@@ -98,9 +119,9 @@ exports.update = async function (id, updates, { barbeariaId }) {
 		.single();
 	if (error) throw error;
 	return toApi(data);
-};
+}
 
-exports.remove = async function (id, { barbeariaId }) {
+export async function remove(id: string, { barbeariaId }: { barbeariaId: string }): Promise<boolean> {
 	const { error } = await supabase
 		.from("produtos")
 		.update({ ativo: false })
@@ -108,4 +129,12 @@ exports.remove = async function (id, { barbeariaId }) {
 		.eq("barbearia_id", barbeariaId);
 	if (error) throw error;
 	return true;
+}
+
+module.exports = {
+	findAll,
+	findById,
+	create,
+	update,
+	remove,
 };

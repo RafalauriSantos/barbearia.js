@@ -1,5 +1,5 @@
 import { AppError } from "../lib/errors";
-import { env } from "../config/env";
+const { env } = require("../config/env");
 
 const CLOUDFLARE_TURNSTILE_VERIFY_URL =
 	"https://challenges.cloudflare.com/turnstile/v0/siteverify";
@@ -99,9 +99,7 @@ export async function verifyToken(
 				"O desafio anti-bot expirou ou já foi utilizado. Recarregue a página e tente novamente."
 			:	"Verificação anti-bot falhou. Por favor, tente novamente.";
 
-			throw new AppError(400, "INVALID_TURNSTILE_TOKEN", message, {
-				errorCodes,
-			});
+			throw new AppError(400, "INVALID_TURNSTILE_TOKEN", message);
 		}
 
 		return true;

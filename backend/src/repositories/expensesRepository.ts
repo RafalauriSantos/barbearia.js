@@ -1,6 +1,14 @@
 const supabase = require("../lib/supabase");
 
-function toApi(row) {
+export interface ApiExpense {
+	id: string;
+	name: string;
+	value: number;
+	date: string;
+	barbearia_id: string;
+}
+
+function toApi(row: any): ApiExpense {
 	return {
 		id: row.id,
 		name: row.descricao,
@@ -10,7 +18,7 @@ function toApi(row) {
 	};
 }
 
-function toDatabase(payload) {
+function toDatabase(payload: Record<string, any>): Record<string, any> {
 	return {
 		...(payload.name !== undefined ? { descricao: payload.name } : {}),
 		...(payload.value !== undefined ? { valor: Number(payload.value) } : {}),
@@ -18,12 +26,17 @@ function toDatabase(payload) {
 	};
 }
 
-exports.findAll = async function ({
+export async function findAll({
 	date,
 	startDate,
 	endDate,
 	barbeariaId,
-} = {}) {
+}: {
+	date?: string;
+	startDate?: string;
+	endDate?: string;
+	barbeariaId: string;
+}): Promise<ApiExpense[]> {
 	let query = supabase
 		.from("despesas")
 		.select("*")
@@ -35,9 +48,9 @@ exports.findAll = async function ({
 	const { data, error } = await query.order("data", { ascending: true });
 	if (error) throw error;
 	return (data || []).map(toApi);
-};
+}
 
-exports.findById = async function (id, { barbeariaId }) {
+export async function findById(id: string, { barbeariaId }: { barbeariaId: string }): Promise<ApiExpense | null> {
 	const { data, error } = await supabase
 		.from("despesas")
 		.select("*")
@@ -46,9 +59,12 @@ exports.findById = async function (id, { barbeariaId }) {
 		.single();
 	if (error && error.code !== "PGRST116") throw error;
 	return data ? toApi(data) : null;
-};
+}
 
-exports.create = async function (payload, { barbeariaId }) {
+export async function create(
+	payload: { name: string; value: number; date: string },
+	{ barbeariaId }: { barbeariaId: string },
+): Promise<ApiExpense> {
 	const row = {
 		barbearia_id: barbeariaId,
 		descricao: payload.name,
@@ -62,9 +78,13 @@ exports.create = async function (payload, { barbeariaId }) {
 		.single();
 	if (error) throw error;
 	return toApi(data);
-};
+}
 
-exports.update = async function (id, updates, { barbeariaId }) {
+export async function update(
+	id: string,
+	updates: Record<string, any>,
+	{ barbeariaId }: { barbeariaId: string },
+): Promise<ApiExpense> {
 	const { data, error } = await supabase
 		.from("despesas")
 		.update(toDatabase(updates))
@@ -74,9 +94,9 @@ exports.update = async function (id, updates, { barbeariaId }) {
 		.single();
 	if (error) throw error;
 	return toApi(data);
-};
+}
 
-exports.remove = async function (id, { barbeariaId }) {
+export async function remove(id: string, { barbeariaId }: { barbeariaId: string }): Promise<boolean> {
 	const { error } = await supabase
 		.from("despesas")
 		.delete()
@@ -84,4 +104,12 @@ exports.remove = async function (id, { barbeariaId }) {
 		.eq("barbearia_id", barbeariaId);
 	if (error) throw error;
 	return true;
+}
+
+module.exports = {
+	findAll,
+	findById,
+	create,
+	update,
+	remove,
 };

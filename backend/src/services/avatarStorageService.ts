@@ -1,6 +1,6 @@
 import { randomUUID } from "crypto";
 import { AppError } from "../lib/errors";
-import { env } from "../config/env";
+const { env } = require("../config/env");
 const supabase = require("../lib/supabase");
 
 const MAX_AVATAR_BYTES = 2 * 1024 * 1024;
