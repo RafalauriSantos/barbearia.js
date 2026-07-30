@@ -1,8 +1,36 @@
 import { useEffect, useRef, useState } from "react";
 
+declare global {
+	interface Window {
+		turnstile?: {
+			render: (
+				container: HTMLElement,
+				options: {
+					sitekey: string | null;
+					theme?: string;
+					callback?: (token: string) => void;
+					"error-callback"?: (err: unknown) => void;
+					"expired-callback"?: () => void;
+				},
+			) => string;
+			remove: (widgetId: string) => void;
+		};
+		__VITEST_ENVIRONMENT__?: boolean;
+	}
+}
+
 const SCRIPT_ID = "cf-turnstile-script";
 const SCRIPT_URL =
 	"https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit";
+
+export interface TurnstileWidgetProps {
+	siteKey?: string;
+	onSuccess?: (token: string) => void;
+	onError?: (err: unknown) => void;
+	onExpire?: () => void;
+	theme?: string;
+	className?: string;
+}
 
 export function TurnstileWidget({
 	siteKey,
@@ -11,9 +39,9 @@ export function TurnstileWidget({
 	onExpire,
 	theme = "auto",
 	className = "",
-}) {
-	const containerRef = useRef(null);
-	const widgetIdRef = useRef(null);
+}: TurnstileWidgetProps) {
+	const containerRef = useRef<HTMLDivElement>(null);
+	const widgetIdRef = useRef<string | null>(null);
 
 	const envKey = import.meta.env?.VITE_TURNSTILE_SITE_KEY;
 	const validEnvKey = (envKey && envKey !== "undefined" && envKey.trim().length > 0) ? envKey.trim() : null;
@@ -29,7 +57,7 @@ export function TurnstileWidget({
 		(typeof window !== "undefined" && window.__VITEST_ENVIRONMENT__) ||
 		(typeof window !== "undefined" && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"));
 
-	const [status, setStatus] = useState(isLocalDev ? "ready" : "loading"); // 'loading' | 'ready' | 'error'
+	const [status, setStatus] = useState<"loading" | "ready" | "error">(isLocalDev ? "ready" : "loading");
 
 	useEffect(() => {
 		// In local dev/test mode, issue dummy token immediately and bypass external iframe completely
@@ -81,7 +109,7 @@ export function TurnstileWidget({
 		if (window.turnstile) {
 			renderWidget();
 		} else {
-			let script = document.getElementById(SCRIPT_ID);
+			let script = document.getElementById(SCRIPT_ID) as HTMLScriptElement | null;
 			if (!script) {
 				script = document.createElement("script");
 				script.id = SCRIPT_ID;
@@ -97,7 +125,7 @@ export function TurnstileWidget({
 				}
 			};
 
-			const handleError = (err) => {
+			const handleError = (err: Event) => {
 				if (isMounted) {
 					setStatus("error");
 					if (onError) onError(err);
@@ -109,8 +137,8 @@ export function TurnstileWidget({
 
 			return () => {
 				isMounted = false;
-				script.removeEventListener("load", handleLoad);
-				script.removeEventListener("error", handleError);
+				script?.removeEventListener("load", handleLoad);
+				script?.removeEventListener("error", handleError);
 				if (widgetIdRef.current !== null && window.turnstile) {
 					try {
 						window.turnstile.remove(widgetIdRef.current);

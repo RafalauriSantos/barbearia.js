@@ -1,5 +1,4 @@
 const supabase = require("../lib/supabase");
-
 const { getDefaultBarbeariaId } = require("../lib/tenant");
 
 const TABLES = [
@@ -14,7 +13,7 @@ const TABLES = [
 	"servicos",
 ];
 
-exports.reset = async function () {
+export async function reset(): Promise<boolean> {
 	const barbeariaId = getDefaultBarbeariaId();
 
 	const { data: appointments, error: appointmentsError } = await supabase
@@ -23,7 +22,7 @@ exports.reset = async function () {
 		.eq("barbearia_id", barbeariaId);
 	if (appointmentsError) throw appointmentsError;
 
-	const appointmentIds = (appointments || []).map((appointment) => appointment.id);
+	const appointmentIds = (appointments || []).map((appointment: { id: string }) => appointment.id);
 
 	if (appointmentIds.length > 0) {
 		for (const table of ["agendamento_produtos", "agendamento_servicos"]) {
@@ -52,4 +51,6 @@ exports.reset = async function () {
 	}
 
 	return true;
-};
+}
+
+module.exports = { reset };
