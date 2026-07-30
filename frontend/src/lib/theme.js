@@ -39,7 +39,7 @@ export function applyTheme(theme, { persist = true, notify = true } = {}) {
 	if (themeColor) {
 		themeColor.setAttribute(
 			"content",
-			theme === "light" ? "#edf5f1" : "#060d0b",
+			theme === "light" ? "#FFFFFF" : "#16181a",
 		);
 	}
 
