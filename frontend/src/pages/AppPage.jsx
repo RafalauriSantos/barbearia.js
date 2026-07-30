@@ -835,39 +835,31 @@ export default function AppPage() {
 	const shopName = profile?.shopName || "Marque's";
 
 	return (
-		<div className="app-shell flex flex-col overflow-hidden bg-background">
-			<header className="shrink-0 border-b border-border bg-background/95 px-4 pb-3 pt-3 backdrop-blur">
-				<div className="flex items-center justify-between gap-3">
-					<div className="flex min-w-0 items-center gap-3">
-						<div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full border border-[#4ade80]/35 bg-card text-xs font-semibold text-[#86efac] shadow-[0_0_0_3px_rgba(74,222,128,0.08)]">
+		<div className="wrap flex flex-col min-h-screen bg-[var(--bg)] text-[var(--white)] overflow-x-hidden">
+			<header className="agenda-header">
+				<div className="flex items-center justify-between">
+					<div className="profile">
+						<div className="avatar-agenda overflow-hidden">
 							{activeAgendaPhotoUrl ?
 								<img
 									src={activeAgendaPhotoUrl}
 									alt={activeAgendaName}
-									className="h-full w-full object-cover"
+									className="h-full w-full object-cover rounded-full"
 								/>
 							:	<span>{getInitials(activeAgendaName)}</span>}
 						</div>
-						<div className="min-w-0">
-							<h1 className="truncate font-logo text-[20px] font-semibold text-foreground">
-								{activeAgendaName}
-							</h1>
-							<p className="mt-0.5 truncate font-mono-ui text-[11px] lowercase text-[#86efac]/70">
-								{agendaSubtitle}
-							</p>
-							<p className="mt-0.5 truncate font-client text-[11px] text-foreground-faint">
-								{shopName}
-							</p>
+						<div>
+							<div className="profile-name">{activeAgendaName}</div>
+							<p className="sr-only">{agendaSubtitle}</p>
+							<div className="profile-shop">{shopName}</div>
 						</div>
 					</div>
-					<div className="flex items-center gap-2">
-						<IconButton
-							label="Configurações"
-							onClick={() => navigate("/settings")}
-							className="h-9 w-9">
-							⚙
-						</IconButton>
-					</div>
+					<IconButton
+						label="Configurações"
+						onClick={() => navigate("/settings")}
+						className="h-8 w-8 text-[var(--gray)] hover:text-[var(--white)]">
+						⚙
+					</IconButton>
 				</div>
 
 				{barberOptions.length > 0 && (
@@ -886,7 +878,7 @@ export default function AppPage() {
 										className="flex shrink-0 flex-col items-center gap-1">
 										<div
 											className={`flex h-9 w-9 items-center justify-center overflow-hidden rounded-full border-2 ${
-												isActive ? "border-[#4ade80]" : "border-transparent"
+												isActive ? "border-[var(--green)]" : "border-transparent"
 											}`}
 											style={{
 												background: barber.color || getAvatarColor(index),
@@ -904,7 +896,7 @@ export default function AppPage() {
 										</div>
 										<span
 											className={`max-w-[52px] truncate text-[8px] ${
-												isActive ? "text-[#4ade80]" : "text-foreground-faint"
+												isActive ? "text-[var(--green)]" : "text-[var(--gray)]"
 											}`}>
 											{barber.name || barber.nome}
 										</span>
@@ -918,7 +910,7 @@ export default function AppPage() {
 										setActiveBarberId("");
 										setFeedbackMessage("");
 									}}
-									className="mt-0.5 flex h-9 shrink-0 items-center rounded-full border border-[#14532d]/80 bg-[#052e1b] px-3 font-mono-ui text-[10px] lowercase text-[#86efac] transition-colors hover:border-[#22c55e]/50">
+									className="mt-0.5 flex h-9 shrink-0 items-center rounded-full border border-[#14532d]/80 bg-[#052e1b] px-3 font-mono-ui text-[10px] lowercase text-[var(--green)] transition-colors">
 									← minha agenda
 								</button>
 							)}
@@ -926,62 +918,38 @@ export default function AppPage() {
 					</div>
 				)}
 
-				<div className="mt-3 grid grid-cols-3 gap-2">
-					<div className="flex items-center justify-center gap-2 rounded-full border border-border bg-card px-2 py-1">
-						<span className="font-client text-[10px] font-semibold text-foreground-faint">
-							Recebido
-						</span>
-						<span className="font-value text-[11px] text-[#4ade80]">
-							{formatCurrency(summary.totalReceived)}
-						</span>
+				<div className="stats-agenda">
+					<div className="stat-agenda green">
+						Recebido <b>{'\u200B'}{formatCurrency(summary.totalReceived)}</b>
 					</div>
-					<div className="flex items-center justify-center gap-2 rounded-full border border-border bg-card px-2 py-1">
-						<span className="font-client text-[10px] font-semibold text-foreground-faint">
-							A cobrar
-						</span>
-						<span className="font-value text-[11px] text-[#facc15]">
-							{formatCurrency(summary.toCollect)}
-						</span>
-					</div>
-					<div className="flex items-center justify-center gap-2 rounded-full border border-border bg-card px-2 py-1">
-						<span className="font-client text-[10px] font-semibold text-foreground-faint">
-							Clientes
-						</span>
-						<span className="font-value text-[11px] text-foreground">
-							{summary.totalClients}
-						</span>
+					<div className="stat-agenda amber">
+						A cobrar <b>{'\u200B'}{formatCurrency(summary.toCollect)}</b>
 					</div>
 				</div>
 
-				<div className="mt-2 grid grid-cols-[32px_1fr_32px] items-center gap-2">
-					<IconButton
-						label="Dia anterior"
+				<div className="date-row">
+					<button
+						type="button"
 						onClick={prevDay}
-						tone="quiet"
-						className="h-7 w-7">
+						aria-label="Dia anterior"
+						className="arrow-btn">
 						‹
-					</IconButton>
-					<div className="flex min-w-0 items-center justify-center gap-2 rounded-md border border-border bg-background-deep px-2 py-1">
-						<span className="truncate font-mono-ui text-[11px] text-foreground">
-							{formatDateDisplay(currentDate)}
-						</span>
-						{todaySelected && (
-							<span className="rounded-full bg-paid px-2 py-0.5 font-client text-[10px] font-bold text-primary-foreground">
-								hoje
-							</span>
-						)}
+					</button>
+					<div className="date-pill">
+						{formatDateDisplay(currentDate)}
+						{todaySelected && <span className="today-tag">hoje</span>}
 					</div>
-					<IconButton
-						label="Próximo dia"
+					<button
+						type="button"
 						onClick={nextDay}
-						tone="quiet"
-						className="h-7 w-7">
+						aria-label="Próximo dia"
+						className="arrow-btn">
 						›
-					</IconButton>
+					</button>
 				</div>
 			</header>
 
-			<main className="min-h-0 flex-1 overflow-y-auto px-3 pt-3 safe-bottom">
+			<main className="min-h-0 flex-1 overflow-y-auto safe-bottom">
 				<AppointmentsList
 					appointments={sortedAppointments}
 					isLoading={isLoading}

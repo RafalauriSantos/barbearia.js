@@ -12,13 +12,13 @@ function NavIcon({ name }) {
 	};
 	const icons = {
 		agenda: (
-			<svg viewBox="0 0 24 24" aria-hidden="true" className="h-4 w-4">
+			<svg viewBox="0 0 24 24" aria-hidden="true" className="h-[18px] w-[18px]">
 				<rect x="4" y="5" width="16" height="15" rx="2" {...common} />
 				<path d="M8 3v4M16 3v4M4 10h16" {...common} />
 			</svg>
 		),
 		team: (
-			<svg viewBox="0 0 24 24" aria-hidden="true" className="h-4 w-4">
+			<svg viewBox="0 0 24 24" aria-hidden="true" className="h-[18px] w-[18px]">
 				<path d="M16 19c0-2.2-1.8-4-4-4s-4 1.8-4 4" {...common} />
 				<circle cx="12" cy="9" r="3" {...common} />
 				<path d="M4 18c0-1.7 1.3-3 3-3M20 18c0-1.7-1.3-3-3-3" {...common} />
@@ -26,19 +26,19 @@ function NavIcon({ name }) {
 			</svg>
 		),
 		clients: (
-			<svg viewBox="0 0 24 24" aria-hidden="true" className="h-4 w-4">
+			<svg viewBox="0 0 24 24" aria-hidden="true" className="h-[18px] w-[18px]">
 				<path d="M16 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2" {...common} />
 				<circle cx="9.5" cy="7" r="4" {...common} />
 				<path d="M19 8v6M22 11h-6" {...common} />
 			</svg>
 		),
 		services: (
-			<svg viewBox="0 0 24 24" aria-hidden="true" className="h-4 w-4">
+			<svg viewBox="0 0 24 24" aria-hidden="true" className="h-[18px] w-[18px]">
 				<path d="M12 5v14M5 12h14" {...common} />
 			</svg>
 		),
 		cash: (
-			<svg viewBox="0 0 24 24" aria-hidden="true" className="h-4 w-4">
+			<svg viewBox="0 0 24 24" aria-hidden="true" className="h-[18px] w-[18px]">
 				<rect x="4" y="6" width="16" height="12" rx="2" {...common} />
 				<circle cx="12" cy="12" r="2.5" {...common} />
 				<path d="M7 9h1M16 15h1" {...common} />
@@ -118,47 +118,23 @@ export const BottomNav = memo(function BottomNav({ variant = "minimal" }) {
 	if (isKeyboardOrModalOpen) return null;
 
 	return (
-		<nav
-			data-variant={variant}
-			className="sticky bottom-0 z-50 shrink-0 border-t border-border bg-background/95 px-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] pt-2 backdrop-blur">
-			<div
-				className={`mx-auto grid ${gridClass} max-w-[860px] gap-1 ${
-					variant === "minimal" ?
-						"border-0 bg-transparent p-0"
-					:	"rounded-lg border border-border bg-background-deep p-1"
-				}`}>
-				{tabs.map((tab) => {
-					// Marca visualmente a aba ativa.
-					const isActive = location.pathname === tab.path;
-					return (
-						<button
-							key={tab.path}
-							onClick={() => navigate(tab.path)}
-							aria-current={isActive ? "page" : undefined}
-							className={`relative flex min-h-12 flex-col items-center justify-center gap-1 rounded-md px-1 py-2 transition-colors ${
-								isActive ?
-									variant === "minimal" ?
-										"text-paid after:absolute after:bottom-0 after:h-0.5 after:w-6 after:rounded-full after:bg-paid"
-									:	"bg-card text-foreground shadow-sm"
-								:	"text-foreground-faint hover:bg-secondary/50 hover:text-foreground"
-							}`}>
-							<span
-								className={`flex h-5 w-5 items-center justify-center rounded-full ${
-									isActive ?
-										variant === "minimal" ?
-											"bg-transparent text-paid"
-										:	"bg-paid text-primary-foreground"
-									:	"bg-transparent text-foreground-faint"
-								}`}>
-								<NavIcon name={tab.icon} />
-							</span>
-							<span className="font-mono-ui text-[9px] leading-none sm:text-[10px]">
-								{tab.label}
-							</span>
-						</button>
-					);
-				})}
-			</div>
+		<nav data-variant={variant} className="tabbar">
+			{tabs.map((tab) => {
+				const isActive = location.pathname === tab.path;
+				return (
+					<button
+						key={tab.path}
+						type="button"
+						onClick={() => navigate(tab.path)}
+						aria-current={isActive ? "page" : undefined}
+						className={`tab ${isActive ? "active text-paid" : ""}`}>
+						<div className="tab-icon">
+							<NavIcon name={tab.icon} />
+						</div>
+						{tab.label}
+					</button>
+				);
+			})}
 		</nav>
 	);
 });
