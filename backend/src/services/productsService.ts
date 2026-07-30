@@ -1,8 +1,8 @@
 const ProductsRepository = require("../repositories/productsRepository");
 const AuditService = require("./auditService");
-const { AppError } = require("../lib/errors");
+import { AppError } from "../lib/errors";
 
-function getBarbeariaContext(user) {
+function getBarbeariaContext(user: any) {
 	if (!user?.barbearia_id) {
 		throw new AppError(
 			403,
@@ -13,7 +13,7 @@ function getBarbeariaContext(user) {
 	return { barbeariaId: user.barbearia_id };
 }
 
-function assertAdminContext(user) {
+function assertAdminContext(user: any) {
 	const context = getBarbeariaContext(user);
 	if (user.role !== "admin") {
 		throw new AppError(
@@ -25,11 +25,11 @@ function assertAdminContext(user) {
 	return context;
 }
 
-exports.listProducts = async function (user) {
+export async function listProducts(user: any) {
 	return ProductsRepository.findAll(getBarbeariaContext(user));
-};
+}
 
-exports.createProduct = async function (payload, user) {
+export async function createProduct(payload: Record<string, any>, user: any) {
 	const product = await ProductsRepository.create(payload, assertAdminContext(user));
 	await AuditService.logResourceChange({
 		action: "PRODUCT_CREATED",
@@ -39,9 +39,9 @@ exports.createProduct = async function (payload, user) {
 		newValues: { name: product.name, price: product.price },
 	});
 	return product;
-};
+}
 
-exports.updateProduct = async function (id, updates, user) {
+export async function updateProduct(id: string, updates: Record<string, any>, user: any) {
 	const context = assertAdminContext(user);
 	const existing = await ProductsRepository.findById(id, context);
 	if (!existing) throw new AppError(404, "NOT_FOUND", "Product not found");
@@ -57,9 +57,9 @@ exports.updateProduct = async function (id, updates, user) {
 	});
 
 	return updated;
-};
+}
 
-exports.deleteProduct = async function (id, user) {
+export async function deleteProduct(id: string, user: any) {
 	const context = assertAdminContext(user);
 	const existing = await ProductsRepository.findById(id, context);
 	if (!existing) throw new AppError(404, "NOT_FOUND", "Product not found");
@@ -74,4 +74,11 @@ exports.deleteProduct = async function (id, user) {
 	});
 
 	return true;
+}
+
+module.exports = {
+	listProducts,
+	createProduct,
+	updateProduct,
+	deleteProduct,
 };

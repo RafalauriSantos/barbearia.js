@@ -1,8 +1,8 @@
 const ServicesRepository = require("../repositories/servicesRepository");
 const AuditService = require("./auditService");
-const { AppError } = require("../lib/errors");
+import { AppError } from "../lib/errors";
 
-function getBarbeariaContext(user) {
+function getBarbeariaContext(user: any) {
 	if (!user?.barbearia_id) {
 		throw new AppError(
 			403,
@@ -13,7 +13,7 @@ function getBarbeariaContext(user) {
 	return { barbeariaId: user.barbearia_id };
 }
 
-function assertAdminContext(user) {
+function assertAdminContext(user: any) {
 	const context = getBarbeariaContext(user);
 	if (user.role !== "admin") {
 		throw new AppError(
@@ -25,11 +25,11 @@ function assertAdminContext(user) {
 	return context;
 }
 
-exports.listServices = async function (user) {
+export async function listServices(user: any) {
 	return ServicesRepository.findAll(getBarbeariaContext(user));
-};
+}
 
-exports.createService = async function (payload, user) {
+export async function createService(payload: Record<string, any>, user: any) {
 	const service = await ServicesRepository.create(payload, assertAdminContext(user));
 	await AuditService.logResourceChange({
 		action: "SERVICE_CREATED",
@@ -39,9 +39,9 @@ exports.createService = async function (payload, user) {
 		newValues: { name: service.name, price: service.price },
 	});
 	return service;
-};
+}
 
-exports.updateService = async function (id, updates, user) {
+export async function updateService(id: string, updates: Record<string, any>, user: any) {
 	const context = assertAdminContext(user);
 	const existing = await ServicesRepository.findById(id, context);
 	if (!existing) throw new AppError(404, "NOT_FOUND", "Service not found");
@@ -57,9 +57,9 @@ exports.updateService = async function (id, updates, user) {
 	});
 
 	return updated;
-};
+}
 
-exports.deleteService = async function (id, user) {
+export async function deleteService(id: string, user: any) {
 	const context = assertAdminContext(user);
 	const existing = await ServicesRepository.findById(id, context);
 	if (!existing) throw new AppError(404, "NOT_FOUND", "Service not found");
@@ -74,4 +74,11 @@ exports.deleteService = async function (id, user) {
 	});
 
 	return true;
+}
+
+module.exports = {
+	listServices,
+	createService,
+	updateService,
+	deleteService,
 };

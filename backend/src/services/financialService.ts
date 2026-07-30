@@ -1,16 +1,16 @@
 const FinancialRepository = require("../repositories/financialRepository");
 const BarbersRepository = require("../repositories/barbersRepository");
-const { AppError } = require("../lib/errors");
+import { AppError } from "../lib/errors";
 
-function isAdmin(user) {
+function isAdmin(user: any): boolean {
 	return user?.role === "admin";
 }
 
-function roundMoney(value) {
+function roundMoney(value: any): number {
 	return Math.round((Number(value || 0) + Number.EPSILON) * 100) / 100;
 }
 
-function assertBarbeariaContext(user) {
+function assertBarbeariaContext(user: any) {
 	if (!user?.barbearia_id) {
 		throw new AppError(
 			403,
@@ -20,7 +20,7 @@ function assertBarbeariaContext(user) {
 	}
 }
 
-function assertBarberContext(user) {
+function assertBarberContext(user: any) {
 	if (!user?.barbeiro_id) {
 		throw new AppError(
 			403,
@@ -30,7 +30,7 @@ function assertBarberContext(user) {
 	}
 }
 
-async function assertBarberBelongsToShop(barbeiroId, barbeariaId) {
+async function assertBarberBelongsToShop(barbeiroId: string, barbeariaId: string) {
 	const barber = await BarbersRepository.findByIdInBarbearia(
 		barbeiroId,
 		barbeariaId,
@@ -45,40 +45,40 @@ async function assertBarberBelongsToShop(barbeiroId, barbeariaId) {
 	return barber;
 }
 
-function getAppointmentTotal(row) {
+function getAppointmentTotal(row: any): number {
 	return Number(row.total ?? row.valor_manual ?? 0);
 }
 
-function getPaymentFeeValue(row) {
+function getPaymentFeeValue(row: any): number {
 	return Number(row.taxa_pagamento_valor || 0);
 }
 
-function getAppointmentNetValue(row) {
+function getAppointmentNetValue(row: any): number {
 	const gross = getAppointmentTotal(row);
 	const explicitNet = Number(row.valor_liquido || 0);
 	if (explicitNet > 0 || gross === 0) return explicitNet;
 	return Math.max(gross - getPaymentFeeValue(row), 0);
 }
 
-function getBarberRow(row) {
+function getBarberRow(row: any) {
 	if (Array.isArray(row.barbeiros)) return row.barbeiros[0] || null;
 	return row.barbeiros || null;
 }
 
-function getPaymentMethodRow(row) {
+function getPaymentMethodRow(row: any) {
 	if (Array.isArray(row.formas_pagamento)) {
 		return row.formas_pagamento[0] || null;
 	}
 	return row.formas_pagamento || null;
 }
 
-function getProductRows(row) {
+function getProductRows(row: any): any[] {
 	return Array.isArray(row.agendamento_produtos) ?
 			row.agendamento_produtos
 		:	[];
 }
 
-function getAppointmentDistribution(row) {
+function getAppointmentDistribution(row: any) {
 	const total = getAppointmentTotal(row);
 	const fee = getPaymentFeeValue(row);
 	const barber = getBarberRow(row);
@@ -113,7 +113,7 @@ function getAppointmentDistribution(row) {
 	};
 }
 
-function getProductSale(item) {
+function getProductSale(item: any) {
 	const quantity = Number(item.quantidade || item.quantity || 1) || 1;
 	const unitPrice = Number(item.preco_unitario ?? item.price ?? 0);
 	const gross = Number(item.subtotal ?? unitPrice * quantity);
@@ -141,7 +141,7 @@ function getProductSale(item) {
 	};
 }
 
-function createBucket({ barbeiroId, nome, comissaoPercent }) {
+function createBucket({ barbeiroId, nome, comissaoPercent }: any) {
 	return {
 		barbeiro_id: barbeiroId,
 		nome: nome || "Sem barbeiro",
@@ -155,7 +155,7 @@ function createBucket({ barbeiroId, nome, comissaoPercent }) {
 	};
 }
 
-function createProductBucket({ produtoId, nome, tipoCompra, fornecedor }) {
+function createProductBucket({ produtoId, nome, tipoCompra, fornecedor }: any) {
 	return {
 		produto_id: produtoId,
 		nome: nome || "Produto",
@@ -171,7 +171,7 @@ function createProductBucket({ produtoId, nome, tipoCompra, fornecedor }) {
 	};
 }
 
-function createSupplierBucket(fornecedor) {
+function createSupplierBucket(fornecedor: string) {
 	return {
 		fornecedor: fornecedor || "Sem fornecedor",
 		quantidade: 0,
@@ -182,7 +182,7 @@ function createSupplierBucket(fornecedor) {
 	};
 }
 
-function createPaymentMethodBucket({ methodId, codigo, nome }) {
+function createPaymentMethodBucket({ methodId, codigo, nome }: any) {
 	return {
 		forma_pagamento_id: methodId,
 		codigo: codigo || "sem_forma",
@@ -194,7 +194,7 @@ function createPaymentMethodBucket({ methodId, codigo, nome }) {
 	};
 }
 
-function finalizeBucket(bucket) {
+function finalizeBucket(bucket: any) {
 	return {
 		...bucket,
 		total_pago: roundMoney(bucket.total_pago),
@@ -206,7 +206,7 @@ function finalizeBucket(bucket) {
 	};
 }
 
-function finalizePaymentMethodBucket(bucket) {
+function finalizePaymentMethodBucket(bucket: any) {
 	return {
 		...bucket,
 		total_pago: roundMoney(bucket.total_pago),
@@ -215,7 +215,7 @@ function finalizePaymentMethodBucket(bucket) {
 	};
 }
 
-function finalizeProductBucket(bucket) {
+function finalizeProductBucket(bucket: any) {
 	return {
 		...bucket,
 		quantidade: Number(bucket.quantidade || 0),
@@ -228,7 +228,7 @@ function finalizeProductBucket(bucket) {
 	};
 }
 
-function finalizeSupplierBucket(bucket) {
+function finalizeSupplierBucket(bucket: any) {
 	return {
 		...bucket,
 		quantidade: Number(bucket.quantidade || 0),
@@ -239,7 +239,7 @@ function finalizeSupplierBucket(bucket) {
 	};
 }
 
-function buildSummaryByBarber(rows) {
+function buildSummaryByBarber(rows: any[]) {
 	const buckets = new Map();
 
 	for (const row of rows) {
@@ -272,7 +272,7 @@ function buildSummaryByBarber(rows) {
 	return Array.from(buckets.values()).map(finalizeBucket);
 }
 
-function buildSummaryByPaymentMethod(rows) {
+function buildSummaryByPaymentMethod(rows: any[]) {
 	const buckets = new Map();
 
 	for (const row of rows) {
@@ -301,7 +301,7 @@ function buildSummaryByPaymentMethod(rows) {
 	return Array.from(buckets.values()).map(finalizePaymentMethodBucket);
 }
 
-function buildProductSummary(rows) {
+function buildProductSummary(rows: any[]) {
 	const productBuckets = new Map();
 	const supplierBuckets = new Map();
 	const totals = {
@@ -374,12 +374,12 @@ function buildProductSummary(rows) {
 			.sort((a, b) => b.total_vendido - a.total_vendido),
 		resumo_por_fornecedor: Array.from(supplierBuckets.values())
 			.map(finalizeSupplierBucket)
-			.filter((row) => row.fornecedor_pagar > 0)
+			.filter((row: any) => row.fornecedor_pagar > 0)
 			.sort((a, b) => b.fornecedor_pagar - a.fornecedor_pagar),
 	};
 }
 
-function buildAdminSummary(rows) {
+function buildAdminSummary(rows: any[]) {
 	const resumoPorBarbeiro = buildSummaryByBarber(rows);
 	const resumoPorFormaPagamento = buildSummaryByPaymentMethod(rows);
 	const resumoProdutos = buildProductSummary(rows);
@@ -411,7 +411,7 @@ function buildAdminSummary(rows) {
 	};
 }
 
-function buildBarberSummary(rows, fallbackBarber) {
+function buildBarberSummary(rows: any[], fallbackBarber: any) {
 	const [summary] = buildSummaryByBarber(rows);
 	if (summary) {
 		return {
@@ -432,12 +432,12 @@ function buildBarberSummary(rows, fallbackBarber) {
 	};
 }
 
-exports.getSummary = async function (query, user) {
+export async function getSummary(query: Record<string, any> = {}, user: any) {
 	assertBarbeariaContext(user);
 
 	const requestedBarberId = query.barbeiro_id || query.barber_id;
 	let targetBarberId = requestedBarberId || null;
-	let fallbackBarber = null;
+	let fallbackBarber: any = null;
 
 	if (isAdmin(user)) {
 		if (targetBarberId) {
@@ -481,4 +481,8 @@ exports.getSummary = async function (query, user) {
 	}
 
 	return buildBarberSummary(rows, fallbackBarber);
+}
+
+module.exports = {
+	getSummary,
 };

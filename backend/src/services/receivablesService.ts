@@ -4,9 +4,9 @@ const PaymentMethodsRepository = require("../repositories/paymentMethodsReposito
 const ClientsRepository = require("../repositories/clientsRepository");
 const AppointmentsService = require("./appointmentsService");
 const AuditService = require("./auditService");
-const { AppError } = require("../lib/errors");
+import { AppError } from "../lib/errors";
 
-function todayInSaoPaulo() {
+function todayInSaoPaulo(): string {
 	return new Intl.DateTimeFormat("en-CA", {
 		timeZone: "America/Sao_Paulo",
 		year: "numeric",
@@ -15,11 +15,11 @@ function todayInSaoPaulo() {
 	}).format(new Date());
 }
 
-function roundMoney(value) {
+function roundMoney(value: any): number {
 	return Math.round((Number(value || 0) + Number.EPSILON) * 100) / 100;
 }
 
-function getReadContext(user, requestedBarberId) {
+function getReadContext(user: any, requestedBarberId?: string) {
 	if (!user?.barbearia_id) {
 		throw new AppError(403, "BARBEARIA_CONTEXT_REQUIRED", "Usuario sem barbearia vinculada.");
 	}
@@ -32,7 +32,7 @@ function getReadContext(user, requestedBarberId) {
 	};
 }
 
-async function resolveWriteBarber(user, requestedBarberId) {
+async function resolveWriteBarber(user: any, requestedBarberId?: string) {
 	const context = getReadContext(user);
 	const barbeiroId =
 		user.role === "admin" ? requestedBarberId || user.barbeiro_id : user.barbeiro_id;
@@ -49,7 +49,7 @@ async function resolveWriteBarber(user, requestedBarberId) {
 	return { ...context, barbeiroId };
 }
 
-async function ensureReceivable(id, user) {
+async function ensureReceivable(id: string, user: any) {
 	const context = getReadContext(user);
 	const receivable = await ReceivablesRepository.findById(id, context);
 	if (!receivable) {
@@ -58,7 +58,7 @@ async function ensureReceivable(id, user) {
 	return { receivable, context };
 }
 
-exports.list = async function (query, user) {
+export async function list(query: Record<string, any> = {}, user: any) {
 	const context = getReadContext(user, query.barbeiro_id);
 	return ReceivablesRepository.findAll({
 		...context,
@@ -67,9 +67,9 @@ exports.list = async function (query, user) {
 		endDate: query.end_date,
 		search: query.search,
 	});
-};
+}
 
-function assertAdminWrite(user) {
+function assertAdminWrite(user: any) {
 	if (user?.role !== "admin") {
 		throw new AppError(
 			403,
@@ -79,7 +79,7 @@ function assertAdminWrite(user) {
 	}
 }
 
-exports.create = async function (payload, user) {
+export async function create(payload: Record<string, any>, user: any) {
 	assertAdminWrite(user);
 	const context = await resolveWriteBarber(user, payload.barbeiro_id);
 	if (payload.cliente_id) {
@@ -95,9 +95,9 @@ exports.create = async function (payload, user) {
 		...context,
 		userId: user.id,
 	});
-};
+}
 
-exports.update = async function (id, payload, user) {
+export async function update(id: string, payload: Record<string, any>, user: any) {
 	assertAdminWrite(user);
 	const { receivable, context } = await ensureReceivable(id, user);
 	if (receivable.status !== "aberto") {
@@ -116,9 +116,9 @@ exports.update = async function (id, payload, user) {
 		updates = { ...payload, barbeiro_id: writeContext.barbeiroId };
 	}
 	return ReceivablesRepository.update(id, updates, context);
-};
+}
 
-exports.receive = async function (id, payload, user) {
+export async function receive(id: string, payload: Record<string, any>, user: any) {
 	assertAdminWrite(user);
 	const { receivable, context } = await ensureReceivable(id, user);
 	if (receivable.status === "pago") return receivable;
@@ -134,7 +134,7 @@ exports.receive = async function (id, payload, user) {
 	}
 	const paymentDate = payload.payment_date || todayInSaoPaulo();
 
-	let updatedResult;
+	let updatedResult: any;
 	if (receivable.agendamento_id) {
 		await AppointmentsService.updateAppointment(
 			receivable.agendamento_id,
@@ -173,9 +173,9 @@ exports.receive = async function (id, payload, user) {
 	});
 
 	return updatedResult;
-};
+}
 
-exports.cancel = async function (id, user) {
+export async function cancel(id: string, user: any) {
 	assertAdminWrite(user);
 	const { receivable, context } = await ensureReceivable(id, user);
 	if (receivable.agendamento_id) {
@@ -189,4 +189,12 @@ exports.cancel = async function (id, user) {
 		throw new AppError(409, "RECEIVABLE_PAID", "Cobranca paga nao pode ser cancelada.");
 	}
 	return ReceivablesRepository.update(id, { status: "cancelado" }, context);
+}
+
+module.exports = {
+	list,
+	create,
+	update,
+	receive,
+	cancel,
 };

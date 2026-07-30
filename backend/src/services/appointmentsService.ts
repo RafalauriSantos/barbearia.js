@@ -4,17 +4,17 @@ const PaymentMethodsRepository = require("../repositories/paymentMethodsReposito
 const ClientsRepository = require("../repositories/clientsRepository");
 const ServicesRepository = require("../repositories/servicesRepository");
 const ProductsRepository = require("../repositories/productsRepository");
-const { AppError } = require("../lib/errors");
+import { AppError } from "../lib/errors";
 
-function isAdmin(user) {
+function isAdmin(user: any): boolean {
 	return user?.role === "admin";
 }
 
-function roundMoney(value) {
+function roundMoney(value: any): number {
 	return Math.round((Number(value || 0) + Number.EPSILON) * 100) / 100;
 }
 
-function todayInSaoPaulo() {
+function todayInSaoPaulo(): string {
 	return new Intl.DateTimeFormat("en-CA", {
 		timeZone: "America/Sao_Paulo",
 		year: "numeric",
@@ -23,14 +23,14 @@ function todayInSaoPaulo() {
 	}).format(new Date());
 }
 
-function sumItems(items = []) {
+function sumItems(items: any[] = []): number {
 	return (Array.isArray(items) ? items : []).reduce(
 		(sum, item) => sum + Number(item.price || 0) * Number(item.quantity || 1),
 		0,
 	);
 }
 
-function resolveGrossValue(payload, fallbackAppointment) {
+function resolveGrossValue(payload: Record<string, any>, fallbackAppointment?: any): number {
 	if (payload.value !== undefined) return Number(payload.value || 0);
 	if (Array.isArray(payload.services) || Array.isArray(payload.products)) {
 		return sumItems(payload.services) + sumItems(payload.products);
@@ -39,9 +39,9 @@ function resolveGrossValue(payload, fallbackAppointment) {
 }
 
 async function withPaymentSnapshot(
-	payload,
-	fallbackAppointment = null,
-	barbeariaId,
+	payload: Record<string, any>,
+	fallbackAppointment: any = null,
+	barbeariaId?: string,
 ) {
 	const effectiveStatus =
 		payload.status !== undefined ? payload.status : fallbackAppointment?.status;
@@ -109,7 +109,7 @@ async function withPaymentSnapshot(
 	};
 }
 
-async function resolveCatalogItems(items, repository, barbeariaId, type) {
+async function resolveCatalogItems(items: any[], repository: any, barbeariaId: string, type: string) {
 	return Promise.all(
 		(Array.isArray(items) ? items : []).map(async (item) => {
 			const catalogItem = await repository.findById(item.id, { barbeariaId });
@@ -151,7 +151,7 @@ async function resolveCatalogItems(items, repository, barbeariaId, type) {
 	);
 }
 
-async function withCanonicalCatalog(payload, barbeariaId, existing = null) {
+async function withCanonicalCatalog(payload: Record<string, any>, barbeariaId: string, existing: any = null) {
 	const servicesProvided =
 		Array.isArray(payload.services) || payload.service_id !== undefined;
 	const productsProvided = Array.isArray(payload.products);
@@ -203,7 +203,7 @@ async function withCanonicalCatalog(payload, barbeariaId, existing = null) {
 	};
 }
 
-async function assertClientAccess(clientId, user, targetBarberId) {
+async function assertClientAccess(clientId: string | null | undefined, user: any, targetBarberId: string) {
 	if (!clientId) return null;
 	const client = await ClientsRepository.findFixedClientById(clientId, {
 		barbeariaId: user.barbearia_id,
@@ -228,6 +228,12 @@ async function assertNoScheduleConflict({
 	barbeiroId,
 	date,
 	time,
+}: {
+	id?: string;
+	barbeariaId: string;
+	barbeiroId: string;
+	date: string;
+	time: string;
 }) {
 	if (!barbeiroId || !date || !time) return;
 	if (typeof AppointmentsRepository.findConflict !== "function") return;
@@ -247,7 +253,7 @@ async function assertNoScheduleConflict({
 	}
 }
 
-function assertBarbeariaContext(user) {
+function assertBarbeariaContext(user: any) {
 	if (!user?.barbearia_id) {
 		throw new AppError(
 			403,
@@ -257,7 +263,7 @@ function assertBarbeariaContext(user) {
 	}
 }
 
-function assertBarberContext(user) {
+function assertBarberContext(user: any) {
 	if (!user?.barbeiro_id) {
 		throw new AppError(
 			403,
@@ -267,7 +273,7 @@ function assertBarberContext(user) {
 	}
 }
 
-async function assertBarberBelongsToShop(barbeiroId, barbeariaId) {
+async function assertBarberBelongsToShop(barbeiroId: string, barbeariaId: string) {
 	const barber = await BarbersRepository.findByIdInBarbearia(
 		barbeiroId,
 		barbeariaId,
@@ -282,7 +288,7 @@ async function assertBarberBelongsToShop(barbeiroId, barbeariaId) {
 	return barber;
 }
 
-async function resolveTargetBarber(user, payload = {}) {
+async function resolveTargetBarber(user: any, payload: Record<string, any> = {}) {
 	assertBarbeariaContext(user);
 
 	if (!isAdmin(user)) {
@@ -303,9 +309,9 @@ async function resolveTargetBarber(user, payload = {}) {
 	return requestedBarberId;
 }
 
-exports.listAppointments = async function (
-	{ data, day_key, barbeiro_id, barber_id } = {},
-	user,
+export async function listAppointments(
+	{ data, day_key, barbeiro_id, barber_id }: { data?: string; day_key?: string; barbeiro_id?: string; barber_id?: string } = {},
+	user: any = {},
 ) {
 	assertBarbeariaContext(user);
 
@@ -322,9 +328,9 @@ exports.listAppointments = async function (
 		barbeariaId: user.barbearia_id,
 		barbeiroId: filterBarberId,
 	});
-};
+}
 
-exports.createAppointment = async function (payload, user) {
+export async function createAppointment(payload: Record<string, any>, user: any) {
 	if (payload) {
 		delete payload.net_value;
 		delete payload.payment_fee_value;
@@ -352,9 +358,9 @@ exports.createAppointment = async function (payload, user) {
 		{ barbeariaId: user.barbearia_id, barbeiroId, userId: user.id },
 	);
 	return appointment;
-};
+}
 
-exports.updateAppointment = async function (id, updates, user) {
+export async function updateAppointment(id: string, updates: Record<string, any>, user: any) {
 	assertBarbeariaContext(user);
 
 	if (
@@ -432,9 +438,9 @@ exports.updateAppointment = async function (id, updates, user) {
 		userId: user.id,
 	});
 	return appointment;
-};
+}
 
-exports.deleteAppointment = async function (id, user) {
+export async function deleteAppointment(id: string, user: any) {
 	assertBarbeariaContext(user);
 
 	const existing = await AppointmentsRepository.findById(id, {
@@ -457,4 +463,11 @@ exports.deleteAppointment = async function (id, user) {
 		userId: user.id,
 	});
 	return true;
+}
+
+module.exports = {
+	listAppointments,
+	createAppointment,
+	updateAppointment,
+	deleteAppointment,
 };

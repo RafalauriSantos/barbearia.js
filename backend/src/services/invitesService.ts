@@ -1,27 +1,27 @@
-const bcrypt = require("bcryptjs");
-const crypto = require("crypto");
-const jwt = require("jsonwebtoken");
+import bcrypt from "bcryptjs";
+import crypto from "crypto";
+import jwt from "jsonwebtoken";
 const { env } = require("../config/env");
-const { AppError } = require("../lib/errors");
+import { AppError } from "../lib/errors";
 const AuthRepository = require("../repositories/authRepository");
 const BarbersRepository = require("../repositories/barbersRepository");
 const InvitesRepository = require("../repositories/invitesRepository");
 const EmailService = require("./emailService");
 const AuditService = require("./auditService");
 
-function createToken() {
+function createToken(): string {
 	return crypto.randomBytes(32).toString("hex");
 }
 
-function hashToken(token) {
+function hashToken(token: string): string {
 	return crypto.createHash("sha256").update(token).digest("hex");
 }
 
-function buildInviteUrl(token) {
+function buildInviteUrl(token: string): string {
 	return `${env.APP_URL.replace(/\/$/, "")}/accept-invite?token=${token}`;
 }
 
-function toPublicInvite(invite) {
+function toPublicInvite(invite: any) {
 	return {
 		id: invite.id,
 		email: invite.email,
@@ -44,7 +44,7 @@ function toPublicInvite(invite) {
 	};
 }
 
-function assertActiveInvite(invite) {
+function assertActiveInvite(invite: any) {
 	if (!invite) {
 		throw new AppError(404, "INVITE_NOT_FOUND", "Convite nao encontrado.");
 	}
@@ -59,7 +59,7 @@ function assertActiveInvite(invite) {
 	}
 }
 
-function createSession(user) {
+function createSession(user: any) {
 	const version = user.token_version || 1;
 	const accessToken = jwt.sign(
 		{ userId: user.id, tokenVersion: version },
@@ -74,7 +74,7 @@ function createSession(user) {
 	return { accessToken, refreshToken };
 }
 
-exports.createBarberInvite = async function (barbeiroId, payload, user, runtimeEnv) {
+export async function createBarberInvite(barbeiroId: string, payload: Record<string, any>, user: any, runtimeEnv?: any) {
 	if (!user?.barbearia_id || user.role !== "admin") {
 		throw new AppError(
 			403,
@@ -140,15 +140,15 @@ exports.createBarberInvite = async function (barbeiroId, payload, user, runtimeE
 		invite: toPublicInvite(invite),
 		inviteUrl,
 	};
-};
+}
 
-exports.getInviteByToken = async function (token) {
+export async function getInviteByToken(token: string) {
 	const invite = await InvitesRepository.findByTokenHash(hashToken(token));
 	assertActiveInvite(invite);
 	return toPublicInvite(invite);
-};
+}
 
-exports.acceptInvite = async function (token, payload) {
+export async function acceptInvite(token: string, payload: Record<string, any>) {
 	const invite = await InvitesRepository.findByTokenHash(hashToken(token));
 	assertActiveInvite(invite);
 
@@ -181,7 +181,7 @@ exports.acceptInvite = async function (token, payload) {
 		user = await AuthRepository.markEmailVerified(user.id);
 	}
 
-	let linkedBarber;
+	let linkedBarber: any;
 	try {
 		linkedBarber = await BarbersRepository.linkUser(
 			invite.barbeiro_id,
@@ -189,7 +189,7 @@ exports.acceptInvite = async function (token, payload) {
 			user.id,
 			email,
 		);
-	} catch (error) {
+	} catch (error: any) {
 		if (error.code === "23505" || error.message?.includes("idx_barbeiros_usuario_unique")) {
 			throw new AppError(
 				400,
@@ -215,4 +215,10 @@ exports.acceptInvite = async function (token, payload) {
 		user: currentUser,
 		...createSession(currentUser),
 	};
+}
+
+module.exports = {
+	createBarberInvite,
+	getInviteByToken,
+	acceptInvite,
 };

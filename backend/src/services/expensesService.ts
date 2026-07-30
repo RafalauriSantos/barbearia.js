@@ -1,8 +1,8 @@
 const ExpensesRepository = require("../repositories/expensesRepository");
 const AuditService = require("./auditService");
-const { AppError } = require("../lib/errors");
+import { AppError } from "../lib/errors";
 
-function getBarbeariaContext(user) {
+function getBarbeariaContext(user: any) {
 	if (!user?.barbearia_id) {
 		throw new AppError(
 			403,
@@ -13,7 +13,7 @@ function getBarbeariaContext(user) {
 	return { barbeariaId: user.barbearia_id };
 }
 
-function assertAdminContext(user) {
+function assertAdminContext(user: any) {
 	const context = getBarbeariaContext(user);
 	if (user.role !== "admin") {
 		throw new AppError(
@@ -25,7 +25,7 @@ function assertAdminContext(user) {
 	return context;
 }
 
-exports.listExpenses = async function ({ date, start_date, end_date } = {}, user) {
+export async function listExpenses({ date, start_date, end_date }: { date?: string; start_date?: string; end_date?: string } = {}, user: any = {}) {
 	const startDate =
 		start_date && end_date && start_date > end_date ? end_date : start_date;
 	const endDate =
@@ -36,9 +36,9 @@ exports.listExpenses = async function ({ date, start_date, end_date } = {}, user
 		endDate,
 		...getBarbeariaContext(user),
 	});
-};
+}
 
-exports.createExpense = async function (payload, user) {
+export async function createExpense(payload: Record<string, any>, user: any) {
 	const expense = await ExpensesRepository.create(payload, assertAdminContext(user));
 	await AuditService.logResourceChange({
 		action: "EXPENSE_CREATED",
@@ -48,9 +48,9 @@ exports.createExpense = async function (payload, user) {
 		newValues: { description: expense.description, value: expense.value },
 	});
 	return expense;
-};
+}
 
-exports.updateExpense = async function (id, updates, user) {
+export async function updateExpense(id: string, updates: Record<string, any>, user: any) {
 	const context = assertAdminContext(user);
 	const existing = await ExpensesRepository.findById(id, context);
 	if (!existing) throw new AppError(404, "NOT_FOUND", "Expense not found");
@@ -66,9 +66,9 @@ exports.updateExpense = async function (id, updates, user) {
 	});
 
 	return updated;
-};
+}
 
-exports.deleteExpense = async function (id, user) {
+export async function deleteExpense(id: string, user: any) {
 	const context = assertAdminContext(user);
 	const existing = await ExpensesRepository.findById(id, context);
 	if (!existing) throw new AppError(404, "NOT_FOUND", "Expense not found");
@@ -83,4 +83,11 @@ exports.deleteExpense = async function (id, user) {
 	});
 
 	return true;
+}
+
+module.exports = {
+	listExpenses,
+	createExpense,
+	updateExpense,
+	deleteExpense,
 };

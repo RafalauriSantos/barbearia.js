@@ -2,9 +2,9 @@ const BarbersRepository = require("../repositories/barbersRepository");
 const AuthRepository = require("../repositories/authRepository");
 const InvitesService = require("./invitesService");
 const AuditService = require("./auditService");
-const { AppError } = require("../lib/errors");
+import { AppError } from "../lib/errors";
 
-function assertAdmin(user) {
+function assertAdmin(user: any) {
 	if (!user?.barbearia_id) {
 		throw new AppError(
 			403,
@@ -22,12 +22,12 @@ function assertAdmin(user) {
 	}
 }
 
-exports.listBarbers = async function (user) {
+export async function listBarbers(user: any) {
 	assertAdmin(user);
 	return BarbersRepository.findAllByBarbearia(user.barbearia_id);
-};
+}
 
-exports.createBarber = async function (payload, user) {
+export async function createBarber(payload: Record<string, any>, user: any) {
 	assertAdmin(user);
 
 	const barber = await BarbersRepository.create({
@@ -55,9 +55,9 @@ exports.createBarber = async function (payload, user) {
 	}
 
 	return barber;
-};
+}
 
-exports.updateBarber = async function (id, payload, user) {
+export async function updateBarber(id: string, payload: Record<string, any>, user: any) {
 	assertAdmin(user);
 	const existing = await BarbersRepository.findByIdInBarbearia(
 		id,
@@ -82,9 +82,9 @@ exports.updateBarber = async function (id, payload, user) {
 	});
 
 	return updated;
-};
+}
 
-exports.deleteBarber = async function (id, user) {
+export async function deleteBarber(id: string, user: any) {
 	assertAdmin(user);
 	const existing = await BarbersRepository.findByIdInBarbearia(
 		id,
@@ -100,7 +100,6 @@ exports.deleteBarber = async function (id, user) {
 		);
 	}
 
-	// Session Revocation Defense: invalidate active JWT sessions for deactivated user
 	if (existing.usuario_id) {
 		const linkedUser = await AuthRepository.findById(existing.usuario_id);
 		if (linkedUser) {
@@ -139,4 +138,11 @@ exports.deleteBarber = async function (id, user) {
 
 		return { success: true, mode: "hard", message: "Barbeiro excluido com sucesso." };
 	}
+}
+
+module.exports = {
+	listBarbers,
+	createBarber,
+	updateBarber,
+	deleteBarber,
 };

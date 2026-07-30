@@ -1,11 +1,11 @@
-const bcrypt = require("bcryptjs");
-const jwt = require("jsonwebtoken");
-const crypto = require("crypto");
-const { AppError } = require("../lib/errors");
+import bcrypt from "bcryptjs";
+import jwt from "jsonwebtoken";
+import crypto from "crypto";
+import { AppError } from "../lib/errors";
 const { env } = require("../config/env");
 const EmailService = require("./emailService");
 
-function wrapRepo(repo) {
+function wrapRepo(repo: any) {
 	return new Proxy(repo, {
 		get(target, prop) {
 			if (prop in target) {
@@ -53,19 +53,19 @@ function getRepo() {
 	return wrapRepo(require("../repositories/authRepository"));
 }
 
-function generateVerificationCode() {
+function generateVerificationCode(): string {
 	const value = crypto.randomInt(0, 1000000);
 	return String(value).padStart(6, "0");
 }
 
-function hashVerificationCode(code) {
+function hashVerificationCode(code: string): string {
 	return crypto
 		.createHash("sha256")
 		.update(`${code}.${env.JWT_SECRET}`)
 		.digest("hex");
 }
 
-exports.register = async function ({ email, password }, runtimeEnv, ipAddress) {
+export async function register({ email, password }: Record<string, any>, runtimeEnv?: any, ipAddress?: string) {
 	const AuthRepository = getRepo();
 	const clientIp = ipAddress || "127.0.0.1";
 
@@ -73,7 +73,6 @@ exports.register = async function ({ email, password }, runtimeEnv, ipAddress) {
 	if (existing)
 		throw new AppError(400, "ALREADY_EXISTS", "Email already registered");
 
-	// Atomic: insert log AND count in one DB operation (stored procedure)
 	const regCount = await AuthRepository.logRegistrationAndCount(clientIp, 3600).catch(() => 0);
 	if (regCount > 5) {
 		throw new AppError(
@@ -108,17 +107,16 @@ exports.register = async function ({ email, password }, runtimeEnv, ipAddress) {
 		verificationCode:
 			(runtimeEnv?.NODE_ENV || env.NODE_ENV) === "production" ? undefined : code,
 	};
-};
+}
 
 const DUMMY_HASH = "$2a$10$7EqJtq98hPqEX7fNZaFWoO.Nqf1f.gW7g.2K8/m.4x.x.x.x.x.x.";
 
-exports.verifyCredentials = async function (email, password, _ipAddress) {
+export async function verifyCredentials(email: string, password: string, _ipAddress?: string) {
 	const AuthRepository = getRepo();
 	const cleanEmail = String(email || "").trim().toLowerCase();
 	const maxAttempts = 5;
 	const lockoutSeconds = 15 * 60;
 
-	// Check if user exists and check lockout status
 	const user = await AuthRepository.findByEmail(cleanEmail);
 
 	if (user && user.bloqueado_ate) {
@@ -136,7 +134,6 @@ exports.verifyCredentials = async function (email, password, _ipAddress) {
 	}
 
 	if (!user) {
-		// Prevent user enumeration via timing attack with dummy hash comparison
 		await bcrypt.compare(password || "", DUMMY_HASH).catch(() => {});
 		return null;
 	}
@@ -160,7 +157,6 @@ exports.verifyCredentials = async function (email, password, _ipAddress) {
 		return null;
 	}
 
-	// Password is correct -> Reset failed login counter and clear lockout
 	await AuthRepository.resetUserFailedLogin(user.id).catch(() => {});
 
 	if (!user.email_verificado_em) {
@@ -172,18 +168,18 @@ exports.verifyCredentials = async function (email, password, _ipAddress) {
 	}
 
 	return user;
-};
+}
 
-exports.getCurrentUser = async function (userId) {
+export async function getCurrentUser(userId: string) {
 	const AuthRepository = getRepo();
 	const user = await AuthRepository.findById(userId);
 	if (!user) throw new AppError(401, "UNAUTHORIZED", "Invalid user session");
 	return user;
-};
+}
 
-exports.verifyEmail = async function (token) {
+export async function verifyEmail(token: string) {
 	const AuthRepository = getRepo();
-	let decoded;
+	let decoded: any;
 	try {
 		decoded = jwt.verify(token, env.JWT_SECRET);
 	} catch {
@@ -213,9 +209,9 @@ exports.verifyEmail = async function (token) {
 
 	const user = await AuthRepository.markEmailVerified(decoded.userId);
 	return user;
-};
+}
 
-exports.verifyEmailCode = async function ({ email, code }) {
+export async function verifyEmailCode({ email, code }: { email: string; code: string }) {
 	const AuthRepository = getRepo();
 	const verificationRepo = getVerificationRepo();
 	const user = await AuthRepository.findByEmail(email);
@@ -251,13 +247,13 @@ exports.verifyEmailCode = async function ({ email, code }) {
 	await verificationRepo.markUsed(record.id);
 	const updated = await AuthRepository.markEmailVerified(user.id);
 	return { user: updated, verifiedNow: true };
-};
+}
 
-async function assertCodeLimits(userId, repo) {
+async function assertCodeLimits(userId: string, repo: any) {
 	const recentCodes = await repo.findRecentCodesForUser(userId, 24 * 60 * 60 * 1000);
 	
 	const codesWithin60s = recentCodes.filter(
-		(c) => Date.now() - new Date(c.criado_em).getTime() < 60 * 1000,
+		(c: any) => Date.now() - new Date(c.criado_em).getTime() < 60 * 1000,
 	);
 	if (codesWithin60s.length > 0) {
 		const elapsed = Date.now() - new Date(codesWithin60s[0].criado_em).getTime();
@@ -271,7 +267,7 @@ async function assertCodeLimits(userId, repo) {
 	}
 
 	const codesWithin1h = recentCodes.filter(
-		(c) => Date.now() - new Date(c.criado_em).getTime() < 60 * 60 * 1000,
+		(c: any) => Date.now() - new Date(c.criado_em).getTime() < 60 * 60 * 1000,
 	);
 	if (codesWithin1h.length >= 5) {
 		throw new AppError(
@@ -290,7 +286,7 @@ async function assertCodeLimits(userId, repo) {
 	}
 }
 
-exports.resendEmailCode = async function ({ email }, runtimeEnv) {
+export async function resendEmailCode({ email }: { email: string }, runtimeEnv?: any) {
 	const AuthRepository = getRepo();
 	const verificationRepo = getVerificationRepo();
 	const user = await AuthRepository.findByEmail(email);
@@ -315,9 +311,9 @@ exports.resendEmailCode = async function ({ email }, runtimeEnv) {
 	}, runtimeEnv);
 
 	return { ok: true };
-};
+}
 
-exports.requestPasswordReset = async function ({ email }, runtimeEnv) {
+export async function requestPasswordReset({ email }: { email: string }, runtimeEnv?: any) {
 	const AuthRepository = getRepo();
 	const passwordResetRepo = getPasswordResetRepo();
 	const user = await AuthRepository.findByEmail(email);
@@ -343,9 +339,9 @@ exports.requestPasswordReset = async function ({ email }, runtimeEnv) {
 		resetCode:
 			(runtimeEnv?.NODE_ENV || env.NODE_ENV) === "production" ? undefined : code,
 	};
-};
+}
 
-exports.resetPassword = async function ({ email, code, password }) {
+export async function resetPassword({ email, code, password }: Record<string, any>) {
 	const AuthRepository = getRepo();
 	const passwordResetRepo = getPasswordResetRepo();
 	const user = await AuthRepository.findByEmail(email);
@@ -389,11 +385,23 @@ exports.resetPassword = async function ({ email, code, password }) {
 	});
 
 	return { ok: true };
-};
+}
 
-exports.logout = async function (userId) {
+export async function logout(userId: string): Promise<void> {
 	const AuthRepository = getRepo();
 	const user = await AuthRepository.findById(userId);
 	const nextVersion = Number(user?.token_version || 1) + 1;
 	await AuthRepository.updateTokenVersion(userId, nextVersion);
+}
+
+module.exports = {
+	register,
+	verifyCredentials,
+	getCurrentUser,
+	verifyEmail,
+	verifyEmailCode,
+	resendEmailCode,
+	requestPasswordReset,
+	resetPassword,
+	logout,
 };

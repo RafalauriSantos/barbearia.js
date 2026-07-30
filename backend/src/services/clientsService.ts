@@ -2,9 +2,9 @@ const ClientsRepository = require("../repositories/clientsRepository");
 const BarbersRepository = require("../repositories/barbersRepository");
 const AppointmentsService = require("./appointmentsService");
 const AuditService = require("./auditService");
-const { AppError } = require("../lib/errors");
+import { AppError } from "../lib/errors";
 
-function getBarbeariaContext(user, requestedBarberId) {
+function getBarbeariaContext(user: any, requestedBarberId?: string) {
 	if (!user?.barbearia_id) {
 		throw new AppError(
 			403,
@@ -25,7 +25,7 @@ function getBarbeariaContext(user, requestedBarberId) {
 	};
 }
 
-async function getWriteContext(user, requestedBarberId) {
+async function getWriteContext(user: any, requestedBarberId?: string) {
 	const context = getBarbeariaContext(user);
 	const barbeiroId =
 		user.role === "admin" ? requestedBarberId || user.barbeiro_id : user.barbeiro_id;
@@ -42,19 +42,19 @@ async function getWriteContext(user, requestedBarberId) {
 	return { ...context, barbeiroId };
 }
 
-async function ensureClient(clientId, context) {
+async function ensureClient(clientId: string, context: any) {
 	const client = await ClientsRepository.findFixedClientById(clientId, context);
 	if (!client) throw new AppError(404, "NOT_FOUND", "Cliente nao encontrado.");
 	return client;
 }
 
-async function ensureClientCut(clientId, cutId, context) {
+async function ensureClientCut(clientId: string, cutId: string, context: any) {
 	const cut = await ClientsRepository.findClientCutById(clientId, cutId, context);
 	if (!cut) throw new AppError(404, "NOT_FOUND", "Corte nao encontrado.");
 	return cut;
 }
 
-async function ensureWaitlistEntry(id, context) {
+async function ensureWaitlistEntry(id: string, context: any) {
 	const entry = await ClientsRepository.findWaitlistEntryById(id, context);
 	if (!entry) {
 		throw new AppError(404, "NOT_FOUND", "Cliente da espera nao encontrado.");
@@ -62,13 +62,13 @@ async function ensureWaitlistEntry(id, context) {
 	return entry;
 }
 
-exports.listFixedClients = async function (user, query = {}) {
+export async function listFixedClients(user: any, query: Record<string, any> = {}) {
 	return ClientsRepository.findFixedClients(
 		getBarbeariaContext(user, query.barbeiro_id),
 	);
-};
+}
 
-function todayInSaoPaulo() {
+function todayInSaoPaulo(): string {
 	return new Intl.DateTimeFormat("en-CA", {
 		timeZone: "America/Sao_Paulo",
 		year: "numeric",
@@ -77,7 +77,7 @@ function todayInSaoPaulo() {
 	}).format(new Date());
 }
 
-exports.createFixedClient = async function (payload, user) {
+export async function createFixedClient(payload: Record<string, any>, user: any) {
 	const context = await getWriteContext(user, payload.barbeiro_id);
 	const client = await ClientsRepository.createFixedClient(payload, context);
 
@@ -110,9 +110,9 @@ exports.createFixedClient = async function (payload, user) {
 	}
 
 	return client;
-};
+}
 
-exports.updateFixedClient = async function (id, payload, user) {
+export async function updateFixedClient(id: string, payload: Record<string, any>, user: any) {
 	const context = getBarbeariaContext(user);
 	const existing = await ensureClient(id, context);
 	let updates = payload;
@@ -132,9 +132,9 @@ exports.updateFixedClient = async function (id, payload, user) {
 	});
 
 	return updated;
-};
+}
 
-exports.deleteFixedClient = async function (id, user) {
+export async function deleteFixedClient(id: string, user: any) {
 	const context = getBarbeariaContext(user);
 	const existing = await ensureClient(id, context);
 	await ClientsRepository.removeFixedClient(id, context);
@@ -148,9 +148,9 @@ exports.deleteFixedClient = async function (id, user) {
 	});
 
 	return true;
-};
+}
 
-exports.createClientCut = async function (clientId, payload, user) {
+export async function createClientCut(clientId: string, payload: Record<string, any>, user: any) {
 	const context = getBarbeariaContext(user);
 	const client = await ensureClient(clientId, context);
 	const status = payload.status || (payload.paid ? "paid" : "normal");
@@ -185,9 +185,9 @@ exports.createClientCut = async function (clientId, payload, user) {
 		throw error;
 	}
 	return ClientsRepository.findFixedClientById(clientId, context);
-};
+}
 
-exports.updateClientCut = async function (clientId, cutId, payload, user) {
+export async function updateClientCut(clientId: string, cutId: string, payload: Record<string, any>, user: any) {
 	const context = getBarbeariaContext(user);
 	const client = await ensureClient(clientId, context);
 	const cut = await ensureClientCut(clientId, cutId, context);
@@ -239,9 +239,9 @@ exports.updateClientCut = async function (clientId, cutId, payload, user) {
 		context,
 	);
 	return ClientsRepository.findFixedClientById(clientId, context);
-};
+}
 
-exports.deleteClientCut = async function (clientId, cutId, user) {
+export async function deleteClientCut(clientId: string, cutId: string, user: any) {
 	const context = getBarbeariaContext(user);
 	await ensureClient(clientId, context);
 	const cut = await ensureClientCut(clientId, cutId, context);
@@ -250,20 +250,20 @@ exports.deleteClientCut = async function (clientId, cutId, user) {
 	}
 	await ClientsRepository.removeClientCut(clientId, cutId, context);
 	return ClientsRepository.findFixedClientById(clientId, context);
-};
+}
 
-exports.listWaitlist = async function (user, query = {}) {
+export async function listWaitlist(user: any, query: Record<string, any> = {}) {
 	return ClientsRepository.findWaitlist(
 		getBarbeariaContext(user, query.barbeiro_id),
 	);
-};
+}
 
-exports.createWaitlistEntry = async function (payload, user) {
+export async function createWaitlistEntry(payload: Record<string, any>, user: any) {
 	const context = await getWriteContext(user, payload.barbeiro_id);
 	return ClientsRepository.createWaitlistEntry(payload, context);
-};
+}
 
-exports.updateWaitlistEntry = async function (id, payload, user) {
+export async function updateWaitlistEntry(id: string, payload: Record<string, any>, user: any) {
 	const context = getBarbeariaContext(user);
 	await ensureWaitlistEntry(id, context);
 	let updates = payload;
@@ -276,11 +276,25 @@ exports.updateWaitlistEntry = async function (id, payload, user) {
 		updates,
 		context,
 	);
-};
+}
 
-exports.deleteWaitlistEntry = async function (id, user) {
+export async function deleteWaitlistEntry(id: string, user: any) {
 	const context = getBarbeariaContext(user);
 	await ensureWaitlistEntry(id, context);
 	await ClientsRepository.removeWaitlistEntry(id, context);
 	return true;
+}
+
+module.exports = {
+	listFixedClients,
+	createFixedClient,
+	updateFixedClient,
+	deleteFixedClient,
+	createClientCut,
+	updateClientCut,
+	deleteClientCut,
+	listWaitlist,
+	createWaitlistEntry,
+	updateWaitlistEntry,
+	deleteWaitlistEntry,
 };

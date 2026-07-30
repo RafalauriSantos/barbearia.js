@@ -1,14 +1,14 @@
 const PaymentMethodsRepository = require("../repositories/paymentMethodsRepository");
-const { AppError } = require("../lib/errors");
+import { AppError } from "../lib/errors";
 
-function isMissingFeeColumn(error) {
+function isMissingFeeColumn(error: any): boolean {
 	const text = `${error?.code || ""} ${error?.message || ""} ${
 		error?.details || ""
 	}`;
 	return text.includes("taxa_percentual") || text.includes("ordem");
 }
 
-function assertBarbeariaContext(user) {
+function assertBarbeariaContext(user: any) {
 	if (!user?.barbearia_id) {
 		throw new AppError(
 			403,
@@ -18,7 +18,7 @@ function assertBarbeariaContext(user) {
 	}
 }
 
-function assertAdmin(user) {
+function assertAdmin(user: any) {
 	if (user?.role !== "admin") {
 		throw new AppError(
 			403,
@@ -28,12 +28,12 @@ function assertAdmin(user) {
 	}
 }
 
-exports.listPaymentMethods = async function (user) {
+export async function listPaymentMethods(user: any) {
 	assertBarbeariaContext(user);
 	return PaymentMethodsRepository.findAll({ barbeariaId: user.barbearia_id });
-};
+}
 
-exports.updatePaymentMethod = async function (id, updates, user) {
+export async function updatePaymentMethod(id: string, updates: Record<string, any>, user: any) {
 	assertBarbeariaContext(user);
 	assertAdmin(user);
 	const context = { barbeariaId: user.barbearia_id };
@@ -53,4 +53,9 @@ exports.updatePaymentMethod = async function (id, updates, user) {
 		}
 		throw error;
 	}
+}
+
+module.exports = {
+	listPaymentMethods,
+	updatePaymentMethod,
 };
