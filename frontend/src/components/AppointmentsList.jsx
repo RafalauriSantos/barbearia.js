@@ -1,7 +1,7 @@
 import { memo, useRef, useState } from "react";
 import { formatCurrency } from "@/lib/store";
 
-const SWIPE_STATUS_THRESHOLD = 72;
+const SWIPE_STATUS_THRESHOLD = 50;
 const SWIPE_STATUS_MAX_OFFSET = 116;
 
 function clamp(value, min, max) {
@@ -61,6 +61,7 @@ const AppointmentSwipeRow = memo(function AppointmentSwipeRow({
 			: null;
 		if (pointerRef.current) {
 			pointerRef.current.action = nextAction;
+			pointerRef.current.lastDx = clampedX;
 		}
 		setDragX(clampedX);
 		setDragAction(nextAction);
@@ -69,60 +70,58 @@ const AppointmentSwipeRow = memo(function AppointmentSwipeRow({
 	const handlePointerDown = (event) => {
 		if (isSaving) return;
 		pointerRef.current = {
-			id: event.pointerId,
-			source: "pointer",
 			startX: event.clientX,
 			startY: event.clientY,
 			dragging: false,
 			moved: false,
 			action: null,
+			lastDx: 0,
 		};
-		event.currentTarget.setPointerCapture(event.pointerId);
 	};
 
-	const moveDrag = (event, source) => {
+	const moveDrag = (event) => {
 		const pointer = pointerRef.current;
-		if (!pointer || pointer.source !== source) return false;
-		if (source === "pointer" && pointer.id !== event.pointerId) return false;
+		if (!pointer) return;
 
-		const deltaX = event.clientX - pointer.startX;
-		const deltaY = event.clientY - pointer.startY;
-		const absX = Math.abs(deltaX);
-		const absY = Math.abs(deltaY);
+		const dx = event.clientX - pointer.startX;
+		const dy = event.clientY - pointer.startY;
+		const absDx = Math.abs(dx);
+		const absDy = Math.abs(dy);
 
 		if (!pointer.dragging) {
-			if (absX < 10 && absY < 10) return false;
-			pointer.moved = true;
-			if (absY > absX) return false;
+			if (absDx < 6 && absDy < 6) return;
+			if (absDy > absDx) {
+				resetDrag();
+				return;
+			}
 			pointer.dragging = true;
 		}
 
-		event.preventDefault();
-		updateDrag(deltaX);
-		return true;
+		pointer.moved = true;
+		pointer.lastDx = dx;
+		updateDrag(dx);
 	};
 
 	const handlePointerMove = (event) => {
-		moveDrag(event, "pointer");
+		moveDrag(event);
 	};
 
-	const endDrag = async (event, source) => {
+	const endDrag = async (event) => {
 		const pointer = pointerRef.current;
-		if (!pointer || pointer.source !== source) return;
-		if (source === "pointer" && pointer.id !== event.pointerId) return;
+		if (!pointer) return;
 
-		const finalAction = pointer.action;
-		const shouldTap = !pointer.moved && !pointer.dragging;
+		const dx = pointer.lastDx || dragX;
+		const finalAction =
+			pointer.action ||
+			dragAction ||
+			(dx >= SWIPE_STATUS_THRESHOLD ? "paid"
+			: dx <= -SWIPE_STATUS_THRESHOLD ? "fiado"
+			: null);
+		const shouldTap = !pointer.moved;
 
-		if (
-			source === "pointer" &&
-			event.currentTarget.hasPointerCapture(event.pointerId)
-		) {
-			event.currentTarget.releasePointerCapture(event.pointerId);
-		}
 		resetDrag();
 
-		if (finalAction) {
+		if (finalAction === "fiado" || finalAction === "paid") {
 			await onStatusChange(appointment, finalAction);
 			return;
 		}
@@ -133,28 +132,28 @@ const AppointmentSwipeRow = memo(function AppointmentSwipeRow({
 	};
 
 	const handlePointerEnd = async (event) => {
-		await endDrag(event, "pointer");
+		await endDrag(event);
 	};
 
 	const handleMouseDown = (event) => {
+		if (pointerRef.current) return;
 		if (isSaving || event.button !== 0) return;
 		pointerRef.current = {
-			id: "mouse",
-			source: "mouse",
 			startX: event.clientX,
 			startY: event.clientY,
 			dragging: false,
 			moved: false,
 			action: null,
+			lastDx: 0,
 		};
 	};
 
 	const handleMouseMove = (event) => {
-		moveDrag(event, "mouse");
+		moveDrag(event);
 	};
 
 	const handleMouseUp = async (event) => {
-		await endDrag(event, "mouse");
+		await endDrag(event);
 	};
 
 	const handleKeyDown = (event) => {
@@ -162,6 +161,11 @@ const AppointmentSwipeRow = memo(function AppointmentSwipeRow({
 		event.preventDefault();
 		setIsExpanded((prev) => !prev);
 	};
+
+	const actionLabel =
+		dragAction === "paid" ? "solte para marcar pago"
+		: dragAction === "fiado" ? "solte para marcar fiado"
+		: "arraste: fiado para esquerda, pago para direita";
 
 	const statusClass =
 		appointment.status === "paid" || appointment.status === "confirmado" ?
@@ -183,15 +187,14 @@ const AppointmentSwipeRow = memo(function AppointmentSwipeRow({
 					Pago
 				</div>
 			</div>
-			<div
-				tabIndex={0}
-				role="button"
-				aria-label={appointment.client_name}
+			<button
+				type="button"
+				aria-label={`${appointment.client_name}. ${actionLabel}`}
 				aria-expanded={isExpanded}
+				disabled={isSaving}
 				onPointerDown={handlePointerDown}
 				onPointerMove={handlePointerMove}
 				onPointerUp={handlePointerEnd}
-				onPointerCancel={resetDrag}
 				onMouseDown={handleMouseDown}
 				onMouseMove={handleMouseMove}
 				onMouseUp={handleMouseUp}
@@ -200,7 +203,7 @@ const AppointmentSwipeRow = memo(function AppointmentSwipeRow({
 					transform: `translateX(${dragX}px)`,
 					touchAction: "pan-y",
 				}}
-				className={`row-agenda ${statusClass} ${isExpanded ? "expanded" : ""} relative bg-[var(--bg)] transition-transform ${
+				className={`row-agenda ${statusClass} ${isExpanded ? "expanded" : ""} relative w-full text-left bg-[var(--bg)] transition-transform ${
 					isSaving ? "opacity-60 cursor-wait" : ""
 				}`}>
 				<div className="time-chip">{timeLabel}</div>
@@ -212,16 +215,9 @@ const AppointmentSwipeRow = memo(function AppointmentSwipeRow({
 							{formatCurrency(Number(appointment.value || 0))}
 						</div>
 					</div>
-					<div
-						className="services-agenda"
-						onClick={(e) => {
-							e.stopPropagation();
-							onOpen(appointment);
-						}}>
-						{summaryText}
-					</div>
+					<div className="services-agenda">{summaryText}</div>
 				</div>
-			</div>
+			</button>
 		</div>
 	);
 });

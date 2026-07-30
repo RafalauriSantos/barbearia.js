@@ -767,6 +767,8 @@ export default function AppPage() {
 				prazo_date:
 					status === "fiado" ? appointment.prazo_date || null : null,
 			});
+			savingStatusIdRef.current = "";
+			setSavingStatusId("");
 			await reload();
 		} catch (error) {
 			appointmentsRef.current = previousAppointments;

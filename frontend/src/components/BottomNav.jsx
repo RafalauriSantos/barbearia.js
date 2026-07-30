@@ -73,7 +73,13 @@ export const BottomNav = memo(function BottomNav({ variant = "minimal" }) {
 			const winHeight = window.innerHeight;
 			const isViewportReduced = Boolean(vvHeight && winHeight && vvHeight < winHeight - 120);
 
-			const isModalOpen = document.body.style.overflow === "hidden";
+			const isModalOpen =
+				document.body.style.overflow === "hidden" ||
+				Boolean(
+					document.querySelector(
+						'[role="dialog"], [data-state="open"], .fixed.inset-0',
+					),
+				);
 
 			setIsKeyboardOrModalOpen(Boolean(isInputFocused || isViewportReduced || isModalOpen));
 		};
