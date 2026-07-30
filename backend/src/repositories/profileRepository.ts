@@ -1,8 +1,8 @@
 const supabase = require("../lib/supabase");
-const { AppError } = require("../lib/errors");
+import { AppError } from "../lib/errors";
 const AvatarStorageService = require("../services/avatarStorageService");
 
-async function findShop(barbeariaId) {
+async function findShop(barbeariaId: string) {
 	const { data, error } = await supabase
 		.from("barbearias")
 		.select("*")
@@ -16,7 +16,7 @@ async function findShop(barbeariaId) {
 	return data;
 }
 
-async function findBarber(user) {
+async function findBarber(user: any) {
 	if (!user?.barbeiro_id) return null;
 
 	const { data, error } = await supabase
@@ -30,7 +30,7 @@ async function findBarber(user) {
 	return data || null;
 }
 
-function toProfile({ shop, barber }) {
+function toProfile({ shop, barber }: { shop: any; barber: any }) {
 	return {
 		shopName: shop?.nome || "",
 		phone: shop?.telefone || "",
@@ -47,20 +47,20 @@ function toProfile({ shop, barber }) {
 	};
 }
 
-exports.get = async function (user) {
+export async function get(user: any) {
 	const [shop, barber] = await Promise.all([
 		findShop(user.barbearia_id),
 		findBarber(user),
 	]);
 
 	return toProfile({ shop, barber });
-};
+}
 
-exports.upsert = async function (payload, user) {
+export async function upsert(payload: Record<string, any>, user: any) {
 	let shop = await findShop(user.barbearia_id);
 
 	if (user.role === "admin") {
-		const shopUpdates = {};
+		const shopUpdates: Record<string, any> = {};
 
 		if (payload.shopName !== undefined) shopUpdates.nome = payload.shopName;
 		if (payload.phone !== undefined) shopUpdates.telefone = payload.phone || null;
@@ -99,7 +99,7 @@ exports.upsert = async function (payload, user) {
 	}
 
 	let barber = await findBarber(user);
-	const barberUpdates = {};
+	const barberUpdates: Record<string, any> = {};
 
 	if (payload.barberName !== undefined) {
 		barberUpdates.nome = payload.barberName || "";
@@ -139,4 +139,9 @@ exports.upsert = async function (payload, user) {
 	}
 
 	return toProfile({ shop, barber });
+}
+
+module.exports = {
+	get,
+	upsert,
 };

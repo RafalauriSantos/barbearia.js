@@ -1,15 +1,15 @@
 const supabase = require("../lib/supabase");
 
-exports.invalidateForUser = async function (userId) {
+export async function invalidateForUser(userId: string): Promise<void> {
 	const { error } = await supabase
 		.from("email_verification_codes")
 		.update({ usado_em: new Date().toISOString() })
 		.eq("user_id", userId)
 		.is("usado_em", null);
 	if (error) throw error;
-};
+}
 
-exports.create = async function ({ userId, codeHash, expiresAt }) {
+export async function create({ userId, codeHash, expiresAt }: { userId: string; codeHash: string; expiresAt: string }) {
 	const { data, error } = await supabase
 		.from("email_verification_codes")
 		.insert({
@@ -21,9 +21,9 @@ exports.create = async function ({ userId, codeHash, expiresAt }) {
 		.single();
 	if (error) throw error;
 	return data;
-};
+}
 
-exports.findValidByUserAndHash = async function ({ userId, codeHash }) {
+export async function findValidByUserAndHash({ userId, codeHash }: { userId: string; codeHash: string }) {
 	const now = new Date().toISOString();
 	const { data, error } = await supabase
 		.from("email_verification_codes")
@@ -35,9 +35,9 @@ exports.findValidByUserAndHash = async function ({ userId, codeHash }) {
 		.maybeSingle();
 	if (error && error.code !== "PGRST116") throw error;
 	return data || null;
-};
+}
 
-exports.markUsed = async function (id) {
+export async function markUsed(id: string) {
 	const { data, error } = await supabase
 		.from("email_verification_codes")
 		.update({ usado_em: new Date().toISOString() })
@@ -46,9 +46,9 @@ exports.markUsed = async function (id) {
 		.single();
 	if (error) throw error;
 	return data;
-};
+}
 
-exports.findActiveForUser = async function (userId) {
+export async function findActiveForUser(userId: string) {
 	const now = new Date().toISOString();
 	const { data, error } = await supabase
 		.from("email_verification_codes")
@@ -61,15 +61,15 @@ exports.findActiveForUser = async function (userId) {
 		.maybeSingle();
 	if (error && error.code !== "PGRST116") throw error;
 	return data || null;
-};
+}
 
-exports.incrementAttempts = async function (id) {
+export async function incrementAttempts(id: string) {
 	const { data, error } = await supabase.rpc("incrementar_tentativas_codigo_verificacao", { p_id: id });
 	if (error) throw error;
 	return data;
-};
+}
 
-exports.findRecentCodesForUser = async function (userId, windowMs) {
+export async function findRecentCodesForUser(userId: string, windowMs: number) {
 	const limitTime = new Date(Date.now() - windowMs).toISOString();
 	const { data, error } = await supabase
 		.from("email_verification_codes")
@@ -78,4 +78,14 @@ exports.findRecentCodesForUser = async function (userId, windowMs) {
 		.gte("criado_em", limitTime);
 	if (error) throw error;
 	return data || [];
+}
+
+module.exports = {
+	invalidateForUser,
+	create,
+	findValidByUserAndHash,
+	markUsed,
+	findActiveForUser,
+	incrementAttempts,
+	findRecentCodesForUser,
 };

@@ -1,12 +1,12 @@
 const supabase = require("../lib/supabase");
-const { randomUUID } = require("crypto");
+import { randomUUID } from "crypto";
 const { env } = require("../config/env");
 
-function getDisplayName(row) {
+function getDisplayName(row: any): string {
 	return row.nome || row.email?.split("@")[0] || "Dono";
 }
 
-async function findBarberByUserId(userId, barbeariaId) {
+async function findBarberByUserId(userId: string, barbeariaId?: string) {
 	let query = supabase
 		.from("barbeiros")
 		.select("id, barbearia_id")
@@ -22,7 +22,7 @@ async function findBarberByUserId(userId, barbeariaId) {
 	return data || null;
 }
 
-async function createOwnerBarber(user, barbeariaId) {
+async function createOwnerBarber(user: any, barbeariaId: string) {
 	const { data, error } = await supabase
 		.from("barbeiros")
 		.insert({
@@ -40,7 +40,7 @@ async function createOwnerBarber(user, barbeariaId) {
 	return data;
 }
 
-async function linkExistingOwnerBarber(user, barbeariaId) {
+async function linkExistingOwnerBarber(user: any, barbeariaId: string) {
 	const { data, error } = await supabase
 		.from("barbeiros")
 		.select("id,nome,email,usuario_id")
@@ -51,13 +51,13 @@ async function linkExistingOwnerBarber(user, barbeariaId) {
 	const rows = data || [];
 	const userEmail = String(user.email || "").trim().toLowerCase();
 	const userName = getDisplayName(user).trim().toLowerCase();
-	const unlinkedRows = rows.filter((row) => !row.usuario_id);
+	const unlinkedRows = rows.filter((row: any) => !row.usuario_id);
 	const candidate =
 		unlinkedRows.find(
-			(row) => row.email && row.email.trim().toLowerCase() === userEmail,
+			(row: any) => row.email && row.email.trim().toLowerCase() === userEmail,
 		) ||
 		unlinkedRows.find(
-			(row) => row.nome && row.nome.trim().toLowerCase() === userName,
+			(row: any) => row.nome && row.nome.trim().toLowerCase() === userName,
 		) ||
 		(unlinkedRows.length === 1 ? unlinkedRows[0] : null);
 
@@ -79,7 +79,7 @@ async function linkExistingOwnerBarber(user, barbeariaId) {
 	return linked || null;
 }
 
-async function ensureOwnerBarber(user, barbeariaId) {
+async function ensureOwnerBarber(user: any, barbeariaId: string) {
 	const linkedBarber = await findBarberByUserId(user.id, barbeariaId);
 	if (linkedBarber) return linkedBarber;
 
@@ -89,7 +89,7 @@ async function ensureOwnerBarber(user, barbeariaId) {
 	return createOwnerBarber(user, barbeariaId);
 }
 
-async function ensureOwnerWorkspace(user) {
+async function ensureOwnerWorkspace(user: any) {
 	const { data: existingBarbearia, error: findError } = await supabase
 		.from("barbearias")
 		.select("id")
@@ -116,8 +116,6 @@ async function ensureOwnerWorkspace(user) {
 }
 
 function resolveDevUserContext() {
-	// Legacy local fallback: only used when the user is not linked to a shop
-	// owner record or a barber profile.
 	if (env.NODE_ENV === "production" || !env.DEFAULT_BARBEARIA_ID) {
 		return {
 			role: "admin",
@@ -133,7 +131,7 @@ function resolveDevUserContext() {
 	};
 }
 
-async function resolveUserContext(user) {
+async function resolveUserContext(user: any) {
 	const { data: ownedBarbearia, error } = await supabase
 		.from("barbearias")
 		.select("id")
@@ -163,7 +161,7 @@ async function resolveUserContext(user) {
 	return resolveDevUserContext();
 }
 
-async function toAuthUser(row) {
+async function toAuthUser(row: any) {
 	if (!row) return null;
 
 	const context = await resolveUserContext(row);
@@ -177,7 +175,7 @@ async function toAuthUser(row) {
 	};
 }
 
-exports.findByEmail = async function (email) {
+export async function findByEmail(email: string) {
 	const { data, error } = await supabase
 		.from("usuarios")
 		.select("*")
@@ -185,9 +183,9 @@ exports.findByEmail = async function (email) {
 		.single();
 	if (error && error.code !== "PGRST116") throw error;
 	return toAuthUser(data);
-};
+}
 
-exports.findById = async function (id) {
+export async function findById(id: string) {
 	const { data, error } = await supabase
 		.from("usuarios")
 		.select("*")
@@ -195,14 +193,20 @@ exports.findById = async function (id) {
 		.single();
 	if (error && error.code !== "PGRST116") throw error;
 	return toAuthUser(data);
-};
+}
 
-exports.create = async function ({
+export async function create({
 	email,
 	password_hash,
 	nome,
 	email_verificado_em,
 	create_workspace,
+}: {
+	email: string;
+	password_hash: string;
+	nome?: string;
+	email_verificado_em?: string | null;
+	create_workspace?: boolean;
 }) {
 	const row = {
 		id: randomUUID(),
@@ -223,9 +227,9 @@ exports.create = async function ({
 	}
 
 	return toAuthUser(data);
-};
+}
 
-exports.markEmailVerified = async function (userId) {
+export async function markEmailVerified(userId: string) {
 	const { data, error } = await supabase
 		.from("usuarios")
 		.update({ email_verificado_em: new Date().toISOString() })
@@ -234,14 +238,14 @@ exports.markEmailVerified = async function (userId) {
 		.single();
 	if (error) throw error;
 	return toAuthUser(data);
-};
+}
 
-exports.updatePassword = async function (
-	userId,
-	password_hash,
-	{ markEmailVerified = false, tokenVersion } = {},
+export async function updatePassword(
+	userId: string,
+	password_hash: string,
+	{ markEmailVerified = false, tokenVersion }: { markEmailVerified?: boolean; tokenVersion?: number } = {},
 ) {
-	const updates = {
+	const updates: Record<string, any> = {
 		senha_hash: password_hash,
 		...(markEmailVerified ?
 			{ email_verificado_em: new Date().toISOString() }
@@ -285,9 +289,9 @@ exports.updatePassword = async function (
 		if (fallbackError) throw fallbackError;
 		return toAuthUser(fallbackData);
 	}
-};
+}
 
-exports.updateTokenVersion = async function (userId, version) {
+export async function updateTokenVersion(userId: string, version: number) {
 	const { data, error } = await supabase
 		.from("usuarios")
 		.update({ token_version: version })
@@ -296,9 +300,9 @@ exports.updateTokenVersion = async function (userId, version) {
 		.single();
 	if (error) throw error;
 	return toAuthUser(data);
-};
+}
 
-exports.logFailedLoginAndCount = async function (email, ipAddress, windowSeconds) {
+export async function logFailedLoginAndCount(email: string, ipAddress: string, windowSeconds?: number) {
 	const { data, error } = await supabase.rpc("incrementar_tentativas_login", {
 		p_email: email,
 		p_ip: ipAddress,
@@ -306,9 +310,9 @@ exports.logFailedLoginAndCount = async function (email, ipAddress, windowSeconds
 	});
 	if (error) throw error;
 	return data;
-};
+}
 
-exports.getFailedLogins = async function (email, ipAddress, windowMs) {
+export async function getFailedLogins(email: string, ipAddress: string, windowMs: number) {
 	const limitTime = new Date(Date.now() - windowMs).toISOString();
 	const { data, error } = await supabase
 		.from("login_attempts")
@@ -319,27 +323,27 @@ exports.getFailedLogins = async function (email, ipAddress, windowMs) {
 		.order("criado_em", { ascending: false });
 	if (error) throw error;
 	return data || [];
-};
+}
 
-exports.clearFailedLogins = async function (email, ipAddress) {
+export async function clearFailedLogins(email: string, ipAddress: string): Promise<void> {
 	const { error } = await supabase
 		.from("login_attempts")
 		.delete()
 		.eq("email", email)
 		.eq("ip_address", ipAddress);
 	if (error) throw error;
-};
+}
 
-exports.logRegistrationAndCount = async function (ipAddress, windowSeconds) {
+export async function logRegistrationAndCount(ipAddress: string, windowSeconds?: number) {
 	const { data, error } = await supabase.rpc("incrementar_tentativas_registro", {
 		p_ip: ipAddress,
 		p_window_seconds: windowSeconds || 3600,
 	});
 	if (error) throw error;
 	return data;
-};
+}
 
-exports.recordUserFailedLogin = async function (email, maxAttempts = 5, lockoutSeconds = 900) {
+export async function recordUserFailedLogin(email: string, maxAttempts = 5, lockoutSeconds = 900) {
 	const { data, error } = await supabase.rpc("registrar_falha_login_usuario", {
 		p_email: email,
 		p_max_attempts: maxAttempts,
@@ -347,11 +351,26 @@ exports.recordUserFailedLogin = async function (email, maxAttempts = 5, lockoutS
 	});
 	if (error) throw error;
 	return data;
-};
+}
 
-exports.resetUserFailedLogin = async function (userId) {
+export async function resetUserFailedLogin(userId: string): Promise<void> {
 	const { error } = await supabase.rpc("resetar_falhas_login_usuario", {
 		p_user_id: userId,
 	});
 	if (error) throw error;
+}
+
+module.exports = {
+	findByEmail,
+	findById,
+	create,
+	markEmailVerified,
+	updatePassword,
+	updateTokenVersion,
+	logFailedLoginAndCount,
+	getFailedLogins,
+	clearFailedLogins,
+	logRegistrationAndCount,
+	recordUserFailedLogin,
+	resetUserFailedLogin,
 };

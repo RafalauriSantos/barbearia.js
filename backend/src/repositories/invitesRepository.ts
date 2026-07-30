@@ -1,6 +1,6 @@
 const supabase = require("../lib/supabase");
 
-function toApi(row) {
+function toApi(row: any) {
 	if (!row) return null;
 	return {
 		id: row.id,
@@ -18,7 +18,7 @@ function toApi(row) {
 	};
 }
 
-exports.revokePendingForBarber = async function (barbeiroId) {
+export async function revokePendingForBarber(barbeiroId: string): Promise<void> {
 	const { error } = await supabase
 		.from("convites_barbeiros")
 		.update({ revogado_em: new Date().toISOString() })
@@ -26,15 +26,22 @@ exports.revokePendingForBarber = async function (barbeiroId) {
 		.is("aceito_em", null)
 		.is("revogado_em", null);
 	if (error) throw error;
-};
+}
 
-exports.create = async function ({
+export async function create({
 	barbeariaId,
 	barbeiroId,
 	email,
 	tokenHash,
 	expiresAt,
 	createdByUserId,
+}: {
+	barbeariaId: string;
+	barbeiroId: string;
+	email: string;
+	tokenHash: string;
+	expiresAt: string;
+	createdByUserId?: string;
 }) {
 	const { data, error } = await supabase
 		.from("convites_barbeiros")
@@ -50,9 +57,9 @@ exports.create = async function ({
 		.single();
 	if (error) throw error;
 	return toApi(data);
-};
+}
 
-exports.findByTokenHash = async function (tokenHash) {
+export async function findByTokenHash(tokenHash: string) {
 	const { data, error } = await supabase
 		.from("convites_barbeiros")
 		.select("*, barbeiros(id,nome,email,usuario_id,barbearia_id), barbearias(id,nome)")
@@ -60,9 +67,9 @@ exports.findByTokenHash = async function (tokenHash) {
 		.maybeSingle();
 	if (error && error.code !== "PGRST116") throw error;
 	return toApi(data);
-};
+}
 
-exports.markAccepted = async function (id) {
+export async function markAccepted(id: string) {
 	const { data, error } = await supabase
 		.from("convites_barbeiros")
 		.update({ aceito_em: new Date().toISOString() })
@@ -71,4 +78,11 @@ exports.markAccepted = async function (id) {
 		.single();
 	if (error) throw error;
 	return toApi(data);
+}
+
+module.exports = {
+	revokePendingForBarber,
+	create,
+	findByTokenHash,
+	markAccepted,
 };

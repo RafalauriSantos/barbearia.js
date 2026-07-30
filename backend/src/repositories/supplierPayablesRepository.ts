@@ -1,11 +1,11 @@
 const supabase = require("../lib/supabase");
 
-function toNumber(value) {
+function toNumber(value: any): number {
 	const number = Number(value || 0);
 	return Number.isFinite(number) ? number : 0;
 }
 
-function toApi(row) {
+function toApi(row: any) {
 	if (!row) return null;
 	return {
 		id: row.id,
@@ -28,15 +28,20 @@ function toApi(row) {
 
 const selectFields = "*, barbeiros(id,nome)";
 
-function originKey(appointmentId, productId) {
+function originKey(appointmentId: string, productId: string) {
 	return `agendamento:${appointmentId}:produto:${productId}`;
 }
 
-exports.findAll = async function ({
+export async function findAll({
 	barbeariaId,
 	status = "aberto",
 	startDate,
 	endDate,
+}: {
+	barbeariaId: string;
+	status?: string;
+	startDate?: string;
+	endDate?: string;
 }) {
 	let query = supabase
 		.from("contas_pagar_fornecedores")
@@ -49,9 +54,9 @@ exports.findAll = async function ({
 	const { data, error } = await query.order(dateColumn, { ascending: false });
 	if (error) throw error;
 	return (data || []).map(toApi);
-};
+}
 
-exports.findById = async function (id, { barbeariaId }) {
+export async function findById(id: string, { barbeariaId }: { barbeariaId: string }) {
 	const { data, error } = await supabase
 		.from("contas_pagar_fornecedores")
 		.select(selectFields)
@@ -60,10 +65,10 @@ exports.findById = async function (id, { barbeariaId }) {
 		.maybeSingle();
 	if (error) throw error;
 	return toApi(data);
-};
+}
 
-exports.syncFromAppointment = async function (appointment) {
-	const activeKeys = [];
+export async function syncFromAppointment(appointment: any): Promise<void> {
+	const activeKeys: string[] = [];
 	if (appointment.status === "paid") {
 		for (const product of appointment.products || []) {
 			if (product.purchase_type !== "consignado") continue;
@@ -107,8 +112,8 @@ exports.syncFromAppointment = async function (appointment) {
 		.eq("status", "aberto");
 	if (openError) throw openError;
 	const staleIds = (openRows || [])
-		.filter((row) => !activeKeys.includes(row.origem_chave))
-		.map((row) => row.id);
+		.filter((row: any) => !activeKeys.includes(row.origem_chave))
+		.map((row: any) => row.id);
 	if (staleIds.length > 0) {
 		const { error: staleError } = await supabase
 			.from("contas_pagar_fornecedores")
@@ -116,24 +121,19 @@ exports.syncFromAppointment = async function (appointment) {
 			.in("id", staleIds);
 		if (staleError) throw staleError;
 	}
-};
+}
 
-exports.pay = async function (id, paymentDate, { barbeariaId }) {
+export async function pay(id: string, paymentDate: string, { barbeariaId }: { barbeariaId: string }) {
 	const { error } = await supabase.rpc("baixar_conta_fornecedor", {
 		p_conta_id: id,
 		p_barbearia_id: barbeariaId,
 		p_data_pagamento: paymentDate,
 	});
 	if (error) throw error;
-	return exports.findById(id, { barbeariaId });
-};
+	return findById(id, { barbeariaId });
+}
 
-exports.createPurchase = async function (payload, { barbeariaId, barbeiroId }) {
-	// First, update the stock in the produtos table.
-	// Since Supabase doesn't have an easy atomic increment from the standard JS client without RPC,
-	// and we don't know if there's an RPC for this, we'll do a read-modify-write.
-	// In a real prod env, we'd use an RPC to avoid race conditions.
-	
+export async function createPurchase(payload: Record<string, any>, { barbeariaId, barbeiroId }: { barbeariaId: string; barbeiroId?: string }) {
 	const { data: product, error: fetchError } = await supabase
 		.from("produtos")
 		.select("quantidade_estoque, nome")
@@ -153,7 +153,6 @@ exports.createPurchase = async function (payload, { barbeariaId, barbeiroId }) {
 		
 	if (updateError) throw updateError;
 
-	// Now insert the payable record
 	const totalValue = payload.quantidade * payload.custo_unitario;
 	const timestamp = new Date().getTime();
 	
@@ -178,4 +177,12 @@ exports.createPurchase = async function (payload, { barbeariaId, barbeiroId }) {
 		
 	if (insertError) throw insertError;
 	return toApi(payable);
+}
+
+module.exports = {
+	findAll,
+	findById,
+	syncFromAppointment,
+	pay,
+	createPurchase,
 };
