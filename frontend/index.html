@@ -430,6 +430,13 @@
 			(() => {
 				const path = window.location.pathname.replace(/\/+$/, "") || "/";
 				if (path !== "/" && path !== "/welcome") return;
+				try {
+					const hasUser = localStorage.getItem("gestor_barbearia_auth_user_v1");
+					const hasToken =
+						localStorage.getItem("gestor_barbearia_access_token") ||
+						localStorage.getItem("kash_flow_access_token");
+					if (hasUser || hasToken) return;
+				} catch {}
 				const root = document.getElementById("root");
 				const template = document.getElementById("static-landing-template");
 				root?.appendChild(template.content.cloneNode(true));

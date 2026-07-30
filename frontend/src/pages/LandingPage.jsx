@@ -1,5 +1,6 @@
-import { Link } from "react-router-dom";
+import { Link, Navigate } from "react-router-dom";
 import { BrandName } from "@/components/BrandName";
+import { getAccessToken } from "@/lib/auth";
 
 const focusClass =
 	"focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary";
@@ -48,6 +49,12 @@ function PrimaryLink({ to, children, className = "" }) {
 }
 
 export default function LandingPage() {
+	if (typeof window !== "undefined" && getAccessToken()) {
+		const lastPath =
+			localStorage.getItem("gestor_barbearia_last_path") || "/app";
+		return <Navigate to={lastPath} replace />;
+	}
+
 	return (
 		<main className="h-[var(--app-height)] overflow-y-auto overflow-x-hidden bg-background-deep text-white">
 			<section className="relative min-h-[88svh] overflow-hidden">

@@ -14,20 +14,22 @@ import VerifyEmailPage from "./pages/VerifyEmailPage";
 import VerifyCodePage from "./pages/VerifyCodePage";
 import AcceptInvitePage from "./pages/AcceptInvitePage";
 
-const AuthGate = lazy(() => import("./components/AuthGate"));
-const AppPage = lazy(() => import("./pages/AppPage"));
-const SettingsPage = lazy(() => import("./pages/SettingsPage"));
-const ServicesPage = lazy(() => import("./pages/ServicesPage"));
-const ClientsPage = lazy(() => import("./pages/ClientsPage"));
-const FinancialPage = lazy(() => import("./pages/FinancialPage"));
-const ExpensesPage = lazy(() => import("./pages/ExpensesPage"));
-const TeamPage = lazy(() => import("./pages/TeamPage"));
+import AuthGate from "./components/AuthGate";
+import AppPage from "./pages/AppPage";
+import SettingsPage from "./pages/SettingsPage";
+import ServicesPage from "./pages/ServicesPage";
+import ClientsPage from "./pages/ClientsPage";
+import FinancialPage from "./pages/FinancialPage";
+import ExpensesPage from "./pages/ExpensesPage";
+import TeamPage from "./pages/TeamPage";
+
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 const SITE_URL = "https://barbearia-app.pages.dev";
 const LANDING_TITLE = `${APP_NAME} | Sistema de agenda e caixa para barbearias`;
 const LANDING_DESCRIPTION =
 	"Sistema simples para barbearias controlarem agenda, caixa, equipe, produtos, despesas e fiados em um painel operacional.";
+const LAST_PATH_KEY = "gestor_barbearia_last_path";
 
 function upsertMeta(selector, attributes) {
 	let element = document.head.querySelector(selector);
@@ -56,6 +58,24 @@ function RouteSeo() {
 	const { pathname } = useLocation();
 
 	useEffect(() => {
+		const isAuthRoute = [
+			"/app",
+			"/team",
+			"/clients",
+			"/financial",
+			"/expenses",
+			"/services",
+			"/settings",
+		].some((path) => pathname.startsWith(path));
+
+		if (isAuthRoute) {
+			try {
+				localStorage.setItem(LAST_PATH_KEY, pathname);
+			} catch {
+				// Ignore storage errors in restricted contexts
+			}
+		}
+
 		const isLanding = pathname === "/";
 		const isDuplicateLanding = pathname === "/welcome";
 		const robots = isLanding ? "index, follow" : "noindex, nofollow";
