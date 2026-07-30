@@ -1,35 +1,55 @@
-import { memo, useRef, useState } from "react";
+import React, { memo, useRef, useState } from "react";
 import { formatCurrency } from "@/lib/store";
 
 const SWIPE_STATUS_THRESHOLD = 50;
 const SWIPE_STATUS_MAX_OFFSET = 116;
 
-function clamp(value, min, max) {
+function clamp(value: number, min: number, max: number): number {
 	return Math.min(Math.max(value, min), max);
 }
 
-function formatPriceDisplay(value) {
-	const num = Number(value || 0);
-	if (Number.isInteger(num)) {
-		return `R$ ${num}`;
-	}
-	return formatCurrency(num);
+export interface AppointmentItem {
+	id: string;
+	client_name: string;
+	client_phone?: string;
+	time_slot?: string;
+	value?: number;
+	status?: "pending" | "paid" | "fiado" | "confirmado" | string;
+	service_name?: string;
+	services?: Array<{ name: string; price?: number }>;
+	products?: Array<{ name: string; quantity: number; price?: number }>;
+	barber_name?: string;
+	barbeiro_id?: string;
+	payment_method_id?: string | null;
+	prazo_date?: string | null;
 }
 
-function getAppointmentSummary(appointment) {
-	const services =
-		Array.isArray(appointment.services) ? appointment.services : [];
-	const products =
-		Array.isArray(appointment.products) ? appointment.products : [];
+function getAppointmentSummary(appointment: AppointmentItem): string {
+	const services = Array.isArray(appointment.services) ? appointment.services : [];
+	const products = Array.isArray(appointment.products) ? appointment.products : [];
 	const serviceNames = services.map((item) => item.name).filter(Boolean);
 	const productNames = products
-		.map((item) =>
-			item.quantity > 1 ? `${item.quantity}x ${item.name}` : item.name,
-		)
+		.map((item) => (item.quantity > 1 ? `${item.quantity}x ${item.name}` : item.name))
 		.filter(Boolean);
 	const names = [...serviceNames, ...productNames].filter(Boolean);
 	if (names.length > 0) return names.join(", ");
 	return appointment.service_name || "Atendimento";
+}
+
+interface PointerState {
+	startX: number;
+	startY: number;
+	dragging: boolean;
+	moved: boolean;
+	action: "paid" | "fiado" | null;
+	lastDx: number;
+}
+
+interface AppointmentSwipeRowProps {
+	appointment: AppointmentItem;
+	isSaving?: boolean;
+	onOpen: (appointment: AppointmentItem) => void;
+	onStatusChange: (appointment: AppointmentItem, nextStatus: "paid" | "fiado") => Promise<void> | void;
 }
 
 const AppointmentSwipeRow = memo(function AppointmentSwipeRow({
@@ -37,11 +57,11 @@ const AppointmentSwipeRow = memo(function AppointmentSwipeRow({
 	isSaving,
 	onOpen,
 	onStatusChange,
-}) {
-	const pointerRef = useRef(null);
-	const [dragX, setDragX] = useState(0);
-	const [dragAction, setDragAction] = useState(null);
-	const [isExpanded, setIsExpanded] = useState(false);
+}: AppointmentSwipeRowProps) {
+	const pointerRef = useRef<PointerState | null>(null);
+	const [dragX, setDragX] = useState<number>(0);
+	const [dragAction, setDragAction] = useState<"paid" | "fiado" | null>(null);
+	const [isExpanded, setIsExpanded] = useState<boolean>(false);
 
 	const resetDrag = () => {
 		pointerRef.current = null;
@@ -49,7 +69,7 @@ const AppointmentSwipeRow = memo(function AppointmentSwipeRow({
 		setDragAction(null);
 	};
 
-	const updateDrag = (nextX) => {
+	const updateDrag = (nextX: number) => {
 		const clampedX = clamp(
 			nextX,
 			-SWIPE_STATUS_MAX_OFFSET,
@@ -67,7 +87,7 @@ const AppointmentSwipeRow = memo(function AppointmentSwipeRow({
 		setDragAction(nextAction);
 	};
 
-	const handlePointerDown = (event) => {
+	const handlePointerDown = (event: React.PointerEvent<HTMLButtonElement>) => {
 		if (isSaving) return;
 		pointerRef.current = {
 			startX: event.clientX,
@@ -79,7 +99,7 @@ const AppointmentSwipeRow = memo(function AppointmentSwipeRow({
 		};
 	};
 
-	const moveDrag = (event) => {
+	const moveDrag = (event: { clientX: number; clientY: number }) => {
 		const pointer = pointerRef.current;
 		if (!pointer) return;
 
@@ -102,11 +122,11 @@ const AppointmentSwipeRow = memo(function AppointmentSwipeRow({
 		updateDrag(dx);
 	};
 
-	const handlePointerMove = (event) => {
+	const handlePointerMove = (event: React.PointerEvent<HTMLButtonElement>) => {
 		moveDrag(event);
 	};
 
-	const endDrag = async (event) => {
+	const endDrag = async () => {
 		const pointer = pointerRef.current;
 		if (!pointer) return;
 
@@ -131,11 +151,11 @@ const AppointmentSwipeRow = memo(function AppointmentSwipeRow({
 		}
 	};
 
-	const handlePointerEnd = async (event) => {
-		await endDrag(event);
+	const handlePointerEnd = async () => {
+		await endDrag();
 	};
 
-	const handleMouseDown = (event) => {
+	const handleMouseDown = (event: React.MouseEvent<HTMLButtonElement>) => {
 		if (pointerRef.current) return;
 		if (isSaving || event.button !== 0) return;
 		pointerRef.current = {
@@ -148,15 +168,15 @@ const AppointmentSwipeRow = memo(function AppointmentSwipeRow({
 		};
 	};
 
-	const handleMouseMove = (event) => {
+	const handleMouseMove = (event: React.MouseEvent<HTMLButtonElement>) => {
 		moveDrag(event);
 	};
 
-	const handleMouseUp = async (event) => {
-		await endDrag(event);
+	const handleMouseUp = async () => {
+		await endDrag();
 	};
 
-	const handleKeyDown = (event) => {
+	const handleKeyDown = (event: React.KeyboardEvent<HTMLButtonElement>) => {
 		if (event.key !== "Enter" && event.key !== " ") return;
 		event.preventDefault();
 		setIsExpanded((prev) => !prev);
@@ -222,6 +242,16 @@ const AppointmentSwipeRow = memo(function AppointmentSwipeRow({
 	);
 });
 
+export interface AppointmentsListProps {
+	appointments: AppointmentItem[];
+	children?: React.ReactNode;
+	isLoading?: boolean;
+	savingStatusId?: string | null;
+	onCreate: () => void;
+	onOpen: (appointment: AppointmentItem) => void;
+	onStatusChange: (appointment: AppointmentItem, nextStatus: "paid" | "fiado") => Promise<void> | void;
+}
+
 export function AppointmentsList({
 	appointments,
 	children,
@@ -230,7 +260,7 @@ export function AppointmentsList({
 	onCreate,
 	onOpen,
 	onStatusChange,
-}) {
+}: AppointmentsListProps) {
 	const countText = `${appointments.length} cliente${appointments.length === 1 ? "" : "s"}`;
 
 	return (
@@ -287,4 +317,3 @@ export function AppointmentsList({
 		</>
 	);
 }
-
