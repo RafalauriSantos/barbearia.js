@@ -14,7 +14,7 @@
 		"@fastify/helmet": "^13.1.0",
 		"@fastify/rate-limit": "^11.1.0",
 		"@sentry/cloudflare": "^10.68.0",
-		"@supabase/supabase-js": "^2.105.1",
+		"@supabase/supabase-js": "^2.110.9",
 		"bcryptjs": "^2.4.3",
 		"hono": "^4.12.32",
 		"jsonwebtoken": "^9.0.0",
