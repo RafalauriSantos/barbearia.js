@@ -920,10 +920,11 @@ export default function AppPage() {
 					</div>
 				)}
 
-				<div className="stats-agenda">
+				<div className="stats-card-compact stats-agenda">
 					<div className="stat-agenda green">
 						Recebido <b>{'\u200B'}{formatCurrency(summary.totalReceived)}</b>
 					</div>
+					<div className="stat-divider" />
 					<div className="stat-agenda amber">
 						A cobrar <b>{'\u200B'}{formatCurrency(summary.toCollect)}</b>
 					</div>
