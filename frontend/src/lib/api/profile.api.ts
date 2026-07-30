@@ -5,11 +5,11 @@ export async function getProfile() {
 	return response.data;
 }
 
-export async function updateProfile(profile) {
+export async function updateProfile(profile: Record<string, any>) {
 	const response = await apiClient.put("/profile", profile);
 	return response.data;
 }
 
-export async function resetAllData() {
+export async function resetAllData(): Promise<void> {
 	await apiClient.delete("/reset");
 }

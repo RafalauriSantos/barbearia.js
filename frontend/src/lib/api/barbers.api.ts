@@ -1,6 +1,23 @@
 import { apiClient } from "./client";
 
-function normalizeBarber(raw) {
+export interface ApiBarber {
+	id: string;
+	name: string;
+	nome: string;
+	cargo: string;
+	active: boolean;
+	comissao_percent: number;
+	email: string;
+	photo_url: string;
+	foto_url: string;
+	barbearia_id?: string;
+	usuario_id?: string | null;
+	convite_pendente?: any;
+	access_status: string;
+	inviteUrl?: string;
+}
+
+function normalizeBarber(raw: any): ApiBarber {
 	return {
 		id: raw.id,
 		name: raw.name || raw.nome || "",
@@ -19,27 +36,27 @@ function normalizeBarber(raw) {
 	};
 }
 
-export async function listBarbers() {
+export async function listBarbers(): Promise<ApiBarber[]> {
 	const response = await apiClient.get("/barbers");
 	return response.data.map(normalizeBarber);
 }
 
-export async function createBarber(payload) {
+export async function createBarber(payload: Record<string, any>): Promise<ApiBarber> {
 	const response = await apiClient.post("/barbers", payload);
 	return normalizeBarber(response.data);
 }
 
-export async function updateBarber(id, payload) {
+export async function updateBarber(id: string, payload: Record<string, any>): Promise<ApiBarber> {
 	const response = await apiClient.patch(`/barbers/${id}`, payload);
 	return normalizeBarber(response.data);
 }
 
-export async function inviteBarber(id, payload) {
+export async function inviteBarber(id: string, payload?: Record<string, any>): Promise<any> {
 	const response = await apiClient.post(`/barbers/${id}/invite`, payload);
 	return response.data;
 }
 
-export async function removeBarber(id) {
+export async function removeBarber(id: string): Promise<any> {
 	const response = await apiClient.delete(`/barbers/${id}`);
 	return response.data;
 }

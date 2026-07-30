@@ -1,16 +1,42 @@
 import { apiClient } from "./client";
 
-function addIfDefined(target, key, value) {
+function addIfDefined(target: Record<string, any>, key: string, value: any) {
 	if (value !== undefined) {
 		target[key] = value;
 	}
 }
 
-function normalizeAppointment(raw) {
+export interface ApiAppointment {
+	id: string;
+	client_name: string;
+	day_key: string;
+	time_slot: string;
+	value: number;
+	status: string;
+	service_id?: string;
+	service_name?: string;
+	prazo_date?: string | null;
+	barber_name?: string;
+	barbearia_id?: string;
+	barbeiro_id?: string;
+	cliente_id?: string | null;
+	forma_pagamento_id?: string | null;
+	payment_method_id?: string | null;
+	payment_method_code?: string;
+	payment_method_name?: string;
+	payment_date?: string | null;
+	payment_fee_percent?: number;
+	payment_fee_value?: number;
+	net_value?: number;
+	services: any[];
+	products: any[];
+}
+
+function normalizeAppointment(raw: any): ApiAppointment {
 	const services = Array.isArray(raw.services) ? raw.services : [];
 	const products = Array.isArray(raw.products) ? raw.products : [];
-	const serviceNames = services.map((item) => item.name).filter(Boolean);
-	const productNames = products.map((item) => item.name).filter(Boolean);
+	const serviceNames = services.map((item: any) => item.name).filter(Boolean);
+	const productNames = products.map((item: any) => item.name).filter(Boolean);
 	const summaryName = [...serviceNames, ...productNames].join(", ");
 	return {
 		id: raw.id,
@@ -39,8 +65,8 @@ function normalizeAppointment(raw) {
 	};
 }
 
-function toApiPayload(appt) {
-	const payload = {};
+function toApiPayload(appt: Record<string, any>): Record<string, any> {
+	const payload: Record<string, any> = {};
 
 	addIfDefined(payload, "cliente_nome", appt.client_name);
 	addIfDefined(payload, "data", appt.day_key);
@@ -65,8 +91,8 @@ function toApiPayload(appt) {
 	return payload;
 }
 
-export async function listAppointmentsByDay(dayKey, filters = {}) {
-	const params = { data: dayKey };
+export async function listAppointmentsByDay(dayKey: string, filters: { barbeiro_id?: string } = {}): Promise<ApiAppointment[]> {
+	const params: Record<string, string> = { data: dayKey };
 	if (filters.barbeiro_id) {
 		params.barbeiro_id = filters.barbeiro_id;
 	}
@@ -77,15 +103,15 @@ export async function listAppointmentsByDay(dayKey, filters = {}) {
 
 	return response.data
 		.map(normalizeAppointment)
-		.sort((a, b) => a.time_slot.localeCompare(b.time_slot));
+		.sort((a: ApiAppointment, b: ApiAppointment) => a.time_slot.localeCompare(b.time_slot));
 }
 
-export async function createAppointment(appt) {
+export async function createAppointment(appt: Record<string, any>): Promise<ApiAppointment> {
 	const response = await apiClient.post("/agendamentos", toApiPayload(appt));
 	return normalizeAppointment(response.data);
 }
 
-export async function updateAppointmentById(id, updates) {
+export async function updateAppointmentById(id: string, updates: Record<string, any>): Promise<ApiAppointment> {
 	const response = await apiClient.patch(
 		`/agendamentos/${id}`,
 		toApiPayload(updates),
@@ -93,6 +119,6 @@ export async function updateAppointmentById(id, updates) {
 	return normalizeAppointment(response.data);
 }
 
-export async function deleteAppointmentById(id) {
+export async function deleteAppointmentById(id: string): Promise<void> {
 	await apiClient.delete(`/agendamentos/${id}`);
 }

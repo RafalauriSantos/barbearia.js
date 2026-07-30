@@ -5,16 +5,16 @@ export async function listServices() {
 	return response.data;
 }
 
-export async function createService(service) {
+export async function createService(service: Record<string, any>) {
 	const response = await apiClient.post("/services", service);
 	return response.data;
 }
 
-export async function updateServiceById(id, updates) {
+export async function updateServiceById(id: string, updates: Record<string, any>) {
 	const response = await apiClient.put(`/services/${id}`, updates);
 	return response.data;
 }
 
-export async function deleteServiceById(id) {
+export async function deleteServiceById(id: string): Promise<void> {
 	await apiClient.delete(`/services/${id}`);
 }

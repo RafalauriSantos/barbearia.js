@@ -1,10 +1,81 @@
 import { apiClient } from "./client";
 
-function normalizeNumber(value) {
+function normalizeNumber(value: any): number {
 	return Number(value || 0);
 }
 
-function normalizeBarberSummary(raw) {
+export interface BarberSummary {
+	barbeiro_id: string;
+	nome: string;
+	total_pago: number;
+	total_taxas: number;
+	total_liquido: number;
+	comissao_percent: number;
+	parte_barbeiro: number;
+	parte_barbearia: number;
+	quantidade_atendimentos: number;
+}
+
+export interface PaymentMethodSummary {
+	forma_pagamento_id: string | null;
+	codigo: string;
+	nome: string;
+	total_pago: number;
+	total_taxas: number;
+	total_liquido: number;
+	quantidade_atendimentos: number;
+}
+
+export interface ProductFinancialRow {
+	produto_id: string | null;
+	nome: string;
+	tipo_compra: string;
+	fornecedor: string;
+	quantidade: number;
+	total_vendido: number;
+	total_custo: number;
+	total_lucro: number;
+	fornecedor_pagar: number;
+	comissao_barbeiro: number;
+	lucro_barbearia: number;
+}
+
+export interface SupplierFinancialRow {
+	fornecedor: string;
+	quantidade: number;
+	total_vendido: number;
+	total_custo: number;
+	total_lucro: number;
+	fornecedor_pagar: number;
+}
+
+export interface ProductSummary {
+	quantidade: number;
+	total_vendido: number;
+	total_custo: number;
+	total_lucro: number;
+	total_fornecedor_pagar: number;
+	total_comissao_barbeiros: number;
+	total_lucro_barbearia: number;
+	resumo_por_produto: ProductFinancialRow[];
+	resumo_por_fornecedor: SupplierFinancialRow[];
+}
+
+export interface FinancialSummaryResult {
+	type: "admin" | "barbeiro";
+	total_pago_geral?: number;
+	total_taxas?: number;
+	total_liquido?: number;
+	total_barbearia?: number;
+	total_barbeiros?: number;
+	quantidade_atendimentos_pagos?: number;
+	resumo_por_barbeiro?: BarberSummary[];
+	resumo_por_forma_pagamento: PaymentMethodSummary[];
+	resumo_produtos: ProductSummary;
+	[key: string]: any;
+}
+
+function normalizeBarberSummary(raw: any): BarberSummary {
 	return {
 		barbeiro_id: raw.barbeiro_id,
 		nome: raw.nome || raw.name || "",
@@ -18,7 +89,7 @@ function normalizeBarberSummary(raw) {
 	};
 }
 
-function normalizePaymentMethodSummary(raw) {
+function normalizePaymentMethodSummary(raw: any): PaymentMethodSummary {
 	return {
 		forma_pagamento_id: raw.forma_pagamento_id || null,
 		codigo: raw.codigo || "sem_forma",
@@ -30,7 +101,7 @@ function normalizePaymentMethodSummary(raw) {
 	};
 }
 
-function normalizeProductFinancialRow(raw) {
+function normalizeProductFinancialRow(raw: any): ProductFinancialRow {
 	return {
 		produto_id: raw.produto_id || null,
 		nome: raw.nome || "Produto",
@@ -46,7 +117,7 @@ function normalizeProductFinancialRow(raw) {
 	};
 }
 
-function normalizeSupplierFinancialRow(raw) {
+function normalizeSupplierFinancialRow(raw: any): SupplierFinancialRow {
 	return {
 		fornecedor: raw.fornecedor || "Sem fornecedor",
 		quantidade: Number(raw.quantidade || 0),
@@ -57,7 +128,7 @@ function normalizeSupplierFinancialRow(raw) {
 	};
 }
 
-function normalizeProductSummary(raw = {}) {
+function normalizeProductSummary(raw: any = {}): ProductSummary {
 	return {
 		quantidade: Number(raw.quantidade || 0),
 		total_vendido: normalizeNumber(raw.total_vendido),
@@ -77,7 +148,7 @@ function normalizeProductSummary(raw = {}) {
 	};
 }
 
-export function normalizeFinancialSummary(raw) {
+export function normalizeFinancialSummary(raw: any): FinancialSummaryResult {
 	const paymentMethods = Array.isArray(raw.resumo_por_forma_pagamento) ?
 		raw.resumo_por_forma_pagamento.map(normalizePaymentMethodSummary)
 	:	[];
@@ -110,7 +181,7 @@ export function normalizeFinancialSummary(raw) {
 	};
 }
 
-export async function getFinancialSummary(params = {}) {
+export async function getFinancialSummary(params: Record<string, any> = {}): Promise<FinancialSummaryResult> {
 	const response = await apiClient.get("/financial/summary", { params });
 	return normalizeFinancialSummary(response.data);
 }
