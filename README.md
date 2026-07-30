@@ -12,6 +12,9 @@ Recentemente, a infraestrutura passou por uma migração arquitetural profunda (
 - Despesas e resumo financeiro diário
 - Equipe, convites e separação de dados por barbearia
 - Foto de perfil dos barbeiros na agenda, com editor de enquadramento
+- **Novo:** Redesign da Tela de Agenda (`agenda-compacta-v3`) com layout ultra-compacto (44px), gestos interativos de swipe (Fiado / Pago) e suporte dinâmico a Dark/Light Theme harmonizado.
+- **Novo:** Card compacto unificado para resumo financeiro diário ("Recebido" e "A cobrar") maximizando o foco na lista de clientes.
+- **Novo:** Navegação Instantânea PWA (0ms delay) entre abas e restauração automática da última sessão e tela visitada ao abrir o app instalado no celular.
 - **Novo:** Sistema de Modais via React Portal (`ReactDOM.createPortal`) com Focus Trap, trava de scroll e restauração determinística de viewport para teclados mobile (iOS Safari / Android).
 - **Novo:** Hardening de segurança no servidor com **Rate Limiting** (proteção contra força bruta) e **Cabeçalhos de Segurança HTTP (Helmet)**.
 - **Novo:** Observabilidade em tempo real com **Sentry** na borda (`@sentry/cloudflare` + `@sentry/react`), com mascaramento LGPD automático e gestão de segredos via Cloudflare Secrets.
