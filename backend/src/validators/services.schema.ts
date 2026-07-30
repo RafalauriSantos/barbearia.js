@@ -1,4 +1,4 @@
-const { z } = require("zod");
+import { z } from "zod";
 
 const createSchema = z.object({
 	name: z.string().min(1),
@@ -10,12 +10,12 @@ const updateSchema = z.object({
 	price: z.coerce.number().nonnegative().optional(),
 });
 
-function validateCreateService(body) {
+export function validateCreateService(body: unknown) {
 	const parsed = createSchema.parse(body);
 	return parsed;
 }
 
-function validateUpdateService(body) {
+export function validateUpdateService(body: unknown) {
 	const parsed = updateSchema.parse(body);
 	return parsed;
 }

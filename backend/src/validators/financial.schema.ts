@@ -1,4 +1,4 @@
-const { z } = require("zod");
+import { z } from "zod";
 
 const dateString = z
 	.string()
@@ -21,7 +21,7 @@ const financialSummaryQuerySchema = z
 		}
 	});
 
-function validateFinancialSummaryQuery(query) {
+export function validateFinancialSummaryQuery(query: unknown) {
 	return financialSummaryQuerySchema.parse(query || {});
 }
 

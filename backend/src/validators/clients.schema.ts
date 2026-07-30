@@ -1,4 +1,4 @@
-const { z } = require("zod");
+import { z } from "zod";
 
 const optionalText = z
 	.string()
@@ -47,31 +47,31 @@ const listClientsQuerySchema = z.object({
 	barbeiro_id: z.string().uuid().optional(),
 });
 
-function validateCreateFixedClient(body) {
+export function validateCreateFixedClient(body: unknown) {
 	return createFixedClientSchema.parse(body);
 }
 
-function validateUpdateFixedClient(body) {
+export function validateUpdateFixedClient(body: unknown) {
 	return updateFixedClientSchema.parse(body);
 }
 
-function validateCreateClientCut(body) {
+export function validateCreateClientCut(body: unknown) {
 	return createClientCutSchema.parse(body);
 }
 
-function validateUpdateClientCut(body) {
+export function validateUpdateClientCut(body: unknown) {
 	return updateClientCutSchema.parse(body);
 }
 
-function validateWaitlistEntry(body) {
+export function validateWaitlistEntry(body: unknown) {
 	return waitlistSchema.parse(body);
 }
 
-function validateUpdateWaitlistEntry(body) {
+export function validateUpdateWaitlistEntry(body: unknown) {
 	return waitlistSchema.partial().parse(body);
 }
 
-function validateListClientsQuery(query) {
+export function validateListClientsQuery(query: unknown) {
 	return listClientsQuerySchema.parse(query || {});
 }
 

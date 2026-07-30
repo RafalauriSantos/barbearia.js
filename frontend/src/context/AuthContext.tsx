@@ -1,4 +1,4 @@
-import {
+import React, {
 	createContext,
 	useCallback,
 	useContext,
@@ -22,18 +22,38 @@ import {
 	clearAppDataCache,
 	configureAppDataCache,
 } from "@/lib/store";
-import { SESSION_EXPIRED_EVENT } from "@/lib/api/client";
-import { AppApiError } from "@/lib/api/client";
+import { SESSION_EXPIRED_EVENT, AppApiError } from "@/lib/api/client";
 
-const AuthContext = createContext(null);
+export interface AuthUser {
+	id: string;
+	email: string;
+	nome: string;
+	role: "admin" | "barber";
+	barbearia_id: string;
+	foto_url?: string | null;
+}
+
+export interface AuthContextType {
+	user: AuthUser | null;
+	isLoading: boolean;
+	isAuthenticated: boolean;
+	login: (credentials: { email?: string; password?: string }) => Promise<AuthUser>;
+	signup: (data: { email?: string; password?: string }) => Promise<unknown>;
+	verifyEmailCode: (data: { email?: string; code?: string }) => Promise<unknown>;
+	acceptInvite: (data: { token: string; password?: string; nome?: string }) => Promise<AuthUser>;
+	logout: () => void;
+	reloadUser: () => Promise<AuthUser | null>;
+}
+
+const AuthContext = createContext<AuthContextType | null>(null);
 const AUTH_USER_SNAPSHOT_KEY = "gestor_barbearia_auth_user_v1";
 
-function getStorage() {
+function getStorage(): Storage | null {
 	if (typeof window === "undefined") return null;
 	return window.localStorage;
 }
 
-function readUserSnapshot() {
+function readUserSnapshot(): AuthUser | null {
 	const token = getAccessToken();
 	if (!token) return null;
 
@@ -47,7 +67,7 @@ function readUserSnapshot() {
 	}
 }
 
-function writeUserSnapshot(user) {
+function writeUserSnapshot(user: AuthUser | null): void {
 	const storage = getStorage();
 	if (!storage) return;
 
@@ -59,19 +79,19 @@ function writeUserSnapshot(user) {
 	storage.setItem(AUTH_USER_SNAPSHOT_KEY, JSON.stringify(user));
 }
 
-function clearUserSnapshot() {
+function clearUserSnapshot(): void {
 	getStorage()?.removeItem(AUTH_USER_SNAPSHOT_KEY);
 }
 
-export function AuthProvider({ children }) {
-	const [user, setUser] = useState(() => {
+export function AuthProvider({ children }: { children: React.ReactNode }) {
+	const [user, setUser] = useState<AuthUser | null>(() => {
 		const cachedUser = readUserSnapshot();
 		if (cachedUser) {
 			configureAppDataCache(cachedUser);
 		}
 		return cachedUser;
 	});
-	const [isLoading, setIsLoading] = useState(() => {
+	const [isLoading, setIsLoading] = useState<boolean>(() => {
 		return Boolean(getAccessToken() && !readUserSnapshot());
 	});
 
@@ -83,7 +103,7 @@ export function AuthProvider({ children }) {
 		setIsLoading(false);
 	}, []);
 
-	const loadCurrentUser = useCallback(async () => {
+	const loadCurrentUser = useCallback(async (): Promise<AuthUser | null> => {
 		const token = getAccessToken();
 		if (!token) {
 			setUser(null);
@@ -127,7 +147,7 @@ export function AuthProvider({ children }) {
 		};
 	}, [clearAuthenticatedState]);
 
-	const login = useCallback(async ({ email, password }) => {
+	const login = useCallback(async ({ email, password }: { email?: string; password?: string }) => {
 		const session = await loginRequest({ email, password });
 		clearAppDataCache();
 		clearUserSnapshot();
@@ -139,11 +159,11 @@ export function AuthProvider({ children }) {
 		return currentUser;
 	}, []);
 
-	const signup = useCallback(async ({ email, password }) => {
+	const signup = useCallback(async ({ email, password }: { email?: string; password?: string }) => {
 		return registerRequest({ email, password });
 	}, []);
 
-	const verifyEmailCode = useCallback(async ({ email, code }) => {
+	const verifyEmailCode = useCallback(async ({ email, code }: { email?: string; code?: string }) => {
 		const session = await verifyEmailCodeRequest({ email, code });
 		if (!session?.accessToken || !session?.refreshToken) {
 			return session;
@@ -159,7 +179,7 @@ export function AuthProvider({ children }) {
 		return { ...session, user: currentUser };
 	}, []);
 
-	const acceptInvite = useCallback(async ({ token, password, nome }) => {
+	const acceptInvite = useCallback(async ({ token, password, nome }: { token: string; password?: string; nome?: string }) => {
 		const session = await acceptInviteRequest(token, { password, nome });
 		clearAppDataCache();
 		clearUserSnapshot();
@@ -200,7 +220,7 @@ export function AuthProvider({ children }) {
 	return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
-export function useAuth() {
+export function useAuth(): AuthContextType {
 	const context = useContext(AuthContext);
 	if (!context) {
 		throw new Error("useAuth must be used inside AuthProvider");

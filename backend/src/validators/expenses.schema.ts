@@ -1,4 +1,4 @@
-const { z } = require("zod");
+import { z } from "zod";
 
 const createSchema = z.object({
 	name: z.string().min(1),
@@ -13,15 +13,15 @@ const listQuerySchema = z.object({
 	end_date: z.string().min(1).optional(),
 });
 
-function validateCreateExpense(body) {
+export function validateCreateExpense(body: unknown) {
 	return createSchema.parse(body);
 }
 
-function validateUpdateExpense(body) {
+export function validateUpdateExpense(body: unknown) {
 	return updateSchema.parse(body);
 }
 
-function validateListExpensesQuery(query) {
+export function validateListExpensesQuery(query: unknown) {
 	return listQuerySchema.parse(query || {});
 }
 

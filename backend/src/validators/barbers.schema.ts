@@ -1,4 +1,4 @@
-const { z } = require("zod");
+import { z } from "zod";
 
 const createBarberSchema = z
 	.object({
@@ -31,7 +31,7 @@ const inviteBarberSchema = z.object({
 	email: z.string().email(),
 });
 
-function validateCreateBarber(body) {
+export function validateCreateBarber(body: unknown) {
 	const payload = createBarberSchema.parse(body);
 	return {
 		...payload,
@@ -39,7 +39,7 @@ function validateCreateBarber(body) {
 	};
 }
 
-function validateUpdateBarber(body) {
+export function validateUpdateBarber(body: unknown) {
 	const payload = updateBarberSchema.parse(body);
 	return {
 		...payload,
@@ -48,7 +48,7 @@ function validateUpdateBarber(body) {
 	};
 }
 
-function validateInviteBarber(body) {
+export function validateInviteBarber(body: unknown) {
 	return inviteBarberSchema.parse(body);
 }
 

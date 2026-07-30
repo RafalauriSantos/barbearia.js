@@ -3,12 +3,17 @@ const REFRESH_TOKEN_KEY = "gestor_barbearia_refresh_token";
 const LEGACY_ACCESS_TOKEN_KEY = "kash_flow_access_token";
 const LEGACY_REFRESH_TOKEN_KEY = "kash_flow_refresh_token";
 
-function getStorage() {
+export interface SessionTokens {
+	accessToken?: string;
+	refreshToken?: string;
+}
+
+function getStorage(): Storage | null {
 	if (typeof window === "undefined") return null;
 	return window.localStorage;
 }
 
-export function getAccessToken() {
+export function getAccessToken(): string {
 	const storage = getStorage();
 	if (!storage) return "";
 	return (
@@ -18,7 +23,7 @@ export function getAccessToken() {
 	);
 }
 
-export function getRefreshToken() {
+export function getRefreshToken(): string {
 	const storage = getStorage();
 	if (!storage) return "";
 	return (
@@ -28,7 +33,7 @@ export function getRefreshToken() {
 	);
 }
 
-export function setAccessToken(token) {
+export function setAccessToken(token?: string | null): void {
 	const storage = getStorage();
 	if (!storage) return;
 	if (!token) {
@@ -40,7 +45,7 @@ export function setAccessToken(token) {
 	storage.removeItem(LEGACY_ACCESS_TOKEN_KEY);
 }
 
-export function setRefreshToken(token) {
+export function setRefreshToken(token?: string | null): void {
 	const storage = getStorage();
 	if (!storage) return;
 	if (!token) {
@@ -52,19 +57,19 @@ export function setRefreshToken(token) {
 	storage.removeItem(LEGACY_REFRESH_TOKEN_KEY);
 }
 
-export function setSessionTokens(session = {}) {
+export function setSessionTokens(session: SessionTokens = {}): void {
 	setAccessToken(session.accessToken);
 	setRefreshToken(session.refreshToken);
 }
 
-export function clearAccessToken() {
+export function clearAccessToken(): void {
 	const storage = getStorage();
 	if (!storage) return;
 	storage.removeItem(ACCESS_TOKEN_KEY);
 	storage.removeItem(LEGACY_ACCESS_TOKEN_KEY);
 }
 
-export function clearSessionTokens() {
+export function clearSessionTokens(): void {
 	const storage = getStorage();
 	if (!storage) return;
 	storage.removeItem(ACCESS_TOKEN_KEY);

@@ -1,4 +1,4 @@
-const { z } = require("zod");
+import { z } from "zod";
 
 const createSchema = z.object({
 	name: z.string().min(1),
@@ -12,11 +12,11 @@ const createSchema = z.object({
 
 const updateSchema = createSchema.partial();
 
-function validateCreateProduct(body) {
+export function validateCreateProduct(body: unknown) {
 	return createSchema.parse(body);
 }
 
-function validateUpdateProduct(body) {
+export function validateUpdateProduct(body: unknown) {
 	return updateSchema.parse(body);
 }
 

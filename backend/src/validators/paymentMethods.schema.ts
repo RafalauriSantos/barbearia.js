@@ -1,4 +1,4 @@
-const { z } = require("zod");
+import { z } from "zod";
 
 const updateSchema = z.object({
 	name: z.string().min(1).max(80).optional(),
@@ -7,7 +7,7 @@ const updateSchema = z.object({
 	order: z.coerce.number().int().min(0).max(999).optional(),
 });
 
-function validateUpdatePaymentMethod(body) {
+export function validateUpdatePaymentMethod(body: unknown) {
 	return updateSchema.parse(body || {});
 }
 

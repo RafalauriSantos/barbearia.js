@@ -8,7 +8,8 @@
 		"seed": "node scripts/seed.js",
 		"migrate": "knex migrate:latest",
 		"migrate:rollback": "knex migrate:rollback",
-		"test": "tap --no-coverage -j1 \"test/**/*.test.js\""
+		"typecheck": "tsc --noEmit",
+		"test": "tap --node-arg=--import --node-arg=tsx --no-coverage -j1 \"test/**/*.test.js\""
 	},
 	"dependencies": {
 		"@fastify/helmet": "^13.1.0",
@@ -23,10 +24,17 @@
 		"zod": "^3.23.2"
 	},
 	"devDependencies": {
+		"@cloudflare/workers-types": "^5.20260730.1",
 		"@fastify/cors": "^11.3.0",
+		"@types/bcryptjs": "^2.4.6",
+		"@types/jsonwebtoken": "^9.0.10",
+		"@types/node": "^26.1.2",
+		"@types/pg": "^8.20.0",
 		"dotenv": "^17.4.2",
 		"fastify": "^5.10.0",
 		"tap": "^16.3.10",
+		"tsx": "^4.23.1",
+		"typescript": "^7.0.2",
 		"wrangler": "^4.114.0"
 	}
 }

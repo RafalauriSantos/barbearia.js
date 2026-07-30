@@ -1,17 +1,19 @@
+export type AppTheme = "light" | "dark";
+
 export const THEME_KEY = "gestor_barbearia_theme";
 export const THEME_CHANGE_EVENT = "gestor-barbearia-theme-change";
 
-function isTheme(value) {
+function isTheme(value: unknown): value is AppTheme {
 	return value === "light" || value === "dark";
 }
 
-function getSystemTheme() {
+function getSystemTheme(): AppTheme {
 	return window.matchMedia?.("(prefers-color-scheme: light)").matches ?
 			"light"
 		: 	"dark";
 }
 
-export function getTheme() {
+export function getTheme(): AppTheme {
 	if (typeof window === "undefined") return "dark";
 
 	const appliedTheme = document.documentElement.dataset.theme;
@@ -27,7 +29,12 @@ export function getTheme() {
 	return getSystemTheme();
 }
 
-export function applyTheme(theme, { persist = true, notify = true } = {}) {
+export interface ApplyThemeOptions {
+	persist?: boolean;
+	notify?: boolean;
+}
+
+export function applyTheme(theme: AppTheme, { persist = true, notify = true }: ApplyThemeOptions = {}): void {
 	if (typeof window === "undefined" || !isTheme(theme)) return;
 
 	const root = document.documentElement;
@@ -58,15 +65,16 @@ export function applyTheme(theme, { persist = true, notify = true } = {}) {
 	}
 }
 
-export function initializeTheme() {
+export function initializeTheme(): void {
 	applyTheme(getTheme(), { persist: false, notify: false });
 }
 
-export function subscribeToTheme(callback) {
-	const handleThemeChange = (event) => {
-		if (isTheme(event.detail?.theme)) callback(event.detail.theme);
+export function subscribeToTheme(callback: (theme: AppTheme) => void): () => void {
+	const handleThemeChange = (event: Event) => {
+		const customEvent = event as CustomEvent<{ theme: AppTheme }>;
+		if (isTheme(customEvent.detail?.theme)) callback(customEvent.detail.theme);
 	};
-	const handleStorage = (event) => {
+	const handleStorage = (event: StorageEvent) => {
 		if (event.key !== THEME_KEY || !isTheme(event.newValue)) return;
 		applyTheme(event.newValue, { persist: false, notify: false });
 		callback(event.newValue);

@@ -1,4 +1,4 @@
-const { z } = require("zod");
+import { z } from "zod";
 
 const timeSchema = z
 	.string()
@@ -24,7 +24,7 @@ const profileSchema = z.object({
 	scheduleInterval: z.coerce.number().int().min(5).max(240).optional(),
 });
 
-function validateProfile(body) {
+export function validateProfile(body: unknown) {
 	return profileSchema.parse(body);
 }
 

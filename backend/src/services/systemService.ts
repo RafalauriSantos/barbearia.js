@@ -1,6 +1,8 @@
 const SystemRepository = require("../repositories/systemRepository");
 
-exports.resetData = async function () {
+export async function resetData(): Promise<boolean> {
 	await SystemRepository.reset();
 	return true;
-};
+}
+
+module.exports = { resetData };

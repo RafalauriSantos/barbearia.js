@@ -1,4 +1,4 @@
-const { z } = require("zod");
+import { z } from "zod";
 
 const dateString = z
 	.string()
@@ -86,15 +86,19 @@ const createSchema = appointmentSchema.superRefine((payload, ctx) => {
 	}
 });
 
-function validateCreateAppointment(body) {
+export type CreateAppointmentInput = z.infer<typeof createSchema>;
+export type UpdateAppointmentInput = z.infer<typeof appointmentSchema>;
+export type ListAppointmentsQueryInput = z.infer<typeof listQuerySchema>;
+
+export function validateCreateAppointment(body: unknown) {
 	return createSchema.parse(body);
 }
 
-function validateUpdateAppointment(body) {
+export function validateUpdateAppointment(body: unknown) {
 	return appointmentSchema.parse(body);
 }
 
-function validateListAppointmentsQuery(query) {
+export function validateListAppointmentsQuery(query: unknown) {
 	return listQuerySchema.parse(query);
 }
 

@@ -1,4 +1,4 @@
-const { z } = require("zod");
+import { z } from "zod";
 
 const optionalText = z.string().trim().max(500).optional().nullable();
 const dateSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
@@ -29,7 +29,14 @@ const receiveSchema = z.object({
 	payment_date: dateSchema.optional(),
 });
 
-exports.validateReceivablesQuery = (query) => querySchema.parse(query || {});
-exports.validateCreateReceivable = (body) => receivableSchema.parse(body);
-exports.validateUpdateReceivable = (body) => receivableSchema.partial().parse(body);
-exports.validateReceiveReceivable = (body) => receiveSchema.parse(body);
+export const validateReceivablesQuery = (query: unknown) => querySchema.parse(query || {});
+export const validateCreateReceivable = (body: unknown) => receivableSchema.parse(body);
+export const validateUpdateReceivable = (body: unknown) => receivableSchema.partial().parse(body);
+export const validateReceiveReceivable = (body: unknown) => receiveSchema.parse(body);
+
+module.exports = {
+	validateReceivablesQuery,
+	validateCreateReceivable,
+	validateUpdateReceivable,
+	validateReceiveReceivable,
+};

@@ -1,7 +1,7 @@
 const { AppError } = require("./errors");
 const { env } = require("../config/env");
 
-function getDefaultBarbeariaId() {
+export function getDefaultBarbeariaId(): string {
 	if (!env.DEFAULT_BARBEARIA_ID) {
 		throw new AppError(
 			500,
@@ -13,7 +13,7 @@ function getDefaultBarbeariaId() {
 	return env.DEFAULT_BARBEARIA_ID;
 }
 
-function getDefaultBarbeiroId() {
+export function getDefaultBarbeiroId(): string | null {
 	return env.DEFAULT_BARBEIRO_ID || null;
 }
 

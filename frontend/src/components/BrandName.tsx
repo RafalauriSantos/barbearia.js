@@ -5,9 +5,16 @@ const sizes = {
 	md: "text-[23px]",
 	lg: "text-[34px]",
 	hero: "text-[40px] sm:text-[76px] lg:text-[92px]",
-};
+} as const;
 
-export function BrandName({ size = "md", className = "" }) {
+export type BrandNameSize = keyof typeof sizes;
+
+export interface BrandNameProps {
+	size?: BrandNameSize;
+	className?: string;
+}
+
+export function BrandName({ size = "md", className = "" }: BrandNameProps) {
 	return (
 		<span
 			aria-label={APP_NAME}

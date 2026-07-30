@@ -1,4 +1,4 @@
-const { z } = require("zod");
+import { z } from "zod";
 
 const registerSchema = z.object({
 	email: z.string().email(),
@@ -33,31 +33,39 @@ const resetPasswordSchema = z.object({
 	password: z.string().min(8),
 });
 
-function validateRegister(body) {
+export type RegisterInput = z.infer<typeof registerSchema>;
+export type LoginInput = z.infer<typeof loginSchema>;
+export type VerifyEmailInput = z.infer<typeof verifyEmailSchema>;
+export type VerifyCodeInput = z.infer<typeof verifyCodeSchema>;
+export type ResendCodeInput = z.infer<typeof resendCodeSchema>;
+export type ForgotPasswordInput = z.infer<typeof forgotPasswordSchema>;
+export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;
+
+export function validateRegister(body: unknown) {
 	return registerSchema.parse(body);
 }
 
-function validateLogin(body) {
+export function validateLogin(body: unknown) {
 	return loginSchema.parse(body);
 }
 
-function validateVerifyEmail(body) {
+export function validateVerifyEmail(body: unknown) {
 	return verifyEmailSchema.parse(body);
 }
 
-function validateVerifyCode(body) {
+export function validateVerifyCode(body: unknown) {
 	return verifyCodeSchema.parse(body);
 }
 
-function validateResendCode(body) {
+export function validateResendCode(body: unknown) {
 	return resendCodeSchema.parse(body);
 }
 
-function validateForgotPassword(body) {
+export function validateForgotPassword(body: unknown) {
 	return forgotPasswordSchema.parse(body);
 }
 
-function validateResetPassword(body) {
+export function validateResetPassword(body: unknown) {
 	return resetPasswordSchema.parse(body);
 }
 

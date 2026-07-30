@@ -1,16 +1,22 @@
-import { memo, useEffect, useState } from "react";
+import React, { memo, useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 
-function NavIcon({ name }) {
+type IconName = "agenda" | "team" | "clients" | "services" | "cash";
+
+interface NavIconProps {
+	name: IconName;
+}
+
+function NavIcon({ name }: NavIconProps) {
 	const common = {
 		fill: "none",
 		stroke: "currentColor",
 		strokeWidth: 2,
-		strokeLinecap: "round",
-		strokeLinejoin: "round",
+		strokeLinecap: "round" as const,
+		strokeLinejoin: "round" as const,
 	};
-	const icons = {
+	const icons: Record<IconName, React.ReactElement> = {
 		agenda: (
 			<svg viewBox="0 0 24 24" aria-hidden="true" className="h-[18px] w-[18px]">
 				<rect x="4" y="5" width="16" height="15" rx="2" {...common} />
@@ -48,16 +54,26 @@ function NavIcon({ name }) {
 	return icons[name] || null;
 }
 
+interface TabItem {
+	path: string;
+	label: string;
+	icon: IconName;
+}
+
 // Abas fixas para navegar entre as telas principais.
-const baseTabs = [
+const baseTabs: TabItem[] = [
 	{ path: "/app", label: "Agenda", icon: "agenda" },
 	{ path: "/clients", label: "Clientes", icon: "clients" },
 	{ path: "/services", label: "Serviços", icon: "services" },
 	{ path: "/financial", label: "Caixa", icon: "cash" },
 ];
 
+export interface BottomNavProps {
+	variant?: string;
+}
+
 // Barra fixa embaixo para trocar de tela.
-export const BottomNav = memo(function BottomNav({ variant = "minimal" }) {
+export const BottomNav = memo(function BottomNav({ variant = "minimal" }: BottomNavProps) {
 	const location = useLocation();
 	const navigate = useNavigate();
 	const { user } = useAuth();
@@ -108,7 +124,7 @@ export const BottomNav = memo(function BottomNav({ variant = "minimal" }) {
 	}, []);
 
 	const isAdmin = user?.role === "admin";
-	const tabs =
+	const tabs: TabItem[] =
 		isAdmin ?
 			[
 				baseTabs[0],
@@ -116,10 +132,6 @@ export const BottomNav = memo(function BottomNav({ variant = "minimal" }) {
 				...baseTabs.slice(1),
 			]
 		:	baseTabs;
-	const gridClass =
-		tabs.length === 6 ? "grid-cols-6"
-		: tabs.length === 5 ? "grid-cols-5"
-		: "grid-cols-4";
 
 	if (isKeyboardOrModalOpen) return null;
 

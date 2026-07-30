@@ -1,18 +1,18 @@
-const { z } = require("zod");
+import { z } from "zod";
 
 const dateSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 
-exports.validateSupplierPayablesQuery = (query) =>
+export const validateSupplierPayablesQuery = (query: unknown) =>
 	z.object({
 		status: z.enum(["aberto", "pago", "todos"]).optional(),
 		start_date: dateSchema.optional(),
 		end_date: dateSchema.optional(),
 	}).parse(query || {});
 
-exports.validatePaySupplierPayable = (body) =>
+export const validatePaySupplierPayable = (body: unknown) =>
 	z.object({ payment_date: dateSchema }).parse(body || {});
 
-exports.validateCreatePurchase = (body) =>
+export const validateCreatePurchase = (body: unknown) =>
 	z.object({
 		produto_id: z.string().uuid(),
 		fornecedor: z.string().min(1),
@@ -22,3 +22,8 @@ exports.validateCreatePurchase = (body) =>
 		data_compra: dateSchema.optional(),
 	}).parse(body || {});
 
+module.exports = {
+	validateSupplierPayablesQuery,
+	validatePaySupplierPayable,
+	validateCreatePurchase,
+};

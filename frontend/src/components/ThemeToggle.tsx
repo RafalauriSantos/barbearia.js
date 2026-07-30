@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { applyTheme, getTheme, subscribeToTheme } from "@/lib/theme";
+import { applyTheme, getTheme, subscribeToTheme, AppTheme } from "@/lib/theme";
 
 function SunIcon() {
 	return (
@@ -34,8 +34,13 @@ function MoonIcon() {
 	);
 }
 
-export function ThemeToggle({ className = "", showLabel = false }) {
-	const [theme, setTheme] = useState(getTheme);
+export interface ThemeToggleProps {
+	className?: string;
+	showLabel?: boolean;
+}
+
+export function ThemeToggle({ className = "", showLabel = false }: ThemeToggleProps) {
+	const [theme, setTheme] = useState<AppTheme>(getTheme);
 	const isLight = theme === "light";
 
 	useEffect(() => {
@@ -46,7 +51,7 @@ export function ThemeToggle({ className = "", showLabel = false }) {
 	}, []);
 
 	const toggleTheme = () => {
-		const nextTheme = getTheme() === "light" ? "dark" : "light";
+		const nextTheme: AppTheme = getTheme() === "light" ? "dark" : "light";
 		applyTheme(nextTheme);
 	};
 	const nextThemeLabel = isLight ? "escuro" : "claro";

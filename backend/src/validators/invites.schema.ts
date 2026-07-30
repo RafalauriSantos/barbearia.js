@@ -1,4 +1,4 @@
-const { z } = require("zod");
+import { z } from "zod";
 
 const acceptInviteSchema = z.object({
 	password: z.string().min(8).optional(),
@@ -6,7 +6,7 @@ const acceptInviteSchema = z.object({
 	name: z.string().min(2).max(80).optional(),
 });
 
-function validateAcceptInvite(body) {
+export function validateAcceptInvite(body: unknown) {
 	const payload = acceptInviteSchema.parse(body || {});
 	return {
 		...payload,
