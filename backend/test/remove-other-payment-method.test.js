@@ -10,13 +10,21 @@ const migrationPath = path.join(
 	"202606210002_remove_other_payment_method.js",
 );
 const schemaPath = path.join(__dirname, "..", "db", "schema.sql");
-const repositoryPath = path.join(
+const repositoryTsPath = path.join(
+	__dirname,
+	"..",
+	"src",
+	"repositories",
+	"paymentMethodsRepository.ts",
+);
+const repositoryJsPath = path.join(
 	__dirname,
 	"..",
 	"src",
 	"repositories",
 	"paymentMethodsRepository.js",
 );
+const repositoryPath = fs.existsSync(repositoryTsPath) ? repositoryTsPath : repositoryJsPath;
 
 t.test("remove other payment method migration preserves history", (t) => {
 	t.ok(fs.existsSync(migrationPath), "migration file exists");

@@ -1,6 +1,6 @@
 const supabase = require("../lib/supabase");
 
-const DEFAULT_ORDER = {
+const DEFAULT_ORDER: Record<string, number> = {
 	pix: 10,
 	dinheiro: 20,
 	cartao_debito: 30,
@@ -9,7 +9,17 @@ const DEFAULT_ORDER = {
 	fiado: 60,
 };
 
-function toApi(row) {
+export interface ApiPaymentMethodRow {
+	id: string;
+	code: string;
+	name: string;
+	fee_percent: number;
+	active: boolean;
+	order: number;
+	barbearia_id: string;
+}
+
+function toApi(row: any): ApiPaymentMethodRow {
 	return {
 		id: row.id,
 		code: row.codigo,
@@ -21,7 +31,7 @@ function toApi(row) {
 	};
 }
 
-function toDatabase(payload) {
+function toDatabase(payload: Record<string, any>): Record<string, any> {
 	return {
 		...(payload.name !== undefined ? { nome: payload.name } : {}),
 		...(payload.fee_percent !== undefined ?
@@ -32,7 +42,7 @@ function toDatabase(payload) {
 	};
 }
 
-exports.findAll = async function ({ barbeariaId, includeInactive = false } = {}) {
+export async function findAll({ barbeariaId, includeInactive = false }: { barbeariaId: string; includeInactive?: boolean }): Promise<ApiPaymentMethodRow[]> {
 	let query = supabase
 		.from("formas_pagamento")
 		.select("id,codigo,nome,ativo,taxa_percentual,ordem,barbearia_id")
@@ -56,10 +66,10 @@ exports.findAll = async function ({ barbeariaId, includeInactive = false } = {})
 	if (legacyResult.error) throw legacyResult.error;
 	return (legacyResult.data || [])
 		.map(toApi)
-		.sort((first, second) => first.order - second.order);
-};
+		.sort((first: ApiPaymentMethodRow, second: ApiPaymentMethodRow) => first.order - second.order);
+}
 
-exports.findById = async function (id, { barbeariaId } = {}) {
+export async function findById(id: string, { barbeariaId }: { barbeariaId?: string } = {}): Promise<ApiPaymentMethodRow | null> {
 	const { data, error } = await supabase
 		.from("formas_pagamento")
 		.select("id,codigo,nome,ativo,taxa_percentual,ordem,barbearia_id")
@@ -79,9 +89,9 @@ exports.findById = async function (id, { barbeariaId } = {}) {
 		throw legacyResult.error;
 	}
 	return legacyResult.data ? toApi(legacyResult.data) : null;
-};
+}
 
-exports.update = async function (id, updates, { barbeariaId } = {}) {
+export async function update(id: string, updates: Record<string, any>, { barbeariaId }: { barbeariaId?: string } = {}): Promise<ApiPaymentMethodRow> {
 	const { data, error } = await supabase
 		.from("formas_pagamento")
 		.update(toDatabase(updates))
@@ -91,4 +101,10 @@ exports.update = async function (id, updates, { barbeariaId } = {}) {
 		.single();
 	if (error) throw error;
 	return toApi(data);
+}
+
+module.exports = {
+	findAll,
+	findById,
+	update,
 };
