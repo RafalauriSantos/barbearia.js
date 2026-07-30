@@ -42,6 +42,8 @@ jobs:
 
       - name: Run validation gate
         shell: pwsh
+        env:
+          NODE_OPTIONS: "--no-warnings"
         run: ./scripts/check-all.ps1
 
       - name: Install Playwright Chromium
@@ -50,4 +52,6 @@ jobs:
 
       - name: Run critical browser smoke tests
         working-directory: frontend
+        env:
+          NODE_OPTIONS: "--no-warnings"
         run: npm run test:e2e:smoke
