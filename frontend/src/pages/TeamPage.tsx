@@ -17,13 +17,13 @@ import {
 } from "@/lib/store";
 import { useAuth } from "@/context/AuthContext";
 
-function normalizeText(value) {
+function normalizeText(value?: string | null): string {
 	return String(value || "")
 		.trim()
 		.toLowerCase();
 }
 
-function isOwnerBarber(barber, user) {
+function isOwnerBarber(barber?: any, user?: any): boolean {
 	if (!barber || !user) return false;
 
 	if (user.barbeiro_id && barber.id === user.barbeiro_id) return true;
@@ -38,8 +38,8 @@ function isOwnerBarber(barber, user) {
 	return Boolean(barberName && userName && barberName === userName);
 }
 
-function getOwnerBarberIds(barbers, user) {
-	const ids = new Set();
+function getOwnerBarberIds(barbers: any[], user?: any): Set<string> {
+	const ids = new Set<string>();
 	if (user?.barbeiro_id) ids.add(user.barbeiro_id);
 	for (const barber of barbers) {
 		if (isOwnerBarber(barber, user)) ids.add(barber.id);
@@ -47,7 +47,7 @@ function getOwnerBarberIds(barbers, user) {
 	return ids;
 }
 
-function formatTeamDate(date) {
+function formatTeamDate(date: Date): string {
 	const months = [
 		"janeiro",
 		"fevereiro",
@@ -88,13 +88,13 @@ export default function TeamPage() {
 		[barbers, user],
 	);
 	const teamBarbers = useMemo(
-		() => barbers.filter((barber) => !ownerBarberIds.has(barber.id)),
+		() => barbers.filter((barber: any) => !ownerBarberIds.has(barber.id)),
 		[barbers, ownerBarberIds],
 	);
 	const teamAppointments = useMemo(
 		() =>
 			appointments.filter(
-				(appointment) => !ownerBarberIds.has(appointment.barbeiro_id),
+				(appointment: any) => !ownerBarberIds.has(appointment.barbeiro_id),
 			),
 		[appointments, ownerBarberIds],
 	);
@@ -112,7 +112,7 @@ export default function TeamPage() {
 			if (!hasLoaded) {
 				setAppointments([]);
 			}
-			setErrorMessage(error.message || "Falha ao carregar dados da equipe.");
+			setErrorMessage((error as any)?.message || "Falha ao carregar dados da equipe.");
 		} finally {
 			setIsLoading(false);
 			hasLoadedRef.current = true;
@@ -129,7 +129,7 @@ export default function TeamPage() {
 			if (!hasLoaded) {
 				setBarbers([]);
 			}
-			setErrorMessage(error.message || "Falha ao carregar barbeiros.");
+			setErrorMessage((error as any)?.message || "Falha ao carregar barbeiros.");
 			return [];
 		}
 	}, []);

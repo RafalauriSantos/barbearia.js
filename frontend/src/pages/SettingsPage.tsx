@@ -26,11 +26,11 @@ const AVATAR_OUTPUT_QUALITIES = [0.9, 0.82, 0.72, 0.62];
 const DEFAULT_AVATAR_FOCUS = { x: 50, y: 50 };
 const DEFAULT_AVATAR_ZOOM = 1;
 
-function clamp(value, min, max) {
+function clamp(value: number, min: number, max: number): number {
 	return Math.min(Math.max(value, min), max);
 }
 
-function getInitials(name) {
+function getInitials(name?: string | null): string {
 	const trimmed = String(name || "").trim();
 	if (!trimmed) return "?";
 	const parts = trimmed.split(/\s+/).filter(Boolean);
@@ -38,7 +38,7 @@ function getInitials(name) {
 	return `${parts[0][0] || ""}${parts[parts.length - 1][0] || ""}`.toUpperCase();
 }
 
-function readFileAsDataUrl(file) {
+function readFileAsDataUrl(file: File): Promise<string> {
 	return new Promise((resolve, reject) => {
 		const reader = new FileReader();
 		reader.onload = () => resolve(String(reader.result || ""));
@@ -47,7 +47,7 @@ function readFileAsDataUrl(file) {
 	});
 }
 
-function loadImage(dataUrl) {
+function loadImage(dataUrl: string): Promise<HTMLImageElement> {
 	return new Promise((resolve, reject) => {
 		const image = new Image();
 		image.crossOrigin = "anonymous";
@@ -58,7 +58,7 @@ function loadImage(dataUrl) {
 	});
 }
 
-function makeAvatarFileName(fileName) {
+function makeAvatarFileName(fileName?: string | null): string {
 	const baseName =
 		String(fileName || "foto")
 			.replace(/\.[^.]+$/u, "")
@@ -69,7 +69,7 @@ function makeAvatarFileName(fileName) {
 	return `${baseName}-avatar.jpg`;
 }
 
-function isAcceptedAvatarFile(file) {
+function isAcceptedAvatarFile(file?: File | null): boolean {
 	const type = String(file?.type || "").toLowerCase();
 	if (type) {
 		return type.startsWith("image/") && type !== "image/svg+xml";
@@ -78,7 +78,7 @@ function isAcceptedAvatarFile(file) {
 	return /\.(jpe?g|png|webp|heic|heif)$/iu.test(String(file?.name || ""));
 }
 
-async function createCroppedAvatarUpload({ draft, focus, zoom }) {
+async function createCroppedAvatarUpload({ draft, focus, zoom }: { draft: any; focus: { x: number; y: number }; zoom: number }) {
 	const image: any = await loadImage(draft.dataUrl);
 	const canvas = document.createElement("canvas");
 	canvas.width = AVATAR_OUTPUT_SIZE;
@@ -99,15 +99,21 @@ async function createCroppedAvatarUpload({ draft, focus, zoom }) {
 		1,
 		Math.min(naturalWidth, naturalHeight) / clamp(zoom, 1, 2.5),
 	);
-	const centerX = naturalWidth * (clamp(focus.x, 0, 100) / 100);
-	const centerY = naturalHeight * (clamp(focus.y, 0, 100) / 100);
-	const sourceX = clamp(centerX - sourceSize / 2, 0, naturalWidth - sourceSize);
-	const sourceY = clamp(
-		centerY - sourceSize / 2,
+	const maxSourceX = Math.max(0, naturalWidth - sourceSize);
+	const maxSourceY = Math.max(0, naturalHeight - sourceSize);
+	const sourceX = clamp(
+		(naturalWidth - sourceSize) * (focus.x / 100),
 		0,
-		naturalHeight - sourceSize,
+		maxSourceX,
+	);
+	const sourceY = clamp(
+		(naturalHeight - sourceSize) * (focus.y / 100),
+		0,
+		maxSourceY,
 	);
 
+	context.imageSmoothingEnabled = true;
+	context.imageSmoothingQuality = "high";
 	context.fillStyle = "#050b09";
 	context.fillRect(0, 0, AVATAR_OUTPUT_SIZE, AVATAR_OUTPUT_SIZE);
 	context.drawImage(
@@ -122,19 +128,20 @@ async function createCroppedAvatarUpload({ draft, focus, zoom }) {
 		AVATAR_OUTPUT_SIZE,
 	);
 
-	for (const quality of AVATAR_OUTPUT_QUALITIES) {
-		const dataUrl = canvas.toDataURL(AVATAR_OUTPUT_TYPE, quality);
-		if (!dataUrl.startsWith(`data:${AVATAR_OUTPUT_TYPE};base64,`)) {
-			throw new Error("Nao foi possivel gerar a foto ajustada.");
-		}
+	const baseName = makeAvatarFileName(draft.fileName);
 
-		const base64 = dataUrl.split(",")[1] || "";
-		const byteCount = Math.ceil((base64.length * 3) / 4);
-		if (byteCount <= AVATAR_MAX_BYTES) {
+	for (const quality of AVATAR_OUTPUT_QUALITIES) {
+		const blob = await new Promise<Blob | null>((resolve) => {
+			canvas.toBlob((result) => resolve(result), "image/jpeg", quality);
+		});
+
+		if (!blob) continue;
+
+		if (blob.size <= AVATAR_MAX_BYTES || quality === 0.62) {
+			const dataUrl = canvas.toDataURL("image/jpeg", quality);
 			return {
+				file: new File([blob], baseName, { type: "image/jpeg" }),
 				dataUrl,
-				fileName: makeAvatarFileName(draft.fileName),
-				mimeType: AVATAR_OUTPUT_TYPE,
 			};
 		}
 	}
@@ -142,7 +149,7 @@ async function createCroppedAvatarUpload({ draft, focus, zoom }) {
 	throw new Error("A foto ajustada ficou acima de 2MB.");
 }
 
-function SettingsSection({ label, children }) {
+function SettingsSection({ label, children }: { label: string; children: React.ReactNode }) {
 	return (
 		<section>
 			<p className="mb-2 mt-5 px-5 font-client text-[10px] font-semibold uppercase tracking-[1px] text-foreground-faint">
@@ -153,7 +160,7 @@ function SettingsSection({ label, children }) {
 	);
 }
 
-function FieldGroup({ children }) {
+function FieldGroup({ children }: { children: React.ReactNode }) {
 	return (
 		<div className="mx-5 overflow-hidden rounded-2xl border border-border bg-card">
 			{children}
@@ -161,7 +168,7 @@ function FieldGroup({ children }) {
 	);
 }
 
-function GroupItem({ children, className = "" }) {
+function GroupItem({ children, className = "" }: { children: React.ReactNode; className?: string }) {
 	return (
 		<div
 			className={`border-b border-border last:border-b-0 ${className}`}>
@@ -170,7 +177,7 @@ function GroupItem({ children, className = "" }) {
 	);
 }
 
-function GridPair({ children }) {
+function GridPair({ children }: { children: React.ReactNode }) {
 	return (
 		<div className="grid grid-cols-2 divide-x divide-border border-b border-border last:border-b-0">
 			{children}
@@ -178,7 +185,7 @@ function GridPair({ children }) {
 	);
 }
 
-function VerticalField({ id, label, children, hint }: any) {
+function VerticalField({ id, label, children, hint }: { id?: string; label: string; children: React.ReactNode; hint?: string }) {
 	return (
 		<div className="flex min-w-0 flex-col gap-1 px-4 py-3.5">
 			<label
@@ -196,7 +203,7 @@ function VerticalField({ id, label, children, hint }: any) {
 	);
 }
 
-function RowField({ id, label, hint, children }) {
+function RowField({ id, label, hint, children }: { id?: string; label: string; hint?: string; children: React.ReactNode }) {
 	return (
 		<div className="flex min-h-[58px] items-center justify-between gap-4 px-4 py-3.5">
 			<div className="min-w-0">
@@ -216,7 +223,7 @@ function RowField({ id, label, hint, children }) {
 	);
 }
 
-function ReadOnlyCell({ label, value }) {
+function ReadOnlyCell({ label, value }: { label: string; value: React.ReactNode }) {
 	return (
 		<div className="flex min-w-0 flex-col gap-1 px-4 py-3.5">
 			<p className="font-client text-[11px] font-medium tracking-[0.2px] text-foreground-faint">
@@ -229,7 +236,7 @@ function ReadOnlyCell({ label, value }) {
 	);
 }
 
-function NavRow({ label, onClick, disabled }) {
+function NavRow({ label, onClick, disabled }: { label: string; onClick?: () => void; disabled?: boolean }) {
 	return (
 		<button
 			type="button"
@@ -244,8 +251,8 @@ function NavRow({ label, onClick, disabled }) {
 	);
 }
 
-function SettingsPill({ children, tone = "neutral" }) {
-	const tones = {
+function SettingsPill({ children, tone = "neutral" }: { children: React.ReactNode; tone?: "green" | "neutral" }) {
+	const tones: Record<string, string> = {
 		green: "border-paid/30 bg-paid-bg text-paid",
 		neutral: "border-border bg-muted text-foreground-faint",
 	};
@@ -258,13 +265,13 @@ function SettingsPill({ children, tone = "neutral" }) {
 	);
 }
 
-function formatPercentInput(value) {
+function formatPercentInput(value: any) {
 	const number = Number(value || 0);
 	if (!Number.isFinite(number)) return "0";
 	return String(Math.round(number * 10000) / 10000).replace(".", ",");
 }
 
-function parsePercentInput(value) {
+function parsePercentInput(value: any) {
 	const normalized = String(value || "")
 		.replace(",", ".")
 		.trim();
@@ -330,7 +337,7 @@ export default function SettingsPage() {
 	const [isSaving, setIsSaving] = useState(false);
 	const [errorMessage, setErrorMessage] = useState("");
 	const [successMessage, setSuccessMessage] = useState("");
-	const avatarDragRef = useRef(null);
+	const avatarDragRef = useRef<boolean>(false);
 
 	useEffect(() => {
 		let mounted = true;
@@ -361,9 +368,9 @@ export default function SettingsPage() {
 					setAvatarZoom(DEFAULT_AVATAR_ZOOM);
 					setRemoveBarberPhoto(false);
 				}
-			} catch (error) {
+			} catch (error: any) {
 				if (mounted) {
-					setErrorMessage(error.message || "Falha ao carregar perfil.");
+					setErrorMessage(error?.message || "Falha ao carregar perfil.");
 					setSuccessMessage("");
 				}
 			} finally {
@@ -393,17 +400,17 @@ export default function SettingsPage() {
 				setPaymentMethods(methods);
 				setPaymentDrafts(
 					Object.fromEntries(
-						methods.map((method) => [
+						methods.map((method: any) => [
 							method.id,
 							formatPercentInput(method.fee_percent),
 						]),
 					),
 				);
 			})
-			.catch((error) => {
+			.catch((error: any) => {
 				if (mounted) {
 					setErrorMessage(
-						error.message || "Falha ao carregar formas de pagamento.",
+						error?.message || "Falha ao carregar formas de pagamento.",
 					);
 					setSuccessMessage("");
 				}
@@ -417,7 +424,7 @@ export default function SettingsPage() {
 		};
 	}, [isAdmin]);
 
-	const handlePhotoChange = async (event) => {
+	const handlePhotoChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
 		const file = event.target.files?.[0];
 		if (!file) return;
 
@@ -448,8 +455,8 @@ export default function SettingsPage() {
 			setErrorMessage("");
 			setSuccessMessage("Ajuste o foco da foto e salve.");
 			event.target.value = "";
-		} catch (error) {
-			setErrorMessage(error.message || "Nao foi possivel carregar a foto.");
+		} catch (error: any) {
+			setErrorMessage(error?.message || "Nao foi possivel carregar a foto.");
 			setSuccessMessage("");
 		}
 	};
@@ -464,7 +471,7 @@ export default function SettingsPage() {
 		setErrorMessage("");
 	};
 
-	const updateAvatarFocusFromPointer = (event) => {
+	const updateAvatarFocusFromPointer = (event: React.PointerEvent<HTMLDivElement>) => {
 		const rect = event.currentTarget.getBoundingClientRect();
 		if (!rect.width || !rect.height) return;
 
@@ -474,19 +481,19 @@ export default function SettingsPage() {
 		});
 	};
 
-	const handleAvatarPointerDown = (event) => {
+	const handleAvatarPointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
 		if (!barberPhotoDraft || isSaving || isLoading) return;
 		avatarDragRef.current = true;
 		event.currentTarget.setPointerCapture?.(event.pointerId);
 		updateAvatarFocusFromPointer(event);
 	};
 
-	const handleAvatarPointerMove = (event) => {
+	const handleAvatarPointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
 		if (!avatarDragRef.current) return;
 		updateAvatarFocusFromPointer(event);
 	};
 
-	const handleAvatarPointerUp = (event) => {
+	const handleAvatarPointerUp = (event: React.PointerEvent<HTMLDivElement>) => {
 		avatarDragRef.current = false;
 		event.currentTarget.releasePointerCapture?.(event.pointerId);
 	};
@@ -520,7 +527,7 @@ export default function SettingsPage() {
 		setErrorMessage("");
 	};
 
-	const handleSaveProfile = async (event) => {
+	const handleSaveProfile = async (event: React.FormEvent) => {
 		event.preventDefault();
 		if (isSaving || isLoading) return;
 
@@ -594,8 +601,8 @@ export default function SettingsPage() {
 			setRemoveBarberPhoto(false);
 			setSuccessMessage("Configuracoes salvas.");
 			window.dispatchEvent(new Event("profile-updated"));
-		} catch (error) {
-			setErrorMessage(error.message || "Falha ao salvar configuracoes.");
+		} catch (error: any) {
+			setErrorMessage(error?.message || "Falha ao salvar configuracoes.");
 		} finally {
 			setIsSaving(false);
 		}
@@ -609,7 +616,7 @@ export default function SettingsPage() {
 	const handleSavePaymentMethods = async () => {
 		if (isSavingPayments || isLoadingPayments) return;
 
-		const updates = [];
+		const updates: { method: any; feePercent: number }[] = [];
 		for (const method of paymentMethods) {
 			const feePercent = parsePercentInput(paymentDrafts[method.id]);
 			if (!Number.isFinite(feePercent) || feePercent < 0 || feePercent > 100) {
@@ -639,22 +646,22 @@ export default function SettingsPage() {
 			);
 			setPaymentMethods((current) =>
 				current.map((method) => {
-					const updated = saved.find((item) => item.id === method.id);
+					const updated = saved.find((item: any) => item.id === method.id);
 					return updated || method;
 				}),
 			);
 			setPaymentDrafts((current) => ({
 				...current,
 				...Object.fromEntries(
-					saved.map((method) => [
+					saved.map((method: any) => [
 						method.id,
 						formatPercentInput(method.fee_percent),
 					]),
 				),
 			}));
 			setSuccessMessage("Taxas de pagamento salvas.");
-		} catch (error) {
-			setErrorMessage(error.message || "Falha ao salvar taxas.");
+		} catch (error: any) {
+			setErrorMessage(error?.message || "Falha ao salvar taxas.");
 		} finally {
 			setIsSavingPayments(false);
 		}

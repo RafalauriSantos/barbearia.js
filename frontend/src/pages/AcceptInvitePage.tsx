@@ -9,7 +9,7 @@ export default function AcceptInvitePage() {
 	const navigate = useNavigate();
 	const { acceptInvite, isAuthenticated, isLoading } = useAuth();
 	const token = searchParams.get("token") || "";
-	const [invite, setInvite] = useState(null);
+	const [invite, setInvite] = useState<any>(null);
 	const [nome, setNome] = useState("");
 	const [password, setPassword] = useState("");
 	const [isSubmitting, setIsSubmitting] = useState(false);
@@ -39,7 +39,7 @@ export default function AcceptInvitePage() {
 				}
 			} catch (error) {
 				if (mounted) {
-					setErrorMessage(error.message || "Convite invalido ou expirado.");
+					setErrorMessage((error as any)?.message || "Convite invalido ou expirado.");
 				}
 			} finally {
 				if (mounted) setIsInviteLoading(false);
@@ -56,13 +56,13 @@ export default function AcceptInvitePage() {
 		return <Navigate to="/app" replace />;
 	}
 
-	const handlePasswordChange = (event) => {
+	const handlePasswordChange = (event: React.ChangeEvent<HTMLInputElement>) => {
 		const nextPassword = event.target.value;
 		setPassword(nextPassword);
 		setErrorMessage("");
 	};
 
-	const handleSubmit = async (event) => {
+	const handleSubmit = async (event: React.FormEvent) => {
 		event.preventDefault();
 		if (isSubmitting) return;
 
@@ -81,7 +81,7 @@ export default function AcceptInvitePage() {
 			});
 			navigate("/app", { replace: true });
 		} catch (error) {
-			setErrorMessage(error.message || "Nao foi possivel aceitar o convite.");
+			setErrorMessage((error as any)?.message || "Nao foi possivel aceitar o convite.");
 		} finally {
 			setIsSubmitting(false);
 		}

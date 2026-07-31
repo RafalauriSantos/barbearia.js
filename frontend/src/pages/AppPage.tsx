@@ -63,13 +63,13 @@ function scheduleIdleTask(callback: () => void) {
 	return () => clearTimeout(id);
 }
 
-function toTimeLabel(totalMinutes) {
+function toTimeLabel(totalMinutes: number): string {
 	const hours = Math.floor(totalMinutes / 60);
 	const minutes = totalMinutes % 60;
 	return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
 }
 
-function formatFiadoLabel(prazoDate) {
+function formatFiadoLabel(prazoDate?: string | null): string {
 	if (!prazoDate) return "";
 	const prazo = new Date(prazoDate + "T12:00:00");
 	const day = prazo.getDate();
@@ -77,14 +77,14 @@ function formatFiadoLabel(prazoDate) {
 	return `${day}/${month}`;
 }
 
-function getAppointmentSummary(appointment) {
+function getAppointmentSummary(appointment: any): string {
 	const services =
 		Array.isArray(appointment.services) ? appointment.services : [];
 	const products =
 		Array.isArray(appointment.products) ? appointment.products : [];
-	const serviceNames = services.map((item) => item.name).filter(Boolean);
+	const serviceNames = services.map((item: any) => item.name).filter(Boolean);
 	const productNames = products
-		.map((item) =>
+		.map((item: any) =>
 			item.quantity > 1 ? `${item.quantity}x ${item.name}` : item.name,
 		)
 		.filter(Boolean);
@@ -93,7 +93,7 @@ function getAppointmentSummary(appointment) {
 	return appointment.service_name || "Atendimento";
 }
 
-function getInitials(name) {
+function getInitials(name?: string | null): string {
 	const trimmed = String(name || "").trim();
 	if (!trimmed) return "?";
 	const parts = trimmed.split(/\s+/).filter(Boolean);
@@ -101,17 +101,17 @@ function getInitials(name) {
 	return `${parts[0][0] || ""}${parts[parts.length - 1][0] || ""}`.toUpperCase();
 }
 
-function getAvatarColor(index) {
+function getAvatarColor(index: number): string {
 	return AVATAR_COLORS[index % AVATAR_COLORS.length];
 }
 
-function normalizeText(value) {
+function normalizeText(value?: string | null): string {
 	return String(value || "")
 		.trim()
 		.toLowerCase();
 }
 
-function isOwnBarber(barber, user) {
+function isOwnBarber(barber?: any, user?: any): boolean {
 	if (!barber || !user) return false;
 
 	if (user.barbeiro_id && barber.id === user.barbeiro_id) return true;
@@ -145,11 +145,11 @@ function PaymentQuickSheet({
 	isSaving,
 	onClose,
 	onConfirm,
-}) {
-	const availableMethods = methods.filter((method) => method.code !== "fiado");
+}: any) {
+	const availableMethods = methods.filter((method: any) => method.code !== "fiado");
 	const initialMethod =
-		availableMethods.find((method) => method.id === appointment.payment_method_id) ||
-		availableMethods.find((method) => method.code === "pix") ||
+		availableMethods.find((method: any) => method.id === appointment.payment_method_id) ||
+		availableMethods.find((method: any) => method.code === "pix") ||
 		availableMethods[0] ||
 		null;
 	const [selectedMethodId, setSelectedMethodId] = useState(
@@ -157,7 +157,7 @@ function PaymentQuickSheet({
 	);
 	const [paymentDate, setPaymentDate] = useState(formatDayKey(new Date()));
 	const selectedMethod =
-		availableMethods.find((method) => method.id === selectedMethodId) ||
+		availableMethods.find((method: any) => method.id === selectedMethodId) ||
 		initialMethod;
 	const gross = Number(appointment.value || 0);
 	const feePercent = Number(selectedMethod?.fee_percent || 0);
@@ -209,7 +209,7 @@ function PaymentQuickSheet({
 					</p>
 				:	<>
 						<div className="mt-4 grid grid-cols-2 gap-2">
-							{availableMethods.map((method, index) => {
+							{availableMethods.map((method: any, index: number) => {
 								const isActive = method.id === selectedMethod?.id;
 								const fillsLastRow =
 									availableMethods.length % 2 === 1 &&
@@ -293,7 +293,7 @@ export default function AppPage() {
 	const navigate = useNavigate();
 	const { user } = useAuth();
 	const isAdmin = user?.role === "admin";
-	const initialCacheRef = useRef(null);
+	const initialCacheRef = useRef<any>(null);
 	if (!initialCacheRef.current) {
 		const initialDayKey = formatDayKey(new Date());
 		const initialOwnBarberId = user?.barbeiro_id || "";
@@ -313,7 +313,15 @@ export default function AppPage() {
 			paymentMethods: getCachedPaymentMethods(),
 		};
 	}
-	const initialCache = initialCacheRef.current;
+	const initialCache = initialCacheRef.current || {
+		dayKey: formatDayKey(new Date()),
+		appointments: [],
+		profile: null,
+		barbers: [],
+		services: [],
+		products: [],
+		paymentMethods: [],
+	};
 	const [currentDate, setCurrentDate] = useState(new Date());
 	const [appointments, setAppointments] = useState(
 		initialCache.appointments || [],
@@ -333,13 +341,13 @@ export default function AppPage() {
 	const [errorMessage, setErrorMessage] = useState("");
 	const [feedbackMessage, setFeedbackMessage] = useState("");
 	const [dialogOpen, setDialogOpen] = useState(false);
-	const [editingAppt, setEditingAppt] = useState();
+	const [editingAppt, setEditingAppt] = useState<any>(undefined);
 	const [defaultTimeSlot, setDefaultTimeSlot] = useState("09:00");
-	const [selectedAppointment, setSelectedAppointment] = useState(null);
+	const [selectedAppointment, setSelectedAppointment] = useState<any>(null);
 	const selectedAppointmentRef = useFocusTrap(() => setSelectedAppointment(null), !!selectedAppointment);
-	const [services, setServices] = useState(initialCache.services || []);
-	const [products, setProducts] = useState(initialCache.products || []);
-	const [paymentMethods, setPaymentMethods] = useState(
+	const [services, setServices] = useState<any[]>(initialCache.services || []);
+	const [products, setProducts] = useState<any[]>(initialCache.products || []);
+	const [paymentMethods, setPaymentMethods] = useState<any[]>(
 		initialCache.paymentMethods || [],
 	);
 	const [isLoadingCatalog, setIsLoadingCatalog] = useState(
@@ -348,19 +356,19 @@ export default function AppPage() {
 	const [isLoadingPaymentMethods, setIsLoadingPaymentMethods] = useState(
 		!initialCache.paymentMethods,
 	);
-	const [itemDraft, setItemDraft] = useState({ services: [], products: [] });
+	const [itemDraft, setItemDraft] = useState<{ services: any[]; products: any[] }>({ services: [], products: [] });
 	const [autoValueForDraft, setAutoValueForDraft] = useState(true);
 	const [isSavingItems, setIsSavingItems] = useState(false);
 	const [itemError, setItemError] = useState("");
-	const [barbers, setBarbers] = useState(initialCache.barbers || []);
-	const [profile, setProfile] = useState(initialCache.profile || null);
+	const [barbers, setBarbers] = useState<any[]>(initialCache.barbers || []);
+	const [profile, setProfile] = useState<any>(initialCache.profile || null);
 	const [activeBarberId, setActiveBarberId] = useState("");
 	const [savingStatusId, setSavingStatusId] = useState("");
-	const [paymentAppointment, setPaymentAppointment] = useState(null);
+	const [paymentAppointment, setPaymentAppointment] = useState<any>(null);
 	const appointmentsRef = useRef(appointments);
 	const savingStatusIdRef = useRef(savingStatusId);
-	const catalogRequestRef = useRef(null);
-	const paymentMethodsRequestRef = useRef(null);
+	const catalogRequestRef = useRef<Promise<any> | null>(null);
+	const paymentMethodsRequestRef = useRef<Promise<any> | null>(null);
 	const catalogLoadedRef = useRef(
 		Boolean(initialCache.services && initialCache.products),
 	);
@@ -534,17 +542,17 @@ export default function AppPage() {
 				setActiveBarberId((current) => {
 					const availableIds = new Set(
 						list
-							.filter((barber) => !isOwnBarber(barber, user))
-							.map((barber) => barber.id),
+							.filter((barber: any) => !isOwnBarber(barber, user))
+							.map((barber: any) => barber.id),
 					);
 					if (!current) return "";
 					if (current && availableIds.has(current)) return current;
 					return "";
 				});
 			})
-			.catch((error) => {
+			.catch((error: any) => {
 				if (!initialCache.barbers) setBarbers([]);
-				setErrorMessage(error.message || "Falha ao carregar barbeiros.");
+				setErrorMessage(error?.message || "Falha ao carregar barbeiros.");
 			});
 	}, [initialCache.barbers, isAdmin, user]);
 
@@ -562,13 +570,13 @@ export default function AppPage() {
 				force,
 			});
 			setSummary(nextSummary);
-		} catch (error) {
+		} catch (error: any) {
 			if (!hasLoaded) {
 				setAppointments([]);
 				setSummary(EMPTY_SUMMARY);
 			}
 			setErrorMessage(
-				error.message || "Falha ao carregar os agendamentos do dia.",
+				error?.message || "Falha ao carregar os agendamentos do dia.",
 			);
 		} finally {
 			setIsLoading(false);
@@ -614,21 +622,21 @@ export default function AppPage() {
 		setFeedbackMessage("");
 	}, [isAdmin, selectedBarberId, todaySelected]);
 
-	const openDetails = (appointment) => {
+	const openDetails = (appointment: any) => {
 		setSelectedAppointment(null);
 		setEditingAppt(appointment);
 		setDefaultTimeSlot(appointment.time_slot || "09:00");
 		setDialogOpen(true);
 	};
 
-	const openQuickItems = useCallback((appointment) => {
+	const openQuickItems = useCallback((appointment: any) => {
 		void ensureCatalogLoaded();
 		const servicesDraft =
 			Array.isArray(appointment.services) ? appointment.services : [];
 		const productsDraft =
 			Array.isArray(appointment.products) ? appointment.products : [];
 		const itemsTotal = [...servicesDraft, ...productsDraft].reduce(
-			(sum, item) => sum + Number(item.price || 0) * Number(item.quantity || 1),
+			(sum: number, item: any) => sum + Number(item.price || 0) * Number(item.quantity || 1),
 			0,
 		);
 		const delta = Math.abs(Number(appointment.value || 0) - itemsTotal);
@@ -638,26 +646,26 @@ export default function AppPage() {
 		setSelectedAppointment(appointment);
 	}, [ensureCatalogLoaded]);
 
-	const updateDraftQuantity = (type, id, quantity) => {
+	const updateDraftQuantity = (type: "services" | "products", id: string, quantity: number) => {
 		setItemDraft((prev) => ({
 			...prev,
-			[type]: prev[type].map((item) =>
+			[type]: prev[type].map((item: any) =>
 				item.id === id ? { ...item, quantity } : item,
 			),
 		}));
 	};
 
-	const removeDraftItem = (type, id) => {
+	const removeDraftItem = (type: "services" | "products", id: string) => {
 		setItemDraft((prev) => ({
 			...prev,
-			[type]: prev[type].filter((item) => item.id !== id),
+			[type]: prev[type].filter((item: any) => item.id !== id),
 		}));
 	};
 
-	const addDraftItem = (type, item) => {
+	const addDraftItem = (type: "services" | "products", item: any) => {
 		setItemDraft((prev) => {
 			const list = prev[type];
-			const existing = list.find((entry) => entry.id === item.id);
+			const existing = list.find((entry: any) => entry.id === item.id);
 			if (!existing) {
 				const nextItem = {
 					id: item.id,
@@ -682,7 +690,7 @@ export default function AppPage() {
 			}
 			return {
 				...prev,
-				[type]: list.map((entry) =>
+				[type]: list.map((entry: any) =>
 					entry.id === item.id ?
 						{ ...entry, quantity: Number(entry.quantity || 1) + 1 }
 					:	entry,
@@ -692,7 +700,7 @@ export default function AppPage() {
 	};
 
 	const draftTotal = [...itemDraft.services, ...itemDraft.products].reduce(
-		(sum, item) => sum + Number(item.price || 0) * Number(item.quantity || 1),
+		(sum: number, item: any) => sum + Number(item.price || 0) * Number(item.quantity || 1),
 		0,
 	);
 
@@ -717,26 +725,27 @@ export default function AppPage() {
 				products: Array.isArray(updated.products) ? updated.products : [],
 			});
 			await reload();
-		} catch (error) {
-			setItemError(error.message || "Falha ao atualizar itens.");
+		} catch (error: any) {
+			setItemError(error?.message || "Falha ao atualizar itens.");
 		} finally {
 			setIsSavingItems(false);
 		}
 	};
 
-	const removeAppointment = async (appointment) => {
+	const removeAppointment = async (appointment: any) => {
 		if (!window.confirm("Remover este cliente da agenda?")) return;
 		setSelectedAppointment(null);
 		setErrorMessage("");
 		try {
 			await deleteAppointment(appointment.id);
 			await reload();
-		} catch (error) {
-			setErrorMessage(error.message || "Nao foi possivel remover cliente.");
+		} catch (error: any) {
+			setErrorMessage(error?.message || "Nao foi possivel remover cliente.");
 		}
 	};
 
-	const changeAppointmentStatusBySwipe = useCallback(async (appointment, status) => {
+	const changeAppointmentStatusBySwipe = useCallback(
+		async (appointment: any, status: any) => {
 		if (status === "paid") {
 			void ensurePaymentMethodsLoaded();
 			setPaymentAppointment(appointment);
@@ -754,8 +763,8 @@ export default function AppPage() {
 			status,
 			prazo_date: status === "fiado" ? appointment.prazo_date || null : null,
 		};
-		setAppointments((current) => {
-			const nextAppointments = current.map((item) =>
+		setAppointments((current: any[]) => {
+			const nextAppointments = current.map((item: any) =>
 				item.id === appointment.id ? optimisticAppointment : item,
 			);
 			appointmentsRef.current = nextAppointments;
@@ -773,14 +782,14 @@ export default function AppPage() {
 		} catch (error) {
 			appointmentsRef.current = previousAppointments;
 			setAppointments(previousAppointments);
-			setErrorMessage(error.message || "Nao foi possivel atualizar o status.");
+			setErrorMessage((error as any)?.message || "Nao foi possivel atualizar o status.");
 		} finally {
 			savingStatusIdRef.current = "";
 			setSavingStatusId("");
 		}
 	}, [ensurePaymentMethodsLoaded, reload]);
 
-	const confirmAppointmentPayment = async (method, paymentDate) => {
+	const confirmAppointmentPayment = async (method: any, paymentDate: string) => {
 		if (!paymentAppointment || savingStatusId) return;
 		const appointment = paymentAppointment;
 		const previousAppointments = appointments;
@@ -808,8 +817,8 @@ export default function AppPage() {
 		setPaymentAppointment(null);
 		setFeedbackMessage("");
 		setErrorMessage("");
-		setAppointments((current) =>
-			current.map((item) =>
+		setAppointments((current: any[]) =>
+			current.map((item: any) =>
 				item.id === appointment.id ? optimisticAppointment : item,
 			),
 		);
@@ -820,15 +829,15 @@ export default function AppPage() {
 				payment_date: paymentDate,
 				prazo_date: null,
 			});
-			setAppointments((current) =>
-				current.map((item) =>
+			setAppointments((current: any[]) =>
+				current.map((item: any) =>
 					item.id === updated.id ? updated : item,
 				),
 			);
 			reload();
 		} catch (error) {
 			setAppointments(previousAppointments);
-			setErrorMessage(error.message || "Nao foi possivel receber pagamento.");
+			setErrorMessage((error as any)?.message || "Nao foi possivel receber pagamento.");
 		} finally {
 			setSavingStatusId("");
 		}
@@ -867,7 +876,7 @@ export default function AppPage() {
 				{barberOptions.length > 0 && (
 					<div className="mt-3">
 						<div className="flex gap-3 overflow-x-auto pb-1 no-scrollbar">
-							{barberOptions.map((barber, index) => {
+							{barberOptions.map((barber: any, index: number) => {
 								const isActive = activeBarberId === barber.id;
 								return (
 									<button
@@ -1026,7 +1035,7 @@ export default function AppPage() {
 										Sem itens adicionados.
 									</p>
 								:	<div className="mt-2 space-y-2">
-										{itemDraft.services.map((item) => (
+										{itemDraft.services.map((item: any) => (
 											<div
 												key={`service-${item.id}`}
 												className="flex items-center gap-2 rounded-md border border-border bg-background-deep px-2 py-2">
@@ -1054,7 +1063,7 @@ export default function AppPage() {
 												</button>
 											</div>
 										))}
-										{itemDraft.products.map((item) => (
+										{itemDraft.products.map((item: any) => (
 											<div
 												key={`product-${item.id}`}
 												className="flex items-center gap-2 rounded-md border border-border bg-background-deep px-2 py-2">
@@ -1113,7 +1122,7 @@ export default function AppPage() {
 													Nenhum serviço cadastrado.
 												</p>
 											:	<div className="flex flex-wrap gap-2">
-													{services.map((service) => (
+													{services.map((service: any) => (
 														<button
 															key={service.id}
 															type="button"
@@ -1134,7 +1143,7 @@ export default function AppPage() {
 													Nenhum produto cadastrado.
 												</p>
 											:	<div className="flex flex-wrap gap-2">
-													{products.map((product) => (
+													{products.map((product: any) => (
 														<button
 															key={product.id}
 															type="button"

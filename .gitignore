@@ -45,3 +45,6 @@ frontend/test-results
 frontend/playwright-report
 .dev.vars
 .wrangler/
+.gemini/
+.codex/
+graphify-out/

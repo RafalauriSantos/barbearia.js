@@ -37,14 +37,14 @@ export default function LoginPage() {
 		return <Navigate to={from} replace />;
 	}
 
-	const handlePasswordChange = (event) => {
+	const handlePasswordChange = (event: React.ChangeEvent<HTMLInputElement>) => {
 		const nextPassword = event.target.value;
 		setPassword(nextPassword);
 		setErrorMessage("");
 		setSuccessMessage("");
 	};
 
-	const handleSubmit = async (event) => {
+	const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
 		event.preventDefault();
 		if (isSubmitting) return;
 
@@ -75,7 +75,7 @@ export default function LoginPage() {
 				return;
 			}
 			setErrorMessage(
-				error.message ||
+				(error as any)?.message ||
 					(mode === "signup" ?
 						"Nao foi possivel criar a conta."
 					:	"Nao foi possivel entrar."),

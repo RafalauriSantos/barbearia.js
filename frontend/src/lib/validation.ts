@@ -1,10 +1,19 @@
-export function parseMoneyInput(value) {
+export function parseMoneyInput(value: any): number {
 	const normalized = String(value ?? "").trim().replace(",", ".");
 	if (!normalized) return NaN;
 	return Number(normalized);
 }
 
-export function validateRequiredText(value, fieldLabel, options = {}) {
+export interface ValidateTextOptions {
+	minLength?: number;
+	maxLength?: number;
+}
+
+export function validateRequiredText(
+	value: any,
+	fieldLabel: string,
+	options: ValidateTextOptions = {},
+): string {
 	const text = String(value ?? "").trim();
 	const minLength = options.minLength ?? 2;
 	const maxLength = options.maxLength ?? 80;
@@ -24,7 +33,16 @@ export function validateRequiredText(value, fieldLabel, options = {}) {
 	return "";
 }
 
-export function validateMoney(value, fieldLabel, options = {}) {
+export interface ValidateMoneyOptions {
+	min?: number;
+	max?: number;
+}
+
+export function validateMoney(
+	value: any,
+	fieldLabel: string,
+	options: ValidateMoneyOptions = {},
+): string {
 	const amount = parseMoneyInput(value);
 	const min = options.min ?? 0.01;
 	const max = options.max ?? 99999.99;
@@ -44,7 +62,7 @@ export function validateMoney(value, fieldLabel, options = {}) {
 	return "";
 }
 
-export function validateTime(value, fieldLabel = "Horario") {
+export function validateTime(value: any, fieldLabel = "Horario"): string {
 	if (!/^\d{2}:\d{2}$/.test(String(value ?? ""))) {
 		return `${fieldLabel} deve ser informado.`;
 	}

@@ -38,7 +38,13 @@ const highlights = [
 	["Equipe", "Acesso separado para dono e barbeiros."],
 ];
 
-function PrimaryLink({ to, children, className = "" }) {
+interface PrimaryLinkProps {
+	to: string;
+	children: React.ReactNode;
+	className?: string;
+}
+
+function PrimaryLink({ to, children, className = "" }: PrimaryLinkProps) {
 	return (
 		<Link
 			to={to}

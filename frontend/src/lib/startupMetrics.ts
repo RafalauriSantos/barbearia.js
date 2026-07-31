@@ -11,8 +11,9 @@ function now() {
 function getState() {
 	if (!shouldCollectStartupMetrics()) return null;
 
-	if (!window[STARTUP_METRICS_KEY]) {
-		window[STARTUP_METRICS_KEY] = {
+	const win = window as any;
+	if (!win[STARTUP_METRICS_KEY]) {
+		win[STARTUP_METRICS_KEY] = {
 			version: 1,
 			startedAt: performance?.timeOrigin || Date.now(),
 			marks: [],
@@ -20,17 +21,17 @@ function getState() {
 		};
 	}
 
-	return window[STARTUP_METRICS_KEY];
+	return win[STARTUP_METRICS_KEY];
 }
 
-function cloneEntry(entry) {
+function cloneEntry(entry: any) {
 	return {
 		...entry,
 		detail: entry.detail ? { ...entry.detail } : {},
 	};
 }
 
-export function markStartupMetric(name, detail = {}) {
+export function markStartupMetric(name: string, detail: any = {}) {
 	const state = getState();
 	if (!state || !name) return null;
 
@@ -50,14 +51,19 @@ export function markStartupMetric(name, detail = {}) {
 	return cloneEntry(mark);
 }
 
-export function measureStartupMetric(name, startMark, endMark, detail = {}) {
+export function measureStartupMetric(
+	name: string,
+	startMark: string,
+	endMark: string,
+	detail: any = {},
+) {
 	const state = getState();
 	if (!state || !name || !startMark || !endMark) return null;
 
 	const start = [...state.marks]
 		.reverse()
-		.find((mark) => mark.name === startMark);
-	const end = [...state.marks].reverse().find((mark) => mark.name === endMark);
+		.find((mark: any) => mark.name === startMark);
+	const end = [...state.marks].reverse().find((mark: any) => mark.name === endMark);
 	if (!start || !end) return null;
 
 	const measure = {
@@ -98,6 +104,6 @@ export function getStartupMetricsSnapshot() {
 
 export function clearStartupMetrics() {
 	if (typeof window !== "undefined") {
-		delete window[STARTUP_METRICS_KEY];
+		delete (window as any)[STARTUP_METRICS_KEY];
 	}
 }

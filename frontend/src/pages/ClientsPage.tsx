@@ -3,7 +3,7 @@ import { useFocusTrap } from "@/lib/useFocusTrap";
 import { BaseModal } from "@/components/BaseModal";
 import { BottomNav } from "@/components/BottomNav";
 
-function Sheet({ title, eyebrow, onClose, children }) {
+function Sheet({ title, eyebrow, onClose, children }: { title: string; eyebrow?: string; onClose: () => void; children: React.ReactNode }) {
 	return (
 		<BaseModal title={title} eyebrow={eyebrow} onClose={onClose} variant="bottom-sheet">
 			{children}
@@ -70,13 +70,13 @@ const emptyWaitForm = {
 	notes: "",
 };
 
-function formatShortDate(dayKey) {
+function formatShortDate(dayKey?: string | null) {
 	if (!dayKey) return "Sem data";
 	const [year, month, day] = String(dayKey).split("-");
 	return `${day}/${month}/${year}`;
 }
 
-function Field({ label, children }) {
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
 	return (
 		<label className="block">
 			<span className="mb-1 block font-client text-xs font-semibold text-foreground-faint">
@@ -87,7 +87,7 @@ function Field({ label, children }) {
 	);
 }
 
-function TextInput(props) {
+function TextInput(props: React.InputHTMLAttributes<HTMLInputElement>) {
 	return (
 		<input
 			{...props}
@@ -96,7 +96,7 @@ function TextInput(props) {
 	);
 }
 
-function TextArea(props) {
+function TextArea(props: React.TextareaHTMLAttributes<HTMLTextAreaElement>) {
 	return (
 		<textarea
 			{...props}
@@ -105,8 +105,6 @@ function TextArea(props) {
 		/>
 	);
 }
-
-
 
 function FixedClientCard({
 	client,
@@ -117,7 +115,7 @@ function FixedClientCard({
 	onRemoveClient,
 	onSchedule,
 	isSubmitting,
-}) {
+}: any) {
 	const totalCuts = Number(client.package_total_cuts || 0);
 	const progress =
 		totalCuts > 0 ?
@@ -199,7 +197,7 @@ function FixedClientCard({
 					<p className="rounded-md border border-dashed border-border px-3 py-3 font-client text-sm text-foreground-faint">
 						Nenhum corte registrado ainda.
 					</p>
-				:	latestCuts.map((cut) => (
+				:	latestCuts.map((cut: any) => (
 						<div
 							key={cut.id}
 							className="flex items-center justify-between gap-2 rounded-md border border-border bg-background px-3 py-2">
@@ -268,8 +266,8 @@ export default function ClientsPage() {
 	const cachedWaitlist = getCachedWaitlist();
 	const cachedPaymentMethods = getCachedPaymentMethods();
 	const [activeTab, setActiveTab] = useState("fixed");
-	const [clients, setClients] = useState(cachedFixed || []);
-	const [waitlist, setWaitlist] = useState(cachedWaitlist || []);
+	const [clients, setClients] = useState<any[]>(cachedFixed || []);
+	const [waitlist, setWaitlist] = useState<any[]>(cachedWaitlist || []);
 	const [isLoading, setIsLoading] = useState(!cachedFixed || !cachedWaitlist);
 	const [isRefreshing, setIsRefreshing] = useState(false);
 	const [isSubmitting, setIsSubmitting] = useState(false);
@@ -277,12 +275,12 @@ export default function ClientsPage() {
 	const [formError, setFormError] = useState("");
 	const [clientForm, setClientForm] = useState(emptyClientForm);
 	const [cutForm, setCutForm] = useState(emptyCutForm);
-	const [paymentMethods, setPaymentMethods] = useState(cachedPaymentMethods || []);
+	const [paymentMethods, setPaymentMethods] = useState<any[]>(cachedPaymentMethods || []);
 	const [waitForm, setWaitForm] = useState(emptyWaitForm);
-	const [editingClientId, setEditingClientId] = useState(null);
-	const [cutClient, setCutClient] = useState(null);
-	const [editingCutId, setEditingCutId] = useState(null);
-	const [scheduleClient, setScheduleClient] = useState(null);
+	const [editingClientId, setEditingClientId] = useState<string | null>(null);
+	const [cutClient, setCutClient] = useState<any>(null);
+	const [editingCutId, setEditingCutId] = useState<string | null>(null);
+	const [scheduleClient, setScheduleClient] = useState<any>(null);
 	const [showClientSheet, setShowClientSheet] = useState(false);
 	const [showWaitSheet, setShowWaitSheet] = useState(false);
 	const hasLoadedRef = useRef(Boolean(cachedFixed && cachedWaitlist));
@@ -313,8 +311,8 @@ export default function ClientsPage() {
 			setWaitlist(waitingList);
 			setPaymentMethods(methods);
 			hasLoadedRef.current = true;
-		} catch (error) {
-			setErrorMessage(error.message || "Falha ao carregar clientes.");
+		} catch (error: any) {
+			setErrorMessage(error?.message || "Falha ao carregar clientes.");
 			if (!hasLoaded) {
 				setClients([]);
 				setWaitlist([]);
@@ -354,7 +352,7 @@ export default function ClientsPage() {
 		}
 	};
 
-	const openEditClient = (client) => {
+	const openEditClient = (client: any) => {
 		setClientForm({
 			name: client.name || "",
 			phone: client.phone || "",
@@ -368,7 +366,7 @@ export default function ClientsPage() {
 		setFormError("");
 	};
 
-	const openCutSheet = (client) => {
+	const openCutSheet = (client: any) => {
 		const today = formatDayKey(new Date());
 		setCutClient(client);
 		setEditingCutId(null);
@@ -376,7 +374,7 @@ export default function ClientsPage() {
 		setFormError("");
 	};
 
-	const openCutPayment = (client, cut) => {
+	const openCutPayment = (client: any, cut: any) => {
 		setCutClient(client);
 		setEditingCutId(cut.id);
 		setCutForm({
@@ -392,7 +390,7 @@ export default function ClientsPage() {
 		setFormError("");
 	};
 
-	const handleClientSubmit = async (event) => {
+	const handleClientSubmit = async (event: React.FormEvent) => {
 		event.preventDefault();
 		if (isSubmitting) return;
 
@@ -433,13 +431,13 @@ export default function ClientsPage() {
 			closeSheets();
 			await reload();
 		} catch (error) {
-			setErrorMessage(error.message || "Falha ao salvar cliente.");
+			setErrorMessage((error as any)?.message || "Falha ao salvar cliente.");
 		} finally {
 			setIsSubmitting(false);
 		}
 	};
 
-	const handleCutSubmit = async (event) => {
+	const handleCutSubmit = async (event: React.FormEvent) => {
 		event.preventDefault();
 		if (isSubmitting || !cutClient) return;
 
@@ -489,13 +487,13 @@ export default function ClientsPage() {
 			closeSheets();
 			await reload();
 		} catch (error) {
-			setErrorMessage(error.message || "Falha ao registrar corte.");
+			setErrorMessage((error as any)?.message || "Falha ao registrar corte.");
 		} finally {
 			setIsSubmitting(false);
 		}
 	};
 
-	const handleWaitSubmit = async (event) => {
+	const handleWaitSubmit = async (event: React.FormEvent) => {
 		event.preventDefault();
 		if (isSubmitting) return;
 
@@ -521,13 +519,13 @@ export default function ClientsPage() {
 			closeSheets();
 			await reload();
 		} catch (error) {
-			setErrorMessage(error.message || "Falha ao salvar lista de espera.");
+			setErrorMessage((error as any)?.message || "Falha ao salvar lista de espera.");
 		} finally {
 			setIsSubmitting(false);
 		}
 	};
 
-	const removeCut = async (client, cut) => {
+	const removeCut = async (client: any, cut: any) => {
 		if (isSubmitting) return;
 		if (!window.confirm("Excluir este corte do pacote?")) return;
 		setIsSubmitting(true);
@@ -536,13 +534,13 @@ export default function ClientsPage() {
 			await deleteFixedClientCut(client.id, cut.id);
 			await reload();
 		} catch (error) {
-			setErrorMessage(error.message || "Falha ao excluir corte.");
+			setErrorMessage((error as any)?.message || "Falha ao excluir corte.");
 		} finally {
 			setIsSubmitting(false);
 		}
 	};
 
-	const removeClient = async (client) => {
+	const removeClient = async (client: any) => {
 		if (isSubmitting) return;
 		if (!window.confirm(`Remover ${client.name} dos clientes fixos?`)) return;
 		setIsSubmitting(true);
@@ -551,13 +549,13 @@ export default function ClientsPage() {
 			await deleteFixedClient(client.id);
 			await reload();
 		} catch (error) {
-			setErrorMessage(error.message || "Falha ao remover cliente.");
+			setErrorMessage((error as any)?.message || "Falha ao remover cliente.");
 		} finally {
 			setIsSubmitting(false);
 		}
 	};
 
-	const markWaitScheduled = async (entry) => {
+	const markWaitScheduled = async (entry: any) => {
 		if (isSubmitting) return;
 		setIsSubmitting(true);
 		setErrorMessage("");
@@ -565,13 +563,13 @@ export default function ClientsPage() {
 			await saveWaitlistEntry(entry.id, { status: "agendado" });
 			await reload();
 		} catch (error) {
-			setErrorMessage(error.message || "Falha ao atualizar lista de espera.");
+			setErrorMessage((error as any)?.message || "Falha ao atualizar lista de espera.");
 		} finally {
 			setIsSubmitting(false);
 		}
 	};
 
-	const removeWaitEntry = async (entry) => {
+	const removeWaitEntry = async (entry: any) => {
 		if (isSubmitting) return;
 		setIsSubmitting(true);
 		setErrorMessage("");
@@ -579,7 +577,7 @@ export default function ClientsPage() {
 			await deleteWaitlistEntry(entry.id);
 			await reload();
 		} catch (error) {
-			setErrorMessage(error.message || "Falha ao remover da lista.");
+			setErrorMessage((error as any)?.message || "Falha ao remover da lista.");
 		} finally {
 			setIsSubmitting(false);
 		}

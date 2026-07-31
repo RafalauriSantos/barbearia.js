@@ -13,7 +13,7 @@ function getPendingEmail() {
 	return window.sessionStorage?.getItem(PENDING_VERIFICATION_EMAIL_KEY) || "";
 }
 
-function setPendingEmail(email) {
+function setPendingEmail(email: string) {
 	if (typeof window === "undefined" || !email) return;
 	window.sessionStorage?.setItem(PENDING_VERIFICATION_EMAIL_KEY, email);
 }
@@ -53,7 +53,7 @@ export default function VerifyCodePage() {
 		navigate("/verify-code", { replace: true });
 	}, [navigate, searchParams]);
 
-	const handleSubmit = async (event) => {
+	const handleSubmit = async (event: React.FormEvent) => {
 		event.preventDefault();
 		if (!email || code.length !== 6) return;
 
@@ -72,7 +72,7 @@ export default function VerifyCodePage() {
 			}
 		} catch (error) {
 			setStatus("error");
-			setMessage(error.message || "Codigo invalido ou expirado.");
+			setMessage((error as any)?.message || "Codigo invalido ou expirado.");
 		}
 	};
 
@@ -92,14 +92,14 @@ export default function VerifyCodePage() {
 				setMessage("Reenviamos um novo codigo.");
 				setCooldown(60);
 			}
-		} catch (error) {
+		} catch (error: any) {
 			setStatus("error");
-			if (error.status === 429 || error.retryAfter) {
+			if (error?.status === 429 || error?.retryAfter) {
 				const waitSecs = error.retryAfter || 60;
 				setCooldown(waitSecs);
 				setMessage(`Muitas tentativas. Aguarde ${waitSecs}s antes de reenviar.`);
 			} else {
-				setMessage(error.message || "Nao foi possivel reenviar o codigo.");
+				setMessage(error?.message || "Nao foi possivel reenviar o codigo.");
 			}
 		} finally {
 			setIsResending(false);

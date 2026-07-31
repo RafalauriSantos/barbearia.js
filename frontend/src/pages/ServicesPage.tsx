@@ -27,11 +27,11 @@ import {
 
 // Tela para cadastrar servicos e produtos.
 export default function ServicesPage() {
-	const initialCacheRef = useRef(null);
+	const initialCacheRef = useRef<{ services: any[]; products: any[] } | null>(null);
 	if (!initialCacheRef.current) {
 		initialCacheRef.current = {
-			services: getCachedServices(),
-			products: getCachedProducts(),
+			services: getCachedServices() || [],
+			products: getCachedProducts() || [],
 		};
 	}
 	const initialCache = initialCacheRef.current;
@@ -71,8 +71,8 @@ export default function ServicesPage() {
 			]);
 			setServices(nextServices);
 			setProducts(nextProducts);
-		} catch (error) {
-			setErrorMessage(error.message || "Falha ao carregar catalogo.");
+		} catch (error: any) {
+			setErrorMessage(error?.message || "Falha ao carregar catalogo.");
 			if (!hasLoaded) {
 				setServices([]);
 				setProducts([]);
@@ -127,20 +127,26 @@ export default function ServicesPage() {
 	};
 
 	const buildPayload = () => {
-		const data: any = { name: name.trim(), price: parseMoneyInput(price) };
+		const data: any = {
+			name: name.trim(),
+			price: parseMoneyInput(price),
+		};
 		if (tab === "products") {
 			data.purchase_type = purchaseType;
-			data.cost_price = parseMoneyInput(costPrice || "0");
+			data.cost_price =
+				costPrice.trim() !== "" ? parseMoneyInput(costPrice) : 0;
 			data.supplier_name = supplierName.trim();
-			data.seller_commission_percent = parseMoneyInput(
-				sellerCommissionPercent || "0",
-			);
-			data.stock_quantity = Number(parseMoneyInput(stockQuantity || "0"));
+			data.seller_commission_percent =
+				sellerCommissionPercent.trim() !== "" ?
+					Number(sellerCommissionPercent.replace(",", "."))
+				:	0;
+			data.stock_quantity =
+				stockQuantity.trim() !== "" ? Number(stockQuantity) : 0;
 		}
 		return data;
 	};
 
-	const handleAdd = async (e) => {
+	const handleAdd = async (e: React.FormEvent) => {
 		e.preventDefault();
 		if (isSubmitting) return;
 
@@ -173,13 +179,13 @@ export default function ServicesPage() {
 			setFormError("");
 			setShowForm(false);
 		} catch (error) {
-			setErrorMessage(error.message || "Falha ao salvar item.");
+			setErrorMessage((error as any)?.message || "Falha ao salvar item.");
 		} finally {
 			setIsSubmitting(false);
 		}
 	};
 	// Coloca um item no formulario para editar.
-	const handleEditItem = (item) => {
+	const handleEditItem = (item: any) => {
 		setEditingId(item.id);
 		setName(item.name);
 		setPrice(item.price.toString());
@@ -193,7 +199,7 @@ export default function ServicesPage() {
 		setFormError("");
 		setShowForm(true);
 	};
-	const handleUpdate = async (e) => {
+	const handleUpdate = async (e: React.FormEvent) => {
 		e.preventDefault();
 		if (!editingId || isSubmitting) return;
 
@@ -208,7 +214,7 @@ export default function ServicesPage() {
 
 		if (tab === "services") {
 			const previousServices = [...services];
-			const originalService = services.find((s) => s.id === editingId);
+			const originalService = services.find((s: any) => s.id === editingId);
 			const updatedService = {
 				...originalService,
 				name: name,
@@ -216,7 +222,7 @@ export default function ServicesPage() {
 			};
 
 			// 1. Atualizacao otimista imediata do estado local
-			setServices(services.map((s) => (s.id === editingId ? updatedService : s)));
+			setServices(services.map((s: any) => (s.id === editingId ? updatedService : s)));
 
 			// 2. Limpar campos e fechar o modal/form instantaneamente (0ms de latência percebida)
 			setEditingId(null);
@@ -233,7 +239,7 @@ export default function ServicesPage() {
 			} catch (error) {
 				// Reversao (rollback) em caso de erro
 				setServices(previousServices);
-				setErrorMessage(error.message || "Falha ao salvar o serviço. Sincronização falhou.");
+				setErrorMessage((error as any)?.message || "Falha ao salvar o serviço. Sincronização falhou.");
 			}
 		} else {
 			setIsSubmitting(true);
@@ -253,13 +259,13 @@ export default function ServicesPage() {
 				setFormError("");
 				setShowForm(false);
 			} catch (error) {
-				setErrorMessage(error.message || "Falha ao atualizar item.");
+				setErrorMessage((error as any)?.message || "Falha ao atualizar item.");
 			} finally {
 				setIsSubmitting(false);
 			}
 		}
 	};
-	const handleDelete = async (id) => {
+	const handleDelete = async (id: string) => {
 		if (isSubmitting) return;
 		const currentLabel = tab === "services" ? "servico" : "produto";
 		if (!window.confirm(`Excluir este ${currentLabel}?`)) return;
@@ -275,13 +281,13 @@ export default function ServicesPage() {
 			}
 			await reloadData();
 		} catch (error) {
-			setErrorMessage(error.message || "Falha ao excluir item.");
+			setErrorMessage((error as any)?.message || "Falha ao excluir item.");
 		} finally {
 			setIsSubmitting(false);
 		}
 	};
 	// Troca entre aba de servicos e aba de produtos.
-	const switchTab = (t) => {
+	const switchTab = (t: string) => {
 		setTab(t);
 		cancelEdit();
 	};

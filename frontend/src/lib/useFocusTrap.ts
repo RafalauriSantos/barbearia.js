@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
 
-export function useFocusTrap(onClose, active = true) {
-	const containerRef = useRef(null);
+export function useFocusTrap(onClose?: (() => void) | null, active = true) {
+	const containerRef = useRef<HTMLDivElement | null>(null);
 	const onCloseRef = useRef(onClose);
 
 	useEffect(() => {
@@ -11,7 +11,7 @@ export function useFocusTrap(onClose, active = true) {
 	useEffect(() => {
 		if (!active) return;
 
-		const handleKeyDown = (e) => {
+		const handleKeyDown = (e: KeyboardEvent) => {
 			if (e.key === "Escape") {
 				onCloseRef.current?.();
 				return;
@@ -19,8 +19,10 @@ export function useFocusTrap(onClose, active = true) {
 
 			if (e.key === "Tab") {
 				if (!containerRef.current) return;
-				const focusableElements = containerRef.current.querySelectorAll(
-					'a[href], area[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), button:not([disabled]), iframe, object, embed, [tabindex="0"], [contenteditable]'
+				const focusableElements: HTMLElement[] = Array.from(
+					containerRef.current.querySelectorAll(
+						'a[href], area[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), button:not([disabled]), iframe, object, embed, [tabindex="0"], [contenteditable]',
+					),
 				);
 				if (focusableElements.length === 0) return;
 
@@ -50,8 +52,10 @@ export function useFocusTrap(onClose, active = true) {
 			containerRef.current &&
 			!containerRef.current.contains(document.activeElement)
 		) {
-			const focusableElements = containerRef.current.querySelectorAll(
-				'a[href], area[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), button:not([disabled]), iframe, object, embed, [tabindex="0"], [contenteditable]'
+			const focusableElements: HTMLElement[] = Array.from(
+				containerRef.current.querySelectorAll(
+					'a[href], area[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), button:not([disabled]), iframe, object, embed, [tabindex="0"], [contenteditable]',
+				),
 			);
 			if (focusableElements.length > 0) {
 				focusableElements[0].focus();

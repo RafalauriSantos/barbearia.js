@@ -41,4 +41,4 @@ window.addEventListener("orientationchange", () => {
 
 // Ponto de entrada da aplicacao React.
 initializeTheme();
-createRoot(document.getElementById("root")).render(<App />);
+createRoot(document.getElementById("root")!).render(<App />);

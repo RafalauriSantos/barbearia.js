@@ -346,7 +346,7 @@ function SupplierPurchaseModal({
 							<option value="" disabled>
 								Selecione um produto...
 							</option>
-							{products.map((product) => (
+							{products.map((product: any) => (
 								<option key={product.id} value={product.id}>
 									{product.name} (Estoque: {product.stock_quantity})
 								</option>

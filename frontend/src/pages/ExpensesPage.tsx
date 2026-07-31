@@ -28,17 +28,17 @@ const initialForm = {
 	date: "",
 };
 
-function addDays(date, amount) {
+function addDays(date: Date, amount: number): Date {
 	const next = new Date(date);
 	next.setDate(next.getDate() + amount);
 	return next;
 }
 
-function getMonthStart(date) {
+function getMonthStart(date: Date): string {
 	return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-01`;
 }
 
-function formatShortDate(dayKey) {
+function formatShortDate(dayKey: string): string {
 	if (!dayKey) return "";
 	return dayKey.split("-").reverse().join("/");
 }
@@ -76,7 +76,7 @@ export default function ExpensesPage() {
 			const list = await loadExpenses(filterParams, { force: true });
 			setExpenses(list);
 		} catch (error) {
-			setErrorMessage(error.message || "Falha ao carregar custos.");
+			setErrorMessage((error as any)?.message || "Falha ao carregar custos.");
 			if (!hasLoaded) {
 				setExpenses([]);
 			}
@@ -92,11 +92,11 @@ export default function ExpensesPage() {
 	}, [reload]);
 
 	const total = expenses.reduce(
-		(sum, item) => sum + Number(item.value || 0),
+		(sum: number, item: any) => sum + Number(item.value || 0),
 		0,
 	);
 
-	const setSingleDay = (date) => {
+	const setSingleDay = (date: Date) => {
 		const key = formatDayKey(date);
 		setStartDate(key);
 		setEndDate(key);
@@ -127,7 +127,7 @@ export default function ExpensesPage() {
 		setShowForm(true);
 	};
 
-	const handleEditItem = (item) => {
+	const handleEditItem = (item: any) => {
 		setEditingId(item.id);
 		setForm({
 			name: item.name || "",
@@ -138,7 +138,7 @@ export default function ExpensesPage() {
 		setShowForm(true);
 	};
 
-	const handleSaveExpense = async (e) => {
+	const handleSaveExpense = async (e: React.FormEvent) => {
 		e.preventDefault();
 		if (isSubmitting) return;
 
@@ -171,13 +171,13 @@ export default function ExpensesPage() {
 			resetForm();
 			await reload();
 		} catch (error) {
-			setErrorMessage(error.message || "Falha ao salvar custo.");
+			setErrorMessage((error as any)?.message || "Falha ao salvar custo.");
 		} finally {
 			setIsSubmitting(false);
 		}
 	};
 
-	const handleDelete = async (id) => {
+	const handleDelete = async (id: string) => {
 		if (isSubmitting) return;
 		if (!window.confirm("Excluir este custo?")) return;
 
@@ -187,7 +187,7 @@ export default function ExpensesPage() {
 			await deleteExpense(id);
 			await reload();
 		} catch (error) {
-			setErrorMessage(error.message || "Falha ao excluir custo.");
+			setErrorMessage((error as any)?.message || "Falha ao excluir custo.");
 		} finally {
 			setIsSubmitting(false);
 		}
@@ -372,7 +372,7 @@ export default function ExpensesPage() {
 						/>
 					</div>
 				:	<div className="grid gap-2 px-4 py-4 sm:grid-cols-2 xl:grid-cols-3">
-						{expenses.map((item) => (
+						{expenses.map((item: any) => (
 							<div
 								key={item.id}
 								className="rounded-lg border border-border bg-card p-4">

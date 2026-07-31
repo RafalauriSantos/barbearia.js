@@ -12,17 +12,17 @@ import {
 	loadFinancialSummary,
 } from "@/lib/store";
 
-function addDays(date, amount) {
+function addDays(date: Date, amount: number): Date {
 	const next = new Date(date);
 	next.setDate(next.getDate() + amount);
 	return next;
 }
 
-function getMonthStart(date) {
+function getMonthStart(date: Date): string {
 	return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-01`;
 }
 
-function PaymentMethodBreakdown({ rows = [] }) {
+function PaymentMethodBreakdown({ rows = [] }: { rows?: any[] }) {
 	if (!rows.length) {
 		return (
 			<div className="rounded-lg border border-border bg-background-deep p-4">
@@ -47,7 +47,7 @@ function PaymentMethodBreakdown({ rows = [] }) {
 				</p>
 			</div>
 			<div className="mt-3 space-y-2">
-				{rows.map((row) => (
+				{rows.map((row: any) => (
 					<div
 						key={row.forma_pagamento_id || row.codigo}
 						className="grid grid-cols-[1fr_auto] gap-3 rounded-md border border-border bg-card px-3 py-2">
@@ -75,7 +75,7 @@ function PaymentMethodBreakdown({ rows = [] }) {
 	);
 }
 
-function ProductSalesBreakdown({ summary }) {
+function ProductSalesBreakdown({ summary }: { summary?: any }) {
 	const productSummary = summary || {};
 	const productRows = productSummary.resumo_por_produto || [];
 	const supplierRows = productSummary.resumo_por_fornecedor || [];
@@ -163,7 +163,7 @@ function ProductSalesBreakdown({ summary }) {
 					<p className="font-mono-ui text-[10px] uppercase text-foreground-faint">
 						Fornecedores a pagar
 					</p>
-					{supplierRows.map((row) => (
+					{supplierRows.map((row: any) => (
 						<div
 							key={row.fornecedor}
 							className="flex items-center justify-between gap-3 rounded-md border border-border bg-card px-3 py-2">
@@ -188,7 +188,7 @@ function ProductSalesBreakdown({ summary }) {
 					<p className="font-mono-ui text-[10px] uppercase text-foreground-faint">
 						Produtos vendidos
 					</p>
-					{productRows.slice(0, 5).map((row) => (
+					{productRows.slice(0, 5).map((row: any) => (
 						<div
 							key={row.produto_id || row.nome}
 							className="grid grid-cols-[1fr_auto] gap-3 rounded-md border border-border bg-card px-3 py-2">
@@ -257,7 +257,7 @@ export default function FinancialPage() {
 			if (!hasLoaded) {
 				setSummary(null);
 			}
-			setErrorMessage(error.message || "Falha ao carregar resumo financeiro.");
+			setErrorMessage((error as any)?.message || "Falha ao carregar resumo financeiro.");
 		} finally {
 			setIsLoading(false);
 			hasLoadedRef.current = true;
@@ -268,7 +268,7 @@ export default function FinancialPage() {
 		reload();
 	}, [reload]);
 
-	const setSingleDay = (date) => {
+	const setSingleDay = (date: Date) => {
 		const key = formatDayKey(date);
 		setStartDate(key);
 		setEndDate(key);

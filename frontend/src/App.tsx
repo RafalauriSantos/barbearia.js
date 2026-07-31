@@ -31,7 +31,7 @@ const LANDING_DESCRIPTION =
 	"Sistema simples para barbearias controlarem agenda, caixa, equipe, produtos, despesas e fiados em um painel operacional.";
 const LAST_PATH_KEY = "gestor_barbearia_last_path";
 
-function upsertMeta(selector, attributes) {
+function upsertMeta(selector: string, attributes: Record<string, string>) {
 	let element = document.head.querySelector(selector);
 	if (!element) {
 		element = document.createElement("meta");
@@ -43,7 +43,7 @@ function upsertMeta(selector, attributes) {
 	});
 }
 
-function upsertCanonical(href) {
+function upsertCanonical(href: string) {
 	let element = document.head.querySelector("link[rel='canonical']");
 	if (!element) {
 		element = document.createElement("link");
@@ -154,20 +154,29 @@ function AppRoutes() {
 	);
 }
 
-class ErrorBoundary extends Component {
-	constructor(props) {
+interface ErrorBoundaryProps {
+	children: React.ReactNode;
+}
+
+interface ErrorBoundaryState {
+	hasError: boolean;
+	errorType: "chunk" | "other" | null;
+}
+
+class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
+	constructor(props: ErrorBoundaryProps) {
 		super(props);
 		this.state = { hasError: false, errorType: null };
 	}
 
-	static getDerivedStateFromError(error) {
+	static getDerivedStateFromError(error: any): ErrorBoundaryState {
 		const isChunkError =
 			error.name === "ChunkLoadError" ||
 			error.message?.includes("Failed to fetch dynamically imported module");
 		return { hasError: true, errorType: isChunkError ? "chunk" : "other" };
 	}
 
-	componentDidCatch(error, errorInfo) {
+	componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
 		console.error("ErrorBoundary caught an error", error, errorInfo);
 	}
 

@@ -70,10 +70,11 @@ const CACHE_STORAGE_KEY = "gestor_barbearia_data_cache_v1";
 
 const cache = new Map();
 let activeCacheScope = "anonymous";
-let hydratedCacheScope = null;
+let hydratedCacheScope: string | null = null;
 let cacheGeneration = 0;
 
 class StaleCacheRequestError extends Error {
+	code: string;
 	constructor() {
 		super("A resposta pertence a uma sessao anterior.");
 		this.name = "StaleCacheRequestError";
@@ -86,7 +87,7 @@ function getStorage() {
 	return window.localStorage;
 }
 
-function readPersistedCache() {
+function readPersistedCache(): { version: number; scopes: Record<string, any> } {
 	const storage = getStorage();
 	if (!storage) return { version: 1, scopes: {} };
 
@@ -104,7 +105,7 @@ function readPersistedCache() {
 	}
 }
 
-function writePersistedCache(payload) {
+function writePersistedCache(payload: any) {
 	const storage = getStorage();
 	if (!storage) return;
 
@@ -115,7 +116,7 @@ function writePersistedCache(payload) {
 	}
 }
 
-function getCacheScopeFromUser(user) {
+function getCacheScopeFromUser(user?: any): string {
 	if (!user?.id) return "anonymous";
 	return [
 		"user",
@@ -127,10 +128,10 @@ function getCacheScopeFromUser(user) {
 	].join(":");
 }
 
-function pruneScopeEntries(scopeEntries = {}) {
+function pruneScopeEntries(scopeEntries: Record<string, any> = {}) {
 	const now = Date.now();
 	return Object.fromEntries(
-		Object.entries(scopeEntries).filter(([, entry]) => {
+		Object.entries(scopeEntries).filter(([, entry]: [string, any]) => {
 			return (
 				entry &&
 				entry.data !== undefined &&
@@ -141,7 +142,7 @@ function pruneScopeEntries(scopeEntries = {}) {
 	);
 }
 
-function persistCacheEntry(key, data, updatedAt) {
+function persistCacheEntry(key: string, data: any, updatedAt: number) {
 	const persisted = readPersistedCache();
 	const currentScope = pruneScopeEntries(persisted.scopes[activeCacheScope]);
 	persisted.scopes[activeCacheScope] = {
@@ -154,7 +155,7 @@ function persistCacheEntry(key, data, updatedAt) {
 	writePersistedCache(persisted);
 }
 
-function removePersistedCacheEntry(match) {
+function removePersistedCacheEntry(match: string | ((key: string) => boolean)) {
 	const persisted = readPersistedCache();
 	const currentScope = persisted.scopes[activeCacheScope];
 	if (!currentScope) return;
@@ -184,8 +185,8 @@ function hydratePersistentCache() {
 	const currentScope = pruneScopeEntries(persisted.scopes[activeCacheScope]);
 	for (const [key, entry] of Object.entries(currentScope)) {
 		cache.set(key, {
-			data: normalizeCacheValue(entry.data),
-			updatedAt: entry.updatedAt,
+			data: normalizeCacheValue((entry as any).data),
+			updatedAt: (entry as any).updatedAt,
 			promise: null,
 		});
 	}
@@ -196,7 +197,7 @@ function hydratePersistentCache() {
 	}
 }
 
-export function configureAppDataCache(user) {
+export function configureAppDataCache(user?: any) {
 	const nextScope = getCacheScopeFromUser(user);
 	if (
 		nextScope === activeCacheScope &&
@@ -211,13 +212,13 @@ export function configureAppDataCache(user) {
 	hydratePersistentCache();
 }
 
-function normalizeCacheValue(value) {
+function normalizeCacheValue(value: any): any {
 	if (Array.isArray(value)) return [...value];
 	if (value && typeof value === "object") return { ...value };
 	return value;
 }
 
-function makeStableKey(prefix, params = {}) {
+function makeStableKey(prefix: string, params: Record<string, any> = {}) {
 	const entries = Object.entries(params)
 		.filter(
 			([, value]) => value !== undefined && value !== null && value !== "",
@@ -230,7 +231,7 @@ function makeStableKey(prefix, params = {}) {
 		.join("&")}`;
 }
 
-function readCache(key) {
+function readCache(key: string) {
 	hydratePersistentCache();
 	const entry = cache.get(key);
 	return entry?.data === undefined ?
@@ -238,7 +239,7 @@ function readCache(key) {
 		:	normalizeCacheValue(entry.data);
 }
 
-function hasFreshCache(key, ttlMs = DEFAULT_TTL_MS) {
+function hasFreshCache(key: string, ttlMs = DEFAULT_TTL_MS) {
 	hydratePersistentCache();
 	const entry = cache.get(key);
 	return Boolean(
@@ -246,7 +247,7 @@ function hasFreshCache(key, ttlMs = DEFAULT_TTL_MS) {
 	);
 }
 
-function writeCache(key, data) {
+function writeCache(key: string, data: any) {
 	const updatedAt = Date.now();
 	cache.set(key, {
 		data: normalizeCacheValue(data),
@@ -257,7 +258,7 @@ function writeCache(key, data) {
 	return readCache(key);
 }
 
-function invalidateCache(match) {
+function invalidateCache(match: string | ((key: string) => boolean)) {
 	for (const key of cache.keys()) {
 		if (typeof match === "string" ? key.startsWith(match) : match(key)) {
 			cache.delete(key);
@@ -273,7 +274,7 @@ export function clearAppDataCache() {
 	hydratedCacheScope = null;
 }
 
-async function loadCached(key, fetcher, options = {}) {
+async function loadCached(key: string, fetcher: () => Promise<any>, options: any = {}) {
 	hydratePersistentCache();
 	const { force = false, ttlMs = DEFAULT_TTL_MS } = options;
 	const entry = cache.get(key);
@@ -298,7 +299,7 @@ async function loadCached(key, fetcher, options = {}) {
 			}
 			return writeCache(key, data);
 		})
-		.catch((error) => {
+		.catch((error: any) => {
 			if (
 				activeCacheScope === requestScope &&
 				cacheGeneration === requestGeneration
@@ -326,12 +327,12 @@ const cacheKeys = {
 	waitlist: "clients:waitlist",
 	barbers: "barbers",
 	paymentMethods: "paymentMethods",
-	expenses: (params) => makeStableKey("expenses", params || {}),
-	appointments: (dayKey, filters = {}) =>
+	expenses: (params?: any) => makeStableKey("expenses", params || {}),
+	appointments: (dayKey: string, filters: any = {}) =>
 		makeStableKey(`appointments:${dayKey}`, filters),
-	financialSummary: (params = {}) => makeStableKey("financial:summary", params),
-	receivables: (params = {}) => makeStableKey("receivables", params),
-	supplierPayables: (params = {}) => makeStableKey("supplierPayables", params),
+	financialSummary: (params: any = {}) => makeStableKey("financial:summary", params),
+	receivables: (params: any = {}) => makeStableKey("receivables", params),
+	supplierPayables: (params: any = {}) => makeStableKey("supplierPayables", params),
 };
 
 // Chaves usadas para salvar dados no navegador.
@@ -343,10 +344,10 @@ const PROFILE_KEY = "gestor_barbearia_profile";
 const OFFLINE_APPOINTMENT_QUEUE_KEY =
 	"gestor_barbearia_offline_appointment_queue_v1";
 const OFFLINE_APPOINTMENT_ID_PREFIX = "offline-appt";
-let offlineSyncPromise = null;
+let offlineSyncPromise: Promise<number> | null = null;
 let offlineSyncListenersRegistered = false;
 
-function isNetworkFailure(error) {
+function isNetworkFailure(error: any) {
 	return error instanceof AppApiError && error.kind === "network";
 }
 
@@ -364,7 +365,7 @@ function readOfflineAppointmentQueue() {
 			storage.getItem(OFFLINE_APPOINTMENT_QUEUE_KEY) || "[]",
 		);
 		if (!Array.isArray(parsed)) return [];
-		return parsed.filter((item) => {
+		return parsed.filter((item: any) => {
 			return (
 				item &&
 				typeof item === "object" &&
@@ -381,11 +382,11 @@ function readOfflineAppointmentQueue() {
 
 function readScopedOfflineAppointmentQueue() {
 	return readOfflineAppointmentQueue().filter(
-		(item) => item.scope === activeCacheScope,
+		(item: any) => item.scope === activeCacheScope,
 	);
 }
 
-function writeOfflineAppointmentQueue(queue) {
+function writeOfflineAppointmentQueue(queue: any[]) {
 	const storage = getStorage();
 	if (!storage) return;
 
@@ -396,7 +397,7 @@ function writeOfflineAppointmentQueue(queue) {
 	}
 }
 
-function sanitizeOfflineAppointmentPayload(payload = {}) {
+function sanitizeOfflineAppointmentPayload(payload: any = {}) {
 	return {
 		client_name: String(payload.client_name || "").trim(),
 		cliente_id: payload.cliente_id || null,
@@ -416,7 +417,7 @@ function sanitizeOfflineAppointmentPayload(payload = {}) {
 	};
 }
 
-function queueOfflineAppointment(payload) {
+function queueOfflineAppointment(payload: any) {
 	const queue = readOfflineAppointmentQueue();
 	const queued = {
 		id: `${OFFLINE_APPOINTMENT_ID_PREFIX}-${Date.now()}-${Math.random()
@@ -432,7 +433,7 @@ function queueOfflineAppointment(payload) {
 	return queued;
 }
 
-function toQueuedAppointment(queued) {
+function toQueuedAppointment(queued: any) {
 	const payload = queued?.payload || {};
 	return {
 		id: queued.id,
@@ -456,7 +457,7 @@ function toQueuedAppointment(queued) {
 	};
 }
 
-function matchesAppointmentDayAndFilters(appointment, dayKey, filters = {}) {
+function matchesAppointmentDayAndFilters(appointment: any, dayKey: string, filters: any = {}) {
 	if (!appointment || appointment.day_key !== dayKey) return false;
 	if (filters.barbeiro_id && appointment.barbeiro_id !== filters.barbeiro_id) {
 		return false;
@@ -464,11 +465,11 @@ function matchesAppointmentDayAndFilters(appointment, dayKey, filters = {}) {
 	return true;
 }
 
-function mergeAppointmentsWithOfflineQueue(appointments, dayKey, filters = {}) {
+function mergeAppointmentsWithOfflineQueue(appointments: any, dayKey: string, filters: any = {}) {
 	const queue = readScopedOfflineAppointmentQueue();
 	const queuedAppointments = queue
 		.map(toQueuedAppointment)
-		.filter((appointment) =>
+		.filter((appointment: any) =>
 			matchesAppointmentDayAndFilters(appointment, dayKey, filters),
 		);
 
@@ -478,18 +479,18 @@ function mergeAppointmentsWithOfflineQueue(appointments, dayKey, filters = {}) {
 	}
 
 	const remoteList = hasRemoteList ? appointments : [];
-	const remoteIds = new Set(remoteList.map((item) => item.id));
+	const remoteIds = new Set(remoteList.map((item: any) => item.id));
 	const merged = [
-		...queuedAppointments.filter((item) => !remoteIds.has(item.id)),
+		...queuedAppointments.filter((item: any) => !remoteIds.has(item.id)),
 		...remoteList,
 	];
 
-	return merged.sort((first, second) =>
+	return merged.sort((first: any, second: any) =>
 		String(first.time_slot || "").localeCompare(String(second.time_slot || "")),
 	);
 }
 
-function updateAppointmentCacheWithQueuedItem(queued) {
+function updateAppointmentCacheWithQueuedItem(queued: any) {
 	const queuedAppointment = toQueuedAppointment(queued);
 	const dayKey = queuedAppointment.day_key;
 	if (!dayKey) return;
@@ -591,7 +592,7 @@ export async function loadProfile(options = {}) {
 }
 
 // Salva os dados basicos de perfil.
-export async function saveProfile(profile) {
+export async function saveProfile(profile: any) {
 	const savedProfile = await updateProfile(profile);
 	writeCache(cacheKeys.profile, savedProfile);
 	invalidateCache(cacheKeys.barbers);
@@ -600,7 +601,7 @@ export async function saveProfile(profile) {
 // ── Appointments ──
 
 // Envia um novo agendamento para o backend.
-export async function addAppointment(appt) {
+export async function addAppointment(appt: any) {
 	try {
 		const created = await createAppointment(appt);
 		invalidateAppointmentRelations();
@@ -615,25 +616,25 @@ export async function addAppointment(appt) {
 }
 
 // Atualiza um agendamento local pelo id.
-export async function updateAppointment(id, updates) {
+export async function updateAppointment(id: string, updates: any) {
 	const updated = await updateAppointmentById(id, updates);
 	invalidateAppointmentRelations();
 	return updated;
 }
 
 // Exclui um agendamento local pelo id.
-export async function deleteAppointment(id) {
+export async function deleteAppointment(id: string) {
 	await deleteAppointmentById(id);
 	invalidateAppointmentRelations();
 }
 
 // Filtra os agendamentos de um dia e ordena por horario.
-export function getCachedAppointmentsForDay(dayKey, filters = {}) {
+export function getCachedAppointmentsForDay(dayKey: string, filters: any = {}) {
 	const cached = readCache(cacheKeys.appointments(dayKey, filters));
 	return mergeAppointmentsWithOfflineQueue(cached, dayKey, filters);
 }
 
-export async function getAppointmentsForDay(dayKey, options = {}) {
+export async function getAppointmentsForDay(dayKey: string, options: any = {}) {
 	void syncOfflineAppointments();
 	try {
 		const appointments = await loadCached(
@@ -650,9 +651,9 @@ export async function getAppointmentsForDay(dayKey, options = {}) {
 }
 
 export async function getAppointmentsForDayWithFilters(
-	dayKey,
-	filters = {},
-	options = {},
+	dayKey: string,
+	filters: any = {},
+	options: any = {},
 ) {
 	void syncOfflineAppointments();
 	try {
@@ -673,28 +674,28 @@ export function getCachedBarbers() {
 	return readCache(cacheKeys.barbers);
 }
 
-export async function loadBarbers(options = {}) {
+export async function loadBarbers(options: any = {}) {
 	return loadCached(cacheKeys.barbers, listBarbers, options);
 }
 
-export async function addBarber(payload) {
+export async function addBarber(payload: any) {
 	const barber = await createBarber(payload);
 	invalidateCache(cacheKeys.barbers);
 	return barber;
 }
 
-export async function saveBarber(id, payload) {
+export async function saveBarber(id: string, payload: any) {
 	const barber = await updateBarber(id, payload);
 	invalidateCache(cacheKeys.barbers);
 	invalidateCache("appointments:");
 	return barber;
 }
 
-export async function sendBarberInvite(id, payload) {
+export async function sendBarberInvite(id: string, payload: any) {
 	return inviteBarber(id, payload);
 }
 
-export async function deleteBarber(id) {
+export async function deleteBarber(id: string) {
 	const res = await removeBarber(id);
 	invalidateCache(cacheKeys.barbers);
 	invalidateCache("appointments:");
@@ -705,17 +706,17 @@ export function getCachedPaymentMethods() {
 	return readCache(cacheKeys.paymentMethods);
 }
 
-export async function loadPaymentMethods(options = {}) {
+export async function loadPaymentMethods(options: any = {}) {
 	return loadCached(cacheKeys.paymentMethods, listPaymentMethods, options);
 }
 
-export async function savePaymentMethod(id, updates) {
+export async function savePaymentMethod(id: string, updates: any) {
 	const method = await updatePaymentMethodById(id, updates);
 	const cached = readCache(cacheKeys.paymentMethods);
 	if (Array.isArray(cached)) {
 		writeCache(
 			cacheKeys.paymentMethods,
-			cached.map((item) => (item.id === id ? method : item)),
+			cached.map((item: any) => (item.id === id ? method : item)),
 		);
 	} else {
 		invalidateCache(cacheKeys.paymentMethods);
@@ -725,11 +726,11 @@ export async function savePaymentMethod(id, updates) {
 	return method;
 }
 
-export function getCachedFinancialSummary(params = {}) {
+export function getCachedFinancialSummary(params: any = {}) {
 	return readCache(cacheKeys.financialSummary(params));
 }
 
-export async function loadFinancialSummary(params = {}, options = {}) {
+export async function loadFinancialSummary(params: any = {}, options: any = {}) {
 	return loadCached(
 		cacheKeys.financialSummary(params),
 		() => getFinancialSummary(params),
@@ -737,11 +738,11 @@ export async function loadFinancialSummary(params = {}, options = {}) {
 	);
 }
 
-export function getCachedReceivables(params = {}) {
+export function getCachedReceivables(params: any = {}) {
 	return readCache(cacheKeys.receivables(params));
 }
 
-export async function loadReceivables(params = {}, options = {}) {
+export async function loadReceivables(params: any = {}, options: any = {}) {
 	return loadCached(
 		cacheKeys.receivables(params),
 		() => listReceivables(params),
@@ -755,31 +756,31 @@ function invalidateReceivables() {
 	invalidateCache("appointments:");
 }
 
-export async function addReceivable(payload) {
+export async function addReceivable(payload: any) {
 	const receivable = await createReceivable(payload);
 	invalidateReceivables();
 	return receivable;
 }
 
-export async function saveReceivable(id, payload) {
+export async function saveReceivable(id: string, payload: any) {
 	const receivable = await updateReceivableById(id, payload);
 	invalidateReceivables();
 	return receivable;
 }
 
-export async function receiveReceivable(id, payload) {
+export async function receiveReceivable(id: string, payload: any) {
 	const receivable = await receiveReceivableById(id, payload);
 	invalidateReceivables();
 	return receivable;
 }
 
-export async function cancelReceivable(id) {
+export async function cancelReceivable(id: string) {
 	const receivable = await cancelReceivableById(id);
 	invalidateReceivables();
 	return receivable;
 }
 
-export async function loadSupplierPayables(params = {}, options = {}) {
+export async function loadSupplierPayables(params: any = {}, options: any = {}) {
 	return loadCached(
 		cacheKeys.supplierPayables(params),
 		() => listSupplierPayables(params),
@@ -787,7 +788,7 @@ export async function loadSupplierPayables(params = {}, options = {}) {
 	);
 }
 
-export async function paySupplierPayable(id, payload) {
+export async function paySupplierPayable(id: string, payload: any) {
 	const payable = await paySupplierPayableById(id, payload);
 	invalidateCache("supplierPayables:");
 	invalidateCache("expenses:");
@@ -795,7 +796,7 @@ export async function paySupplierPayable(id, payload) {
 	return payable;
 }
 
-export async function addSupplierPurchase(payload) {
+export async function addSupplierPurchase(payload: any) {
 	const purchase = await createSupplierPurchase(payload);
 	invalidateCache("supplierPayables:");
 	invalidateCache("products");
@@ -808,12 +809,12 @@ export function getCachedServices() {
 	return readCache(cacheKeys.services);
 }
 
-export async function loadServices(options = {}) {
+export async function loadServices(options: any = {}) {
 	return loadCached(cacheKeys.services, listServices, options);
 }
 
 // Adiciona um novo servico.
-export async function addService(svc) {
+export async function addService(svc: any) {
 	const service = await createService(svc);
 	const cached = readCache(cacheKeys.services);
 	if (Array.isArray(cached)) {
@@ -825,13 +826,13 @@ export async function addService(svc) {
 }
 
 // Atualiza um servico existente.
-export async function updateService(id, updates) {
+export async function updateService(id: string, updates: any) {
 	const service = await updateServiceById(id, updates);
 	const cached = readCache(cacheKeys.services);
 	if (Array.isArray(cached)) {
 		writeCache(
 			cacheKeys.services,
-			cached.map((item) => (item.id === id ? service : item)),
+			cached.map((item: any) => (item.id === id ? service : item)),
 		);
 	} else {
 		invalidateCache(cacheKeys.services);
@@ -840,13 +841,13 @@ export async function updateService(id, updates) {
 }
 
 // Exclui um servico existente.
-export async function deleteService(id) {
+export async function deleteService(id: string) {
 	await deleteServiceById(id);
 	const cached = readCache(cacheKeys.services);
 	if (Array.isArray(cached)) {
 		writeCache(
 			cacheKeys.services,
-			cached.filter((item) => item.id !== id),
+			cached.filter((item: any) => item.id !== id),
 		);
 	} else {
 		invalidateCache(cacheKeys.services);
@@ -859,12 +860,12 @@ export function getCachedProducts() {
 	return readCache(cacheKeys.products);
 }
 
-export async function loadProducts(options = {}) {
+export async function loadProducts(options: any = {}) {
 	return loadCached(cacheKeys.products, listProducts, options);
 }
 
 // Adiciona um novo produto.
-export async function addProduct(prod) {
+export async function addProduct(prod: any) {
 	const product = await createProduct(prod);
 	const cached = readCache(cacheKeys.products);
 	if (Array.isArray(cached)) {
@@ -876,13 +877,13 @@ export async function addProduct(prod) {
 }
 
 // Atualiza um produto existente.
-export async function updateProduct(id, updates) {
+export async function updateProduct(id: string, updates: any) {
 	const product = await updateProductById(id, updates);
 	const cached = readCache(cacheKeys.products);
 	if (Array.isArray(cached)) {
 		writeCache(
 			cacheKeys.products,
-			cached.map((item) => (item.id === id ? product : item)),
+			cached.map((item: any) => (item.id === id ? product : item)),
 		);
 	} else {
 		invalidateCache(cacheKeys.products);
@@ -891,13 +892,13 @@ export async function updateProduct(id, updates) {
 }
 
 // Exclui um produto existente.
-export async function deleteProduct(id) {
+export async function deleteProduct(id: string) {
 	await deleteProductById(id);
 	const cached = readCache(cacheKeys.products);
 	if (Array.isArray(cached)) {
 		writeCache(
 			cacheKeys.products,
-			cached.filter((item) => item.id !== id),
+			cached.filter((item: any) => item.id !== id),
 		);
 	} else {
 		invalidateCache(cacheKeys.products);
@@ -909,11 +910,11 @@ export function getCachedFixedClients() {
 	return readCache(cacheKeys.fixedClients);
 }
 
-export async function loadFixedClients(options = {}) {
+export async function loadFixedClients(options: any = {}) {
 	return loadCached(cacheKeys.fixedClients, listFixedClients, options);
 }
 
-export async function addFixedClient(payload) {
+export async function addFixedClient(payload: any) {
 	const client = await createFixedClient(payload);
 	const cached = readCache(cacheKeys.fixedClients);
 	if (Array.isArray(cached)) {
@@ -924,13 +925,13 @@ export async function addFixedClient(payload) {
 	return client;
 }
 
-export async function saveFixedClient(id, payload) {
+export async function saveFixedClient(id: string, payload: any) {
 	const client = await updateFixedClientById(id, payload);
 	const cached = readCache(cacheKeys.fixedClients);
 	if (Array.isArray(cached)) {
 		writeCache(
 			cacheKeys.fixedClients,
-			cached.map((item) => (item.id === id ? client : item)),
+			cached.map((item: any) => (item.id === id ? client : item)),
 		);
 	} else {
 		invalidateCache(cacheKeys.fixedClients);
@@ -938,13 +939,13 @@ export async function saveFixedClient(id, payload) {
 	return client;
 }
 
-export async function deleteFixedClient(id) {
+export async function deleteFixedClient(id: string) {
 	await deleteFixedClientById(id);
 	const cached = readCache(cacheKeys.fixedClients);
 	if (Array.isArray(cached)) {
 		writeCache(
 			cacheKeys.fixedClients,
-			cached.filter((item) => item.id !== id),
+			cached.filter((item: any) => item.id !== id),
 		);
 	} else {
 		invalidateCache(cacheKeys.fixedClients);
@@ -958,13 +959,13 @@ function invalidateClientCutRelations() {
 	invalidateCache("supplierPayables:");
 }
 
-export async function addFixedClientCut(clientId, payload) {
+export async function addFixedClientCut(clientId: string, payload: any) {
 	const client = await createClientCut(clientId, payload);
 	const cached = readCache(cacheKeys.fixedClients);
 	if (Array.isArray(cached)) {
 		writeCache(
 			cacheKeys.fixedClients,
-			cached.map((item) => (item.id === clientId ? client : item)),
+			cached.map((item: any) => (item.id === clientId ? client : item)),
 		);
 	} else {
 		invalidateCache(cacheKeys.fixedClients);
@@ -973,13 +974,13 @@ export async function addFixedClientCut(clientId, payload) {
 	return client;
 }
 
-export async function saveFixedClientCut(clientId, cutId, payload) {
+export async function saveFixedClientCut(clientId: string, cutId: string, payload: any) {
 	const client = await updateClientCutById(clientId, cutId, payload);
 	const cached = readCache(cacheKeys.fixedClients);
 	if (Array.isArray(cached)) {
 		writeCache(
 			cacheKeys.fixedClients,
-			cached.map((item) => (item.id === clientId ? client : item)),
+			cached.map((item: any) => (item.id === clientId ? client : item)),
 		);
 	} else {
 		invalidateCache(cacheKeys.fixedClients);
@@ -988,13 +989,13 @@ export async function saveFixedClientCut(clientId, cutId, payload) {
 	return client;
 }
 
-export async function deleteFixedClientCut(clientId, cutId) {
+export async function deleteFixedClientCut(clientId: string, cutId: string) {
 	const client = await deleteClientCutById(clientId, cutId);
 	const cached = readCache(cacheKeys.fixedClients);
 	if (Array.isArray(cached)) {
 		writeCache(
 			cacheKeys.fixedClients,
-			cached.map((item) => (item.id === clientId ? client : item)),
+			cached.map((item: any) => (item.id === clientId ? client : item)),
 		);
 	} else {
 		invalidateCache(cacheKeys.fixedClients);
@@ -1007,11 +1008,11 @@ export function getCachedWaitlist() {
 	return readCache(cacheKeys.waitlist);
 }
 
-export async function loadWaitlist(options = {}) {
+export async function loadWaitlist(options: any = {}) {
 	return loadCached(cacheKeys.waitlist, listWaitlist, options);
 }
 
-export async function addWaitlistEntry(payload) {
+export async function addWaitlistEntry(payload: any) {
 	const entry = await createWaitlistEntry(payload);
 	const cached = readCache(cacheKeys.waitlist);
 	if (Array.isArray(cached)) {
@@ -1022,14 +1023,14 @@ export async function addWaitlistEntry(payload) {
 	return entry;
 }
 
-export async function saveWaitlistEntry(id, payload) {
+export async function saveWaitlistEntry(id: string, payload: any) {
 	const entry = await updateWaitlistEntryById(id, payload);
 	const cached = readCache(cacheKeys.waitlist);
 	if (Array.isArray(cached)) {
 		const next =
 			entry.status === "aguardando" ?
-				cached.map((item) => (item.id === id ? entry : item))
-			:	cached.filter((item) => item.id !== id);
+				cached.map((item: any) => (item.id === id ? entry : item))
+			:	cached.filter((item: any) => item.id !== id);
 		writeCache(cacheKeys.waitlist, next);
 	} else {
 		invalidateCache(cacheKeys.waitlist);
@@ -1037,13 +1038,13 @@ export async function saveWaitlistEntry(id, payload) {
 	return entry;
 }
 
-export async function deleteWaitlistEntry(id) {
+export async function deleteWaitlistEntry(id: string) {
 	await deleteWaitlistEntryById(id);
 	const cached = readCache(cacheKeys.waitlist);
 	if (Array.isArray(cached)) {
 		writeCache(
 			cacheKeys.waitlist,
-			cached.filter((item) => item.id !== id),
+			cached.filter((item: any) => item.id !== id),
 		);
 	} else {
 		invalidateCache(cacheKeys.waitlist);
@@ -1052,14 +1053,14 @@ export async function deleteWaitlistEntry(id) {
 // ── Expenses ──
 
 // Carrega as despesas cadastradas.
-export function getCachedExpenses(params) {
+export function getCachedExpenses(params?: any) {
 	if (typeof params === "string") {
 		return readCache(cacheKeys.expenses({ date: params }));
 	}
-	return readCache(cacheKeys.expenses(params));
+	return readCache(cacheKeys.expenses(params || {}));
 }
 
-export async function loadExpenses(params, options = {}) {
+export async function loadExpenses(params?: any, options: any = {}) {
 	if (typeof params === "string") {
 		return loadCached(
 			cacheKeys.expenses({ date: params }),
@@ -1074,11 +1075,11 @@ export async function loadExpenses(params, options = {}) {
 			options,
 		);
 	}
-	return loadCached(cacheKeys.expenses(), listExpenses, options);
+	return loadCached(cacheKeys.expenses({}), listExpenses, options);
 }
 
 // Adiciona uma nova despesa.
-export async function addExpense(exp) {
+export async function addExpense(exp: any) {
 	const expense = await createExpense(exp);
 	invalidateCache("expenses:");
 	invalidateCache("financial:");
@@ -1086,7 +1087,7 @@ export async function addExpense(exp) {
 }
 
 // Atualiza uma despesa existente.
-export async function updateExpense(id, updates) {
+export async function updateExpense(id: string, updates: any) {
 	const expense = await updateExpenseById(id, updates);
 	invalidateCache("expenses:");
 	invalidateCache("financial:");
@@ -1094,25 +1095,25 @@ export async function updateExpense(id, updates) {
 }
 
 // Exclui uma despesa existente.
-export async function deleteExpense(id) {
+export async function deleteExpense(id: string) {
 	await deleteExpenseById(id);
 	invalidateCache("expenses:");
 	invalidateCache("financial:");
 }
 
 // Filtra as despesas de um dia especifico.
-export async function getExpensesForDay(dayKey, options = {}) {
+export async function getExpensesForDay(dayKey: string, options: any = {}) {
 	return loadExpenses(dayKey, options);
 }
 // ── Summaries ──
 
-export function getCachedDaySummaryFromAppointments(dayKey, appointments) {
+export function getCachedDaySummaryFromAppointments(dayKey: string, appointments: any[]) {
 	const expenses = getCachedExpenses(dayKey);
 	if (!expenses) return null;
 	return buildDaySummary(appointments, expenses);
 }
 
-function buildDaySummary(appointments, expenses) {
+function buildDaySummary(appointments: any[], expenses: any[]) {
 	const today = formatDayKey(new Date());
 	let totalReceived = 0;
 	let paid = 0;
@@ -1121,7 +1122,7 @@ function buildDaySummary(appointments, expenses) {
 	let overdue = 0;
 	let totalIncome = 0;
 
-	appointments.forEach((a) => {
+	appointments.forEach((a: any) => {
 		totalIncome += Number(a.value || 0);
 		if (a.status === "paid") {
 			totalReceived += Number(a.value || 0);
@@ -1138,7 +1139,7 @@ function buildDaySummary(appointments, expenses) {
 		}
 	});
 
-	const totalExpenses = expenses.reduce((sum, e) => sum + e.value, 0);
+	const totalExpenses = expenses.reduce((sum: number, e: any) => sum + Number(e.value || 0), 0);
 	return {
 		totalReceived,
 		totalClients: appointments.length,
@@ -1153,9 +1154,9 @@ function buildDaySummary(appointments, expenses) {
 
 // Monta os totais do dia com a lista de agendamentos recebida da API.
 export async function getDaySummaryFromAppointments(
-	dayKey,
-	appointments,
-	options = {},
+	dayKey: string,
+	appointments: any[],
+	options: any = {},
 ) {
 	const expenses = await getExpensesForDay(dayKey, options);
 	return buildDaySummary(appointments, expenses);
@@ -1167,7 +1168,7 @@ export function prefetchAppData() {
 // ── Formatting ──
 
 // Formata numero para moeda em real.
-export function formatCurrency(value) {
+export function formatCurrency(value: any) {
 	const numericValue = Number(value);
 	const safeValue = Number.isFinite(numericValue) ? numericValue : 0;
 	return safeValue.toLocaleString("pt-BR", {
@@ -1178,7 +1179,7 @@ export function formatCurrency(value) {
 }
 
 // Converte data para formato YYYY-MM-DD.
-export function formatDayKey(date) {
+export function formatDayKey(date: Date) {
 	const year = date.getFullYear();
 	const month = String(date.getMonth() + 1).padStart(2, "0");
 	const day = String(date.getDate()).padStart(2, "0");
@@ -1186,7 +1187,7 @@ export function formatDayKey(date) {
 }
 
 // Converte data para um texto amigavel por extenso (ex: "Quarta-feira, 22 de julho").
-export function formatDateDisplay(date) {
+export function formatDateDisplay(date: any) {
 	if (!date) return "";
 	const dateObj = date instanceof Date ? date : new Date(date);
 	if (isNaN(dateObj.getTime())) return "";
@@ -1201,7 +1202,7 @@ export function formatDateDisplay(date) {
 }
 
 // Diz se a data recebida e hoje.
-export function isToday(date) {
+export function isToday(date: Date) {
 	const today = new Date();
 	return date.toDateString() === today.toDateString();
 }

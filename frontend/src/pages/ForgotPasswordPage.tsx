@@ -41,26 +41,26 @@ export default function ForgotPasswordPage() {
 			setStatus("idle");
 			setMessage("Enviamos um codigo de 6 digitos para seu email.");
 			setCooldown(60);
-		} catch (error) {
+		} catch (error: any) {
 			setStatus("error");
-			if (error.status === 429 || error.retryAfter) {
+			if (error?.status === 429 || error?.retryAfter) {
 				const waitSecs = error.retryAfter || 60;
 				setCooldown(waitSecs);
 				setMessage(`Muitas tentativas. Aguarde ${waitSecs}s antes de solicitar novamente.`);
 			} else {
-				setMessage(error.message || "Nao foi possivel enviar o codigo.");
+				setMessage(error?.message || "Nao foi possivel enviar o codigo.");
 			}
 		}
 	};
 
-	const handlePasswordChange = (event) => {
+	const handlePasswordChange = (event: React.ChangeEvent<HTMLInputElement>) => {
 		const nextPassword = event.target.value;
 		setPassword(nextPassword);
 		setMessage("");
 		setStatus("idle");
 	};
 
-	const handleSubmit = async (event) => {
+	const handleSubmit = async (event: React.FormEvent) => {
 		event.preventDefault();
 		if (step === "request") {
 			await handleRequestCode();
@@ -80,9 +80,9 @@ export default function ForgotPasswordPage() {
 			});
 			setStatus("success");
 			setMessage("Senha alterada com sucesso. Agora voce ja pode entrar.");
-		} catch (error) {
+		} catch (error: any) {
 			setStatus("error");
-			setMessage(error.message || "Nao foi possivel redefinir a senha.");
+			setMessage(error?.message || "Nao foi possivel redefinir a senha.");
 		}
 	};
 
