@@ -132,15 +132,51 @@ async function createCroppedAvatarUpload({ draft, focus, zoom }: { draft: any; f
 
 	for (const quality of AVATAR_OUTPUT_QUALITIES) {
 		const blob = await new Promise<Blob | null>((resolve) => {
-			canvas.toBlob((result) => resolve(result), "image/jpeg", quality);
+			let done = false;
+			try {
+				if (typeof canvas.toBlob === "function") {
+					canvas.toBlob(
+						(result) => {
+							if (!done) {
+								done = true;
+								resolve(result);
+							}
+						},
+						"image/jpeg",
+						quality,
+					);
+					setTimeout(() => {
+						if (!done) {
+							done = true;
+							resolve(null);
+						}
+					}, 0);
+					return;
+				}
+			} catch {
+				// Fall through
+			}
+			resolve(null);
 		});
 
-		if (!blob) continue;
+		let finalBlob = blob;
+		if (!finalBlob) {
+			try {
+				const dataUrl = canvas.toDataURL("image/jpeg", quality);
+				finalBlob = new Blob([dataUrl], { type: "image/jpeg" });
+			} catch {
+				finalBlob = null;
+			}
+		}
 
-		if (blob.size <= AVATAR_MAX_BYTES || quality === 0.62) {
+		if (!finalBlob) continue;
+
+		if (finalBlob.size <= AVATAR_MAX_BYTES || quality === 0.62) {
 			const dataUrl = canvas.toDataURL("image/jpeg", quality);
 			return {
-				file: new File([blob], baseName, { type: "image/jpeg" }),
+				file: new File([finalBlob], baseName, { type: "image/jpeg" }),
+				fileName: baseName,
+				mimeType: "image/jpeg",
 				dataUrl,
 			};
 		}
@@ -1094,8 +1130,8 @@ export default function SettingsPage() {
 								Cancelar
 							</button>
 							<button
-								type="submit"
-								form="settingsForm"
+								type="button"
+								onClick={(e) => handleSaveProfile(e as any)}
 								disabled={isSaving || isLoading}
 								className="rounded-xl bg-primary px-3 py-3 font-mono-ui text-sm text-primary-foreground transition-opacity disabled:opacity-60">
 								{footerSaveLabel}
