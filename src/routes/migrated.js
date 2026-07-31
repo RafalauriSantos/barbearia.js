@@ -6,20 +6,45 @@ import { rateLimitMiddleware } from '../middlewares/rateLimit.middleware.js';
 import { AppError } from '../../backend/src/lib/errors.js';
 import { ZodError } from 'zod';
 
+function resolveModule(mod) {
+  if (!mod) return {};
+  if (mod.default && typeof mod.default === 'object') {
+    return { ...mod.default, ...mod };
+  }
+  return mod;
+}
+
 // Controllers
-import profileController from '../../backend/src/controllers/profileController.js';
-import expensesController from '../../backend/src/controllers/expensesController.js';
-import paymentMethodsController from '../../backend/src/controllers/paymentMethodsController.js';
-import productsController from '../../backend/src/controllers/productsController.js';
-import barbersController from '../../backend/src/controllers/barbersController.js';
-import clientsController from '../../backend/src/controllers/clientsController.js';
-import financialController from '../../backend/src/controllers/financialController.js';
-import receivablesController from '../../backend/src/controllers/receivablesController.js';
-import supplierPayablesController from '../../backend/src/controllers/supplierPayablesController.js';
-import invitesController from '../../backend/src/controllers/invitesController.js';
+import profileControllerRaw from '../../backend/src/controllers/profileController.js';
+import expensesControllerRaw from '../../backend/src/controllers/expensesController.js';
+import paymentMethodsControllerRaw from '../../backend/src/controllers/paymentMethodsController.js';
+import productsControllerRaw from '../../backend/src/controllers/productsController.js';
+import barbersControllerRaw from '../../backend/src/controllers/barbersController.js';
+import clientsControllerRaw from '../../backend/src/controllers/clientsController.js';
+import financialControllerRaw from '../../backend/src/controllers/financialController.js';
+import receivablesControllerRaw from '../../backend/src/controllers/receivablesController.js';
+import supplierPayablesControllerRaw from '../../backend/src/controllers/supplierPayablesController.js';
+import invitesControllerRaw from '../../backend/src/controllers/invitesController.js';
+
+const profileController = resolveModule(profileControllerRaw);
+const expensesController = resolveModule(expensesControllerRaw);
+const paymentMethodsController = resolveModule(paymentMethodsControllerRaw);
+const productsController = resolveModule(productsControllerRaw);
+const barbersController = resolveModule(barbersControllerRaw);
+const clientsController = resolveModule(clientsControllerRaw);
+const financialController = resolveModule(financialControllerRaw);
+const receivablesController = resolveModule(receivablesControllerRaw);
+const supplierPayablesController = resolveModule(supplierPayablesControllerRaw);
+const invitesController = resolveModule(invitesControllerRaw);
 
 export function adaptController(controllerFn) {
   return async (c) => {
+    const fn = typeof controllerFn === 'function' ? controllerFn : (controllerFn?.default || undefined);
+    if (!fn || typeof fn !== 'function') {
+      console.error("adaptController Error: target function is missing or not a function", controllerFn);
+      return c.json({ error: "Internal Server Error", code: "INTERNAL_ERROR" }, 500);
+    }
+    
     const request = {
       user: c.get('user'),
       query: c.req.query(),
@@ -55,7 +80,7 @@ export function adaptController(controllerFn) {
     };
     
     try {
-      const result = await controllerFn(request, reply);
+      const result = await fn(request, reply);
       const finalData = sentData !== undefined ? sentData : result;
       
       if (statusCode === 204 || finalData === null || finalData === undefined) {

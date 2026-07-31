@@ -1,8 +1,20 @@
 import { Hono } from 'hono';
 import { authMiddleware } from '../middlewares/auth.js';
 import { rateLimitMiddleware } from '../middlewares/rateLimit.middleware.js';
-import AppointmentsService from '../../backend/src/services/appointmentsService.js';
-import AuthService from '../../backend/src/services/authService.js';
+import AppointmentsServiceRaw from '../../backend/src/services/appointmentsService.js';
+import AuthServiceRaw from '../../backend/src/services/authService.js';
+
+function resolveModule(mod) {
+  if (!mod) return {};
+  if (mod.default && typeof mod.default === 'object') {
+    return { ...mod.default, ...mod };
+  }
+  return mod;
+}
+
+const AppointmentsService = resolveModule(AppointmentsServiceRaw);
+const AuthService = resolveModule(AuthServiceRaw);
+
 import { AppError } from '../../backend/src/lib/errors.js';
 import { ZodError } from 'zod';
 import {
@@ -35,7 +47,8 @@ router.onError((err, c) => {
 // GET /agendamentos
 router.get('/', authMiddleware, async (c) => {
   const userPayload = c.get('user');
-  const fullUser = await AuthService.getCurrentUser(userPayload.userId);
+  const getUserFn = AuthService.getCurrentUser || AuthService.default?.getCurrentUser;
+  const fullUser = await getUserFn(userPayload.userId);
   
   const queryParams = c.req.query();
   const validatedQuery = validateListAppointmentsQuery(queryParams);
