@@ -88,7 +88,7 @@ router.post('/login', rateLimitMiddleware, async (c) => {
       .maybeSingle();
 
     if (error && error.code !== "PGRST116") {
-      return c.json({ error: error.message }, 500);
+      return c.json({ error: error.message, code: "INTERNAL_ERROR" }, 500);
     }
 
     if (!user) {
@@ -144,7 +144,7 @@ router.post('/login', rateLimitMiddleware, async (c) => {
       }
     });
   } catch (err) {
-    return c.json({ error: err.message }, 500);
+    return c.json({ error: err.message, code: "INTERNAL_ERROR" }, 500);
   }
 });
 
@@ -160,7 +160,7 @@ router.get('/me', authMiddleware, async (c) => {
       .maybeSingle();
 
     if (error && error.code !== "PGRST116") {
-      return c.json({ error: error.message }, 500);
+      return c.json({ error: error.message, code: "INTERNAL_ERROR" }, 500);
     }
 
     if (!user) {
@@ -178,7 +178,7 @@ router.get('/me', authMiddleware, async (c) => {
       barbeiro_id: user.barbeiro_id || context.barbeiro_id,
     });
   } catch (err) {
-    return c.json({ error: err.message }, 500);
+    return c.json({ error: err.message, code: "INTERNAL_ERROR" }, 500);
   }
 });
 
