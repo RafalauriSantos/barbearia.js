@@ -23,7 +23,9 @@ app.use('*', async (c, next) => {
 
 // Helper para instanciar o Supabase utilizando as bindings do Worker
 export function getSupabase(c) {
-  return createClient(c.env.SUPABASE_URL, c.env.SUPABASE_SERVICE_KEY, {
+  const url = c.env?.SUPABASE_URL || "https://zniehugopmvoutxnpgox.supabase.co";
+  const key = c.env?.SUPABASE_SERVICE_KEY || c.env?.SUPABASE_ANON_KEY || "anon-fallback-key";
+  return createClient(url, key, {
     auth: { persistSession: false },
   });
 }

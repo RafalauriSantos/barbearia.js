@@ -9,10 +9,12 @@ function getSupabaseClient() {
 	const key =
 		env.SUPABASE_SERVICE_KEY ||
 		env.SUPABASE_ANON_KEY ||
-		(env.NODE_ENV === "test" ? "anon-test-key" : undefined);
+		(typeof process !== "undefined" && (process.env?.SUPABASE_SERVICE_KEY || process.env?.SUPABASE_ANON_KEY)) ||
+		"anon-fallback-key";
 	const url =
 		env.SUPABASE_URL ||
-		(env.NODE_ENV === "test" ? "http://localhost" : undefined);
+		(typeof process !== "undefined" && process.env?.SUPABASE_URL) ||
+		"https://zniehugopmvoutxnpgox.supabase.co";
 
 	if (!url || !key) {
 		throw new Error(
