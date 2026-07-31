@@ -20,4 +20,5 @@ export function validateUpdateProduct(body: unknown) {
 	return updateSchema.parse(body);
 }
 
-export default { validateCreateProduct, validateUpdateProduct };
+module.exports = { validateCreateProduct, validateUpdateProduct };
+export default module.exports;

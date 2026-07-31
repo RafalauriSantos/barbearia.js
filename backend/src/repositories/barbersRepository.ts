@@ -196,7 +196,7 @@ export async function deletePendingInvites(barberId: string, barbeariaId?: strin
 	if (error) throw error;
 }
 
-export default {
+module.exports = {
 	findAllByBarbearia,
 	findByIdInBarbearia,
 	create,
@@ -206,3 +206,4 @@ export default {
 	hardDelete,
 	deletePendingInvites,
 };
+export default module.exports;

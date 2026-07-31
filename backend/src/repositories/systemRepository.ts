@@ -53,4 +53,5 @@ export async function reset(): Promise<boolean> {
 	return true;
 }
 
-export default { reset };
+module.exports = { reset };
+export default module.exports;

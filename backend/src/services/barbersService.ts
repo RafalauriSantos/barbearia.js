@@ -140,9 +140,10 @@ export async function deleteBarber(id: string, user: any) {
 	}
 }
 
-export default {
+module.exports = {
 	listBarbers,
 	createBarber,
 	updateBarber,
 	deleteBarber,
 };
+export default module.exports;

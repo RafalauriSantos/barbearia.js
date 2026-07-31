@@ -103,8 +103,9 @@ export async function update(id: string, updates: Record<string, any>, { barbear
 	return toApi(data);
 }
 
-export default {
+module.exports = {
 	findAll,
 	findById,
 	update,
 };
+export default module.exports;

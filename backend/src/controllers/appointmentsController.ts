@@ -45,9 +45,10 @@ export async function remove(request: any, reply: any) {
 	return reply.code(204).send();
 }
 
-export default {
+module.exports = {
 	list,
 	create,
 	update,
 	remove,
 };
+export default module.exports;

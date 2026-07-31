@@ -1,7 +1,7 @@
 const supabase = require("../lib/supabase");
 const { env } = require("../config/env");
 
-export default async function (fastify: any, opts: any) {
+async function routes (fastify: any, opts: any) {
 	// Health & Index
 	fastify.get("/", async () => ({
 		ok: true,
@@ -43,3 +43,6 @@ export default async function (fastify: any, opts: any) {
 
 export {};
 
+
+module.exports = routes;
+export default routes;

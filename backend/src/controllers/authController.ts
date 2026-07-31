@@ -242,7 +242,7 @@ export async function logout(request: any, reply: any) {
 	return reply.send({ ok: true });
 }
 
-export default {
+module.exports = {
 	register,
 	login,
 	refresh,
@@ -254,3 +254,4 @@ export default {
 	resetPassword,
 	logout,
 };
+export default module.exports;

@@ -40,10 +40,11 @@ export async function cancel(request: any, reply: any) {
 	return reply.send(await ReceivablesService.cancel(request.params.id, user));
 }
 
-export default {
+module.exports = {
 	list,
 	create,
 	update,
 	receive,
 	cancel,
 };
+export default module.exports;

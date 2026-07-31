@@ -118,7 +118,7 @@ function resetRateLimitCounter() {
 	rateLimitCounter = 0;
 }
 
-export default {
+module.exports = {
 	Sentry,
 	sanitizeSentryEvent,
 	maskSensitiveFields,
@@ -126,3 +126,4 @@ export default {
 	resetRateLimitCounter,
 	withSentry: Sentry.withSentry,
 };
+export default module.exports;

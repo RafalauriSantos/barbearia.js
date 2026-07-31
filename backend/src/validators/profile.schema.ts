@@ -28,4 +28,5 @@ export function validateProfile(body: unknown) {
 	return profileSchema.parse(body);
 }
 
-export default { validateProfile };
+module.exports = { validateProfile };
+export default module.exports;

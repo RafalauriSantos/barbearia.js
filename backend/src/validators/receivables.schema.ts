@@ -34,9 +34,10 @@ export const validateCreateReceivable = (body: unknown) => receivableSchema.pars
 export const validateUpdateReceivable = (body: unknown) => receivableSchema.partial().parse(body);
 export const validateReceiveReceivable = (body: unknown) => receiveSchema.parse(body);
 
-export default {
+module.exports = {
 	validateReceivablesQuery,
 	validateCreateReceivable,
 	validateUpdateReceivable,
 	validateReceiveReceivable,
 };
+export default module.exports;

@@ -217,8 +217,9 @@ export async function acceptInvite(token: string, payload: Record<string, any>) 
 	};
 }
 
-export default {
+module.exports = {
 	createBarberInvite,
 	getInviteByToken,
 	acceptInvite,
 };
+export default module.exports;

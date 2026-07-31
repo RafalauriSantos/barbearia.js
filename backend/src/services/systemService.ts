@@ -5,4 +5,5 @@ export async function resetData(): Promise<boolean> {
 	return true;
 }
 
-export default { resetData };
+module.exports = { resetData };
+export default module.exports;

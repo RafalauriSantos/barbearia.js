@@ -360,7 +360,7 @@ export async function resetUserFailedLogin(userId: string): Promise<void> {
 	if (error) throw error;
 }
 
-export default {
+module.exports = {
 	findByEmail,
 	findById,
 	create,
@@ -374,3 +374,4 @@ export default {
 	recordUserFailedLogin,
 	resetUserFailedLogin,
 };
+export default module.exports;

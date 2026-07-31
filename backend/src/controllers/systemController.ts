@@ -48,7 +48,8 @@ export async function sendTestEmail(request: any, reply: any) {
 	});
 }
 
-export default {
+module.exports = {
 	reset,
 	sendTestEmail,
 };
+export default module.exports;

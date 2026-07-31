@@ -1,7 +1,7 @@
 const controller = require("../controllers/clientsController");
 const auth = require("../middleware/auth");
 
-export default async function (fastify: any) {
+async function routes (fastify: any) {
 	fastify.get("/fixed", { preHandler: auth }, controller.listFixed);
 	fastify.post("/fixed", { preHandler: auth }, controller.createFixed);
 	fastify.put("/fixed/:id", { preHandler: auth }, controller.updateFixed);
@@ -31,3 +31,6 @@ export default async function (fastify: any) {
 
 export {};
 
+
+module.exports = routes;
+export default routes;

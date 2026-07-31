@@ -76,9 +76,10 @@ export async function deleteService(id: string, user: any) {
 	return true;
 }
 
-export default {
+module.exports = {
 	listServices,
 	createService,
 	updateService,
 	deleteService,
 };
+export default module.exports;

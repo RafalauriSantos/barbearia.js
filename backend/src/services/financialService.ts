@@ -483,6 +483,7 @@ export async function getSummary(query: Record<string, any> = {}, user: any) {
 	return buildBarberSummary(rows, fallbackBarber);
 }
 
-export default {
+module.exports = {
 	getSummary,
 };
+export default module.exports;

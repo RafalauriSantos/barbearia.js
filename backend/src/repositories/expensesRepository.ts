@@ -106,10 +106,11 @@ export async function remove(id: string, { barbeariaId }: { barbeariaId: string 
 	return true;
 }
 
-export default {
+module.exports = {
 	findAll,
 	findById,
 	create,
 	update,
 	remove,
 };
+export default module.exports;

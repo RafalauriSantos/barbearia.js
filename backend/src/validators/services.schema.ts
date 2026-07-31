@@ -20,4 +20,5 @@ export function validateUpdateService(body: unknown) {
 	return parsed;
 }
 
-export default { validateCreateService, validateUpdateService };
+module.exports = { validateCreateService, validateUpdateService };
+export default module.exports;

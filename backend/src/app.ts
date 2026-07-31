@@ -119,4 +119,5 @@ export async function buildApp() {
 	return app;
 }
 
-export default { buildApp };
+module.exports = { buildApp };
+export default module.exports;

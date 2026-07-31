@@ -124,8 +124,9 @@ export async function verifyToken(
 	}
 }
 
-export default {
+module.exports = {
 	verifyToken,
 	DUMMY_PASS_SECRET,
 	DUMMY_FAIL_SECRET,
 };
+export default module.exports;

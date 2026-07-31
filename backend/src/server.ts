@@ -17,7 +17,8 @@ export async function start() {
 	}
 }
 
-export default { start };
+module.exports = { start };
+export default module.exports;
 
 if (require.main === module) {
 	start();

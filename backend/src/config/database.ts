@@ -31,4 +31,5 @@ function getDatabaseConfig() {
 	};
 }
 
-export default { getDatabaseConfig };
+module.exports = { getDatabaseConfig };
+export default module.exports;

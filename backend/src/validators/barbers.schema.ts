@@ -52,8 +52,9 @@ export function validateInviteBarber(body: unknown) {
 	return inviteBarberSchema.parse(body);
 }
 
-export default {
+module.exports = {
 	validateCreateBarber,
 	validateUpdateBarber,
 	validateInviteBarber,
 };
+export default module.exports;

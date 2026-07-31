@@ -129,4 +129,5 @@ const env = new Proxy({}, {
 });
 
 export { env, setRuntimeEnv };
-export default { env, setRuntimeEnv };
+module.exports = { env, setRuntimeEnv };
+export default module.exports;

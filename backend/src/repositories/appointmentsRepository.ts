@@ -335,7 +335,7 @@ export async function remove(id: string, { barbeariaId }: { barbeariaId: string 
 	return true;
 }
 
-export default {
+module.exports = {
 	findAll,
 	findById,
 	findConflict,
@@ -344,3 +344,4 @@ export default {
 	remove,
 	_private: { normalizeItemList },
 };
+export default module.exports;

@@ -244,7 +244,7 @@ export function toFinancialRow(row: any) {
 	};
 }
 
-export default {
+module.exports = {
 	findAll,
 	findById,
 	createManual,
@@ -254,3 +254,4 @@ export default {
 	findPaidManual,
 	toFinancialRow,
 };
+export default module.exports;

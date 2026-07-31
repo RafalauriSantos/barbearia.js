@@ -11,4 +11,5 @@ export function validateUpdatePaymentMethod(body: unknown) {
 	return updateSchema.parse(body || {});
 }
 
-export default { validateUpdatePaymentMethod };
+module.exports = { validateUpdatePaymentMethod };
+export default module.exports;

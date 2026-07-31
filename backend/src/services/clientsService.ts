@@ -285,7 +285,7 @@ export async function deleteWaitlistEntry(id: string, user: any) {
 	return true;
 }
 
-export default {
+module.exports = {
 	listFixedClients,
 	createFixedClient,
 	updateFixedClient,
@@ -298,3 +298,4 @@ export default {
 	updateWaitlistEntry,
 	deleteWaitlistEntry,
 };
+export default module.exports;

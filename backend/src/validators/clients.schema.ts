@@ -75,7 +75,7 @@ export function validateListClientsQuery(query: unknown) {
 	return listClientsQuerySchema.parse(query || {});
 }
 
-export default {
+module.exports = {
 	validateCreateFixedClient,
 	validateUpdateFixedClient,
 	validateCreateClientCut,
@@ -84,3 +84,4 @@ export default {
 	validateUpdateWaitlistEntry,
 	validateListClientsQuery,
 };
+export default module.exports;

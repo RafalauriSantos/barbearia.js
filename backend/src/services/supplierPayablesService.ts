@@ -38,8 +38,9 @@ export async function createPurchase(payload: Record<string, any>, user: any) {
 	});
 }
 
-export default {
+module.exports = {
 	list,
 	pay,
 	createPurchase,
 };
+export default module.exports;

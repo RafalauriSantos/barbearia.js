@@ -1,7 +1,7 @@
 const controller = require("../controllers/authController");
 const auth = require("../middleware/auth");
 
-export default async function (fastify: any, opts: any) {
+async function routes (fastify: any, opts: any) {
 	fastify.get("/me", { preHandler: auth }, async (request: any, reply: any) =>
 		controller.me(request, reply),
 	);
@@ -36,3 +36,6 @@ export default async function (fastify: any, opts: any) {
 
 export {};
 
+
+module.exports = routes;
+export default routes;
