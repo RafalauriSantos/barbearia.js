@@ -8,26 +8,26 @@ const SLOT_START_MINUTES = 9 * 60;
 const SLOT_END_MINUTES = 20 * 60;
 const SLOT_STEP_MINUTES = 30;
 
-function statusLabel(status) {
+function statusLabel(status: string) {
 	if (status === "paid") return "Pago";
 	if (status === "fiado") return "Fiado";
 	return "Aberto";
 }
 
-function statusTone(status) {
+function statusTone(status: string) {
 	if (status === "paid") return "border-paid/30 bg-paid/10 text-paid";
 	if (status === "fiado") return "border-fiado/30 bg-fiado/10 text-fiado";
 	return "border-border bg-secondary text-foreground-faint";
 }
 
-function getAppointmentSummary(appointment) {
+function getAppointmentSummary(appointment: any) {
 	const services =
 		Array.isArray(appointment.services) ? appointment.services : [];
 	const products =
 		Array.isArray(appointment.products) ? appointment.products : [];
-	const serviceNames = services.map((item) => item.name).filter(Boolean);
+	const serviceNames = services.map((item: any) => item.name).filter(Boolean);
 	const productNames = products
-		.map((item) =>
+		.map((item: any) =>
 			item.quantity > 1 ? `${item.quantity}x ${item.name}` : item.name,
 		)
 		.filter(Boolean);
@@ -36,25 +36,25 @@ function getAppointmentSummary(appointment) {
 	return appointment.service_name || "Atendimento";
 }
 
-function accessLabel(barber) {
+function accessLabel(barber: any) {
 	if (barber.usuario_id) return "Acesso liberado";
 	if (barber.convite_pendente) return "Acesso pendente";
 	return "Sem acesso";
 }
 
-function accessTone(barber) {
+function accessTone(barber: any) {
 	if (barber.usuario_id) return "border-paid/30 bg-paid/10 text-paid";
 	if (barber.convite_pendente) return "border-fiado/30 bg-fiado/10 text-fiado";
 	return "border-overdue/30 bg-overdue/10 text-overdue";
 }
 
-function toTimeLabel(totalMinutes) {
+function toTimeLabel(totalMinutes: number) {
 	const hours = Math.floor(totalMinutes / 60);
 	const minutes = totalMinutes % 60;
 	return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
 }
 
-function toMinutes(time) {
+function toMinutes(time: string) {
 	const [hours, minutes] = String(time || "00:00")
 		.slice(0, 5)
 		.split(":")
@@ -74,12 +74,12 @@ function getSlots() {
 	return slots;
 }
 
-function groupAppointmentsByBarber(appointments) {
-	const grouped = new Map();
+function groupAppointmentsByBarber(appointments: any[]) {
+	const grouped = new Map<string, any[]>();
 	for (const appointment of appointments) {
 		const key = appointment.barbeiro_id || "sem-barbeiro";
 		if (!grouped.has(key)) grouped.set(key, []);
-		grouped.get(key).push(appointment);
+		grouped.get(key)!.push(appointment);
 	}
 	for (const rows of grouped.values()) {
 		rows.sort((a, b) => a.time_slot.localeCompare(b.time_slot));
@@ -87,7 +87,7 @@ function groupAppointmentsByBarber(appointments) {
 	return grouped;
 }
 
-function isTodayKey(dayKey) {
+function isTodayKey(dayKey: string) {
 	const today = new Date();
 	const currentDayKey = `${today.getFullYear()}-${String(
 		today.getMonth() + 1,
@@ -95,7 +95,7 @@ function isTodayKey(dayKey) {
 	return dayKey === currentDayKey;
 }
 
-function getNextAppointment(rows, dayKey) {
+function getNextAppointment(rows: any[], dayKey: string) {
 	if (rows.length === 0) return null;
 	if (!isTodayKey(dayKey)) return rows[0];
 
@@ -108,15 +108,15 @@ function getNextAppointment(rows, dayKey) {
 	);
 }
 
-function getAppointmentsByTime(rows) {
-	const map = new Map();
+function getAppointmentsByTime(rows: any[]) {
+	const map = new Map<string, any>();
 	for (const appointment of rows) {
 		map.set(String(appointment.time_slot || "").slice(0, 5), appointment);
 	}
 	return map;
 }
 
-function getInitials(name) {
+function getInitials(name: string) {
 	const parts = String(name || "")
 		.trim()
 		.split(/\s+/)
@@ -126,7 +126,7 @@ function getInitials(name) {
 	return `${parts[0][0] || ""}${parts[parts.length - 1][0] || ""}`.toUpperCase();
 }
 
-function TeamBarberRow({ barber, rows, dayKey, onSelect, onAdd }) {
+function TeamBarberRow({ barber, rows, dayKey, onSelect, onAdd }: any) {
 	const nextAppointment = getNextAppointment(rows, dayKey);
 	const accessDot =
 		barber.usuario_id ? "bg-paid"
@@ -201,7 +201,7 @@ function TeamBarberRow({ barber, rows, dayKey, onSelect, onAdd }) {
 	);
 }
 
-function BarberAgenda({ barber, rows, slots, onBack, onAdd, onEdit }) {
+function BarberAgenda({ barber, rows, slots, onBack, onAdd, onEdit }: any) {
 	const appointmentsByTime = getAppointmentsByTime(rows);
 
 	return (
@@ -224,7 +224,7 @@ function BarberAgenda({ barber, rows, slots, onBack, onAdd, onEdit }) {
 			</div>
 
 			<div className="space-y-1.5">
-				{slots.map((slot) => {
+				{slots.map((slot: any) => {
 					const appointment = appointmentsByTime.get(slot.time);
 
 					return (
@@ -275,6 +275,18 @@ function BarberAgenda({ barber, rows, slots, onBack, onAdd, onEdit }) {
 	);
 }
 
+interface AdminDashboardProps {
+	dayKey: string;
+	barbers: any[];
+	appointments: any[];
+	isLoading?: boolean;
+	errorMessage?: string;
+	onRetry?: () => void;
+	onReload: () => Promise<void> | void;
+	teamSheetOpen?: boolean;
+	onTeamSheetOpenChange?: (open: boolean) => void;
+}
+
 export function AdminDashboard({
 	dayKey,
 	barbers,
@@ -285,12 +297,12 @@ export function AdminDashboard({
 	onReload,
 	teamSheetOpen: controlledTeamSheetOpen,
 	onTeamSheetOpenChange,
-}) {
+}: AdminDashboardProps) {
 	const [dialogOpen, setDialogOpen] = useState(false);
 	const [internalTeamSheetOpen, setInternalTeamSheetOpen] = useState(false);
 	const teamSheetOpen = controlledTeamSheetOpen ?? internalTeamSheetOpen;
 	const setTeamSheetOpen = onTeamSheetOpenChange ?? setInternalTeamSheetOpen;
-	const [editingAppt, setEditingAppt] = useState();
+	const [editingAppt, setEditingAppt] = useState<any>();
 	const [defaultBarberId, setDefaultBarberId] = useState("");
 	const [defaultTimeSlot, setDefaultTimeSlot] = useState("09:00");
 	const [activeBarberId, setActiveBarberId] = useState("all");
@@ -334,14 +346,14 @@ export function AdminDashboard({
 		setDialogOpen(true);
 	};
 
-	const openEdit = (appointment) => {
+	const openEdit = (appointment: any) => {
 		setDefaultBarberId(appointment.barbeiro_id || "");
 		setDefaultTimeSlot(String(appointment.time_slot || "09:00").slice(0, 5));
 		setEditingAppt(appointment);
 		setDialogOpen(true);
 	};
 
-	const handleCreateBarber = async (event) => {
+	const handleCreateBarber = async (event: React.FormEvent) => {
 		event.preventDefault();
 		if (isSubmittingBarber) return;
 
@@ -371,14 +383,14 @@ export function AdminDashboard({
 				:	"Barbeiro salvo.",
 			);
 			await onReload();
-		} catch (error) {
+		} catch (error: any) {
 			setPanelError(error.message || "Nao foi possivel salvar o barbeiro.");
 		} finally {
 			setIsSubmittingBarber(false);
 		}
 	};
 
-	const handleInvite = async (barber) => {
+	const handleInvite = async (barber: any) => {
 		if (invitingBarberId) return;
 		if (!barber.email) {
 			setPanelError("Informe um email para este barbeiro antes de convidar.");
@@ -406,14 +418,14 @@ export function AdminDashboard({
 					`${message} Atualize a lista para conferir o novo acesso.`,
 				);
 			}
-		} catch (error) {
+		} catch (error: any) {
 			setPanelError(error.message || "Nao foi possivel enviar convite.");
 		} finally {
 			setInvitingBarberId("");
 		}
 	};
 
-	const handleDeleteBarber = async (barber) => {
+	const handleDeleteBarber = async (barber: any) => {
 		if (deletingBarberId) return;
 
 		if (barber.cargo === "dono") {
@@ -433,7 +445,7 @@ export function AdminDashboard({
 			const res = await deleteBarber(barber.id);
 			setPanelMessage(res.message || "Barbeiro removido com sucesso.");
 			await onReload();
-		} catch (error) {
+		} catch (error: any) {
 			setPanelError(error.message || "Não foi possível remover o barbeiro.");
 		} finally {
 			setDeletingBarberId("");

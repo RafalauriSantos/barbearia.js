@@ -79,7 +79,7 @@ function isAcceptedAvatarFile(file) {
 }
 
 async function createCroppedAvatarUpload({ draft, focus, zoom }) {
-	const image = await loadImage(draft.dataUrl);
+	const image: any = await loadImage(draft.dataUrl);
 	const canvas = document.createElement("canvas");
 	canvas.width = AVATAR_OUTPUT_SIZE;
 	canvas.height = AVATAR_OUTPUT_SIZE;
@@ -178,7 +178,7 @@ function GridPair({ children }) {
 	);
 }
 
-function VerticalField({ id, label, children, hint }) {
+function VerticalField({ id, label, children, hint }: any) {
 	return (
 		<div className="flex min-w-0 flex-col gap-1 px-4 py-3.5">
 			<label
@@ -284,8 +284,8 @@ export default function SettingsPage() {
 	if (initialPaymentMethodsRef.current === null) {
 		initialPaymentMethodsRef.current = getCachedPaymentMethods() || false;
 	}
-	const initialProfile = initialProfileRef.current || null;
-	const initialPaymentMethods = initialPaymentMethodsRef.current || [];
+	const initialProfile: any = initialProfileRef.current || null;
+	const initialPaymentMethods: any[] = (initialPaymentMethodsRef.current as any) || [];
 	const [shopName, setShopName] = useState(
 		getBrandedShopName(initialProfile?.shopName),
 	);
@@ -309,15 +309,15 @@ export default function SettingsPage() {
 	const [barberPhotoUrl, setBarberPhotoUrl] = useState(
 		initialProfile?.barberPhotoUrl || initialProfile?.photo_url || "",
 	);
-	const [barberPhotoDraft, setBarberPhotoDraft] = useState(null);
+	const [barberPhotoDraft, setBarberPhotoDraft] = useState<any>(null);
 	const [avatarFocus, setAvatarFocus] = useState(DEFAULT_AVATAR_FOCUS);
 	const [avatarZoom, setAvatarZoom] = useState(DEFAULT_AVATAR_ZOOM);
 	const [removeBarberPhoto, setRemoveBarberPhoto] = useState(false);
 	const [isLoading, setIsLoading] = useState(!initialProfile);
-	const [paymentMethods, setPaymentMethods] = useState(initialPaymentMethods);
-	const [paymentDrafts, setPaymentDrafts] = useState(() =>
+	const [paymentMethods, setPaymentMethods] = useState<any[]>(initialPaymentMethods);
+	const [paymentDrafts, setPaymentDrafts] = useState<Record<string, string>>(() =>
 		Object.fromEntries(
-			initialPaymentMethods.map((method) => [
+			initialPaymentMethods.map((method: any) => [
 				method.id,
 				formatPercentInput(method.fee_percent),
 			]),
@@ -556,7 +556,7 @@ export default function SettingsPage() {
 		setErrorMessage("");
 		setSuccessMessage("");
 		try {
-			const payload = {
+			const payload: any = {
 				barberName: cleanBarberName,
 			};
 

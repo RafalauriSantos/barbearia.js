@@ -127,7 +127,7 @@ export default function ServicesPage() {
 	};
 
 	const buildPayload = () => {
-		const data = { name: name.trim(), price: parseMoneyInput(price) };
+		const data: any = { name: name.trim(), price: parseMoneyInput(price) };
 		if (tab === "products") {
 			data.purchase_type = purchaseType;
 			data.cost_price = parseMoneyInput(costPrice || "0");

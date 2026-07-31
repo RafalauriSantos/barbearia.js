@@ -127,7 +127,7 @@ apiClient.interceptors.request.use((config: CustomAxiosRequestConfig) => {
 	config._sessionAccessToken = token;
 	config._sessionRefreshToken = getRefreshToken();
 	if (token) {
-		config.headers = config.headers || {};
+		config.headers = (config.headers || {}) as any;
 		config.headers.Authorization = `Bearer ${token}`;
 	}
 	return config;
@@ -187,7 +187,7 @@ apiClient.interceptors.response.use(
 				}
 
 				setAccessToken(newAccessToken);
-				originalRequest.headers = originalRequest.headers || {};
+				originalRequest.headers = (originalRequest.headers || {}) as any;
 				originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
 				return apiClient(originalRequest);
 			} catch (refreshError) {

@@ -65,7 +65,7 @@ export default function VerifyCodePage() {
 			clearPendingEmail();
 			setMessage("Email confirmado com sucesso.");
 
-			if (result?.accessToken) {
+			if ((result as any)?.accessToken) {
 				navigate("/app", { replace: true });
 			} else {
 				navigate("/login", { replace: true });

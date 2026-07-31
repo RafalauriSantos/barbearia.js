@@ -15,22 +15,28 @@ import { AppApiError } from "@/lib/api/client";
 const OFFLINE_ERROR_MESSAGE =
 	"Sem conexao com a internet ou a API esta indisponivel. Tente novamente.";
 
-function formatDate(value) {
+function formatDate(value: string) {
 	return value ? value.split("-").reverse().join("/") : "Sem data";
 }
 
-export function SupplierPayablesPanel({ startDate, endDate, onChanged }) {
+interface SupplierPayablesPanelProps {
+	startDate?: string;
+	endDate?: string;
+	onChanged?: () => void;
+}
+
+export function SupplierPayablesPanel({ startDate, endDate, onChanged }: SupplierPayablesPanelProps) {
 	const [status, setStatus] = useState("aberto");
-	const [rows, setRows] = useState([]);
+	const [rows, setRows] = useState<any[]>([]);
 	const [isLoading, setIsLoading] = useState(true);
 	const [isSaving, setIsSaving] = useState(false);
 	const [errorMessage, setErrorMessage] = useState("");
-	const [selected, setSelected] = useState(null);
+	const [selected, setSelected] = useState<any>(null);
 	const [paymentDate, setPaymentDate] = useState(formatDayKey(new Date()));
 
 	// Purchase form state
 	const [showPurchaseForm, setShowPurchaseForm] = useState(false);
-	const [products, setProducts] = useState(() => getCachedProducts() || []);
+	const [products, setProducts] = useState<any[]>(() => getCachedProducts() || []);
 	const [purchaseSupplier, setPurchaseSupplier] = useState("");
 	const [purchaseProduct, setPurchaseProduct] = useState("");
 	const [purchaseQuantity, setPurchaseQuantity] = useState("1");
@@ -50,7 +56,7 @@ export function SupplierPayablesPanel({ startDate, endDate, onChanged }) {
 		setErrorMessage("");
 		try {
 			setRows(await loadSupplierPayables(query, { force: true }));
-		} catch (error) {
+		} catch (error: any) {
 			setErrorMessage(
 				error instanceof AppApiError && error.kind === "network" ?
 					OFFLINE_ERROR_MESSAGE
@@ -73,7 +79,7 @@ export function SupplierPayablesPanel({ startDate, endDate, onChanged }) {
 
 	const total = rows.reduce((sum, row) => sum + Number(row.value || 0), 0);
 
-	const handlePay = async (event) => {
+	const handlePay = async (event: React.FormEvent) => {
 		event.preventDefault();
 		if (!selected || isSaving) return;
 		setIsSaving(true);
@@ -83,7 +89,7 @@ export function SupplierPayablesPanel({ startDate, endDate, onChanged }) {
 			setSelected(null);
 			await reload();
 			onChanged?.();
-		} catch (error) {
+		} catch (error: any) {
 			setErrorMessage(
 				error instanceof AppApiError && error.kind === "network" ?
 					OFFLINE_ERROR_MESSAGE
@@ -94,7 +100,7 @@ export function SupplierPayablesPanel({ startDate, endDate, onChanged }) {
 		}
 	};
 
-	const handleProductChange = (e) => {
+	const handleProductChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
 		const id = e.target.value;
 		setPurchaseProduct(id);
 		const prod = products.find((product) => product.id === id);
@@ -103,7 +109,7 @@ export function SupplierPayablesPanel({ startDate, endDate, onChanged }) {
 		}
 	};
 
-	const handlePurchase = async (event) => {
+	const handlePurchase = async (event: React.FormEvent) => {
 		event.preventDefault();
 		if (!purchaseProduct || !purchaseSupplier || isSaving) return;
 		setIsSaving(true);
@@ -127,7 +133,7 @@ export function SupplierPayablesPanel({ startDate, endDate, onChanged }) {
 			setPurchasePaid(false);
 			await reload();
 			onChanged?.();
-		} catch (error) {
+		} catch (error: any) {
 			setErrorMessage(error.message || "Falha ao registrar compra.");
 		} finally {
 			setIsSaving(false);
@@ -267,7 +273,7 @@ function SupplierPayModal({
 	isSaving,
 	handlePay,
 	onClose,
-}) {
+}: any) {
 	return (
 		<BaseModal
 			eyebrow="Baixa de fornecedor"
@@ -315,7 +321,7 @@ function SupplierPurchaseModal({
 	isSaving,
 	handlePurchase,
 	onClose,
-}) {
+}: any) {
 	return (
 		<BaseModal
 			eyebrow="Nova entrada de estoque"

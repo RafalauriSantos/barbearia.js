@@ -54,13 +54,13 @@ const EMPTY_SUMMARY = {
 	overdue: 0,
 };
 
-function scheduleIdleTask(callback) {
+function scheduleIdleTask(callback: () => void) {
 	if (typeof window !== "undefined" && "requestIdleCallback" in window) {
-		const id = window.requestIdleCallback(callback, { timeout: 1500 });
-		return () => window.cancelIdleCallback?.(id);
+		const id = (window as any).requestIdleCallback(callback, { timeout: 1500 });
+		return () => (window as any).cancelIdleCallback?.(id);
 	}
-	const id = window.setTimeout(callback, 0);
-	return () => window.clearTimeout(id);
+	const id = setTimeout(callback, 0);
+	return () => clearTimeout(id);
 }
 
 function toTimeLabel(totalMinutes) {
@@ -179,7 +179,7 @@ function PaymentQuickSheet({
 			onClick={onClose}>
 			<div
 				ref={containerRef}
-				tabIndex="-1"
+				tabIndex={-1}
 				className="w-full max-w-[480px] rounded-t-lg border-x border-t border-border bg-background p-4 shadow-[0_-20px_80px_rgba(0,0,0,0.45)] outline-none"
 				onClick={(event) => event.stopPropagation()}>
 				<div className="flex items-start justify-between gap-3">
@@ -701,7 +701,7 @@ export default function AppPage() {
 		setIsSavingItems(true);
 		setItemError("");
 		try {
-			const payload = {
+			const payload: any = {
 				services: itemDraft.services,
 				products: itemDraft.products,
 			};
@@ -973,7 +973,7 @@ export default function AppPage() {
 								action={
 									<button
 										type="button"
-										onClick={reload}
+										onClick={() => reload()}
 										className="rounded-md border border-border px-3 py-2 font-mono-ui text-[10px] text-foreground">
 										Tentar novamente
 									</button>
@@ -993,7 +993,7 @@ export default function AppPage() {
 					onClick={() => setSelectedAppointment(null)}>
 					<div
 						ref={selectedAppointmentRef}
-						tabIndex="-1"
+						tabIndex={-1}
 						className="w-full max-w-[480px] rounded-t-lg border-x border-t border-border bg-background p-4 outline-none"
 						onClick={(event) => event.stopPropagation()}>
 						<p className="font-client text-xs font-semibold text-foreground-faint">

@@ -10,21 +10,27 @@ import {
 	loadProducts,
 } from "@/lib/store";
 
-function statusDotClass(statusColor) {
+function statusDotClass(statusColor: string) {
 	if (statusColor === "paid") return "bg-paid";
 	if (statusColor === "fiado") return "bg-fiado";
 	if (statusColor === "overdue") return "bg-overdue";
 	return "bg-foreground-faint";
 }
 
-function statusLabel(status) {
+function statusLabel(status: string) {
 	if (status === "paid") return "Pago";
 	if (status === "fiado") return "Fiado";
 	return "Pendente";
 }
 
+interface AppointmentRowProps {
+	appointment: any;
+	onUpdate: () => Promise<void> | void;
+	onEdit?: () => void;
+}
+
 // Mostra uma linha do atendimento com botoes de acao.
-export function AppointmentRow({ appointment, onUpdate, onEdit }) {
+export function AppointmentRow({ appointment, onUpdate, onEdit }: AppointmentRowProps) {
 	const [expanded, setExpanded] = useState(false);
 	const [showServicePicker, setShowServicePicker] = useState(false);
 	// Regras visuais para destacar prazo e status.
@@ -52,12 +58,12 @@ export function AppointmentRow({ appointment, onUpdate, onEdit }) {
 	})();
 	const serviceNames =
 		Array.isArray(appointment.services) ?
-			appointment.services.map((item) => item.name).filter(Boolean)
+			appointment.services.map((item: any) => item.name).filter(Boolean)
 		:	[];
 	const productNames =
 		Array.isArray(appointment.products) ?
 			appointment.products
-				.map((item) =>
+				.map((item: any) =>
 					item.quantity > 1 ? `${item.quantity}x ${item.name}` : item.name,
 				)
 				.filter(Boolean)
@@ -148,7 +154,7 @@ export function AppointmentRow({ appointment, onUpdate, onEdit }) {
 }
 
 // Editor rapido para mudar valor/status ou excluir.
-function InlineEditor({ appointment, onUpdate, onClose, onEdit }) {
+function InlineEditor({ appointment, onUpdate, onClose, onEdit }: any) {
 	const [value, setValue] = useState(appointment.value.toString());
 	const [status, setStatus] = useState(appointment.status);
 	const [isSubmitting, setIsSubmitting] = useState(false);
@@ -165,7 +171,7 @@ function InlineEditor({ appointment, onUpdate, onClose, onEdit }) {
 			});
 			await onUpdate();
 			onClose();
-		} catch (error) {
+		} catch (error: any) {
 			setErrorMessage(error.message || "Falha ao atualizar atendimento.");
 		} finally {
 			setIsSubmitting(false);
@@ -180,7 +186,7 @@ function InlineEditor({ appointment, onUpdate, onClose, onEdit }) {
 			await deleteAppointment(appointment.id);
 			await onUpdate();
 			onClose();
-		} catch (error) {
+		} catch (error: any) {
 			setErrorMessage(error.message || "Falha ao excluir atendimento.");
 		} finally {
 			setIsSubmitting(false);
@@ -235,8 +241,8 @@ function InlineEditor({ appointment, onUpdate, onClose, onEdit }) {
 }
 
 // Lista de servicos para adicionar ao atendimento.
-function ServicePicker({ appointment, onUpdate, onClose }) {
-	const initialCatalogRef = useRef(null);
+function ServicePicker({ appointment, onUpdate, onClose }: any) {
+	const initialCatalogRef = useRef<any>(null);
 	if (!initialCatalogRef.current) {
 		initialCatalogRef.current = {
 			services: getCachedServices(),
@@ -244,11 +250,11 @@ function ServicePicker({ appointment, onUpdate, onClose }) {
 		};
 	}
 	const initialCatalog = initialCatalogRef.current;
-	const [services, setServices] = useState(initialCatalog.services || []);
+	const [services, setServices] = useState<any[]>(initialCatalog.services || []);
 	const [isLoadingServices, setIsLoadingServices] = useState(
 		!initialCatalog.services,
 	);
-	const [products, setProducts] = useState(initialCatalog.products || []);
+	const [products, setProducts] = useState<any[]>(initialCatalog.products || []);
 	const [isLoadingProducts, setIsLoadingProducts] = useState(
 		!initialCatalog.products,
 	);
@@ -290,7 +296,7 @@ function ServicePicker({ appointment, onUpdate, onClose }) {
 			mounted = false;
 		};
 	}, [initialCatalog.products, initialCatalog.services]);
-	const handleSelect = async (svc) => {
+	const handleSelect = async (svc: any) => {
 		if (isSubmitting) return;
 		setIsSubmitting(true);
 		setErrorMessage("");
@@ -299,7 +305,7 @@ function ServicePicker({ appointment, onUpdate, onClose }) {
 			const current =
 				Array.isArray(appointment.services) ? appointment.services : [];
 			const nextServices = (() => {
-				const existing = current.find((item) => item.id === svc.id);
+				const existing = current.find((item: any) => item.id === svc.id);
 				if (!existing) {
 					return [
 						...current,
@@ -311,7 +317,7 @@ function ServicePicker({ appointment, onUpdate, onClose }) {
 						},
 					];
 				}
-				return current.map((item) =>
+				return current.map((item: any) =>
 					item.id === svc.id ?
 						{ ...item, quantity: Number(item.quantity || 1) + 1 }
 					:	item,
@@ -323,13 +329,13 @@ function ServicePicker({ appointment, onUpdate, onClose }) {
 			});
 			await onUpdate();
 			onClose();
-		} catch (error) {
+		} catch (error: any) {
 			setErrorMessage(error.message || "Falha ao vincular servico.");
 		} finally {
 			setIsSubmitting(false);
 		}
 	};
-	const handleSelectProduct = async (prod) => {
+	const handleSelectProduct = async (prod: any) => {
 		if (isSubmitting) return;
 		setIsSubmitting(true);
 		setErrorMessage("");
@@ -337,7 +343,7 @@ function ServicePicker({ appointment, onUpdate, onClose }) {
 			const current =
 				Array.isArray(appointment.products) ? appointment.products : [];
 			const nextProducts = (() => {
-				const existing = current.find((item) => item.id === prod.id);
+				const existing = current.find((item: any) => item.id === prod.id);
 				if (!existing) {
 					return [
 						...current,
@@ -355,7 +361,7 @@ function ServicePicker({ appointment, onUpdate, onClose }) {
 						},
 					];
 				}
-				return current.map((item) =>
+				return current.map((item: any) =>
 					item.id === prod.id ?
 						{ ...item, quantity: Number(item.quantity || 1) + 1 }
 					:	item,
@@ -367,7 +373,7 @@ function ServicePicker({ appointment, onUpdate, onClose }) {
 			});
 			await onUpdate();
 			onClose();
-		} catch (error) {
+		} catch (error: any) {
 			setErrorMessage(error.message || "Falha ao vincular produto.");
 		} finally {
 			setIsSubmitting(false);

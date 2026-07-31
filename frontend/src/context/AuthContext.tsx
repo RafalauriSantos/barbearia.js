@@ -30,6 +30,7 @@ export interface AuthUser {
 	nome: string;
 	role: "admin" | "barber";
 	barbearia_id: string;
+	barbeiro_id?: string | null;
 	foto_url?: string | null;
 }
 
@@ -38,7 +39,7 @@ export interface AuthContextType {
 	isLoading: boolean;
 	isAuthenticated: boolean;
 	login: (credentials: { email?: string; password?: string }) => Promise<AuthUser>;
-	signup: (data: { email?: string; password?: string }) => Promise<unknown>;
+	signup: (data: { email?: string; password?: string; turnstileToken?: string }) => Promise<unknown>;
 	verifyEmailCode: (data: { email?: string; code?: string }) => Promise<unknown>;
 	acceptInvite: (data: { token: string; password?: string; nome?: string }) => Promise<AuthUser>;
 	logout: () => void;

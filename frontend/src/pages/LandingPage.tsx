@@ -68,7 +68,7 @@ export default function LandingPage() {
 						alt="Balcão de barbearia com tablet exibindo agenda e indicadores financeiros"
 						width="1400"
 						height="788"
-						fetchpriority="high"
+						{...({ fetchpriority: "high" } as any)}
 						className="h-full w-full object-cover object-[61%_center] sm:object-center"
 					/>
 				</picture>

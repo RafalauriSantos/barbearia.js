@@ -28,7 +28,7 @@ export default function ForgotPasswordPage() {
 		if (initialEmail) setEmail(initialEmail);
 	}, [searchParams]);
 
-	const handleRequestCode = async (event) => {
+	const handleRequestCode = async (event?: any) => {
 		if (event) event.preventDefault();
 		const cleanEmail = email.trim();
 		if (!cleanEmail || status === "loading" || cooldown > 0) return;

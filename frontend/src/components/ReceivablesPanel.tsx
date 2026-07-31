@@ -15,7 +15,7 @@ import {
 	saveReceivable,
 } from "@/lib/store";
 
-function formatShortDate(dayKey) {
+function formatShortDate(dayKey: string) {
 	if (!dayKey) return "Sem data";
 	const [year, month, day] = String(dayKey).split("-");
 	return `${day}/${month}/${year}`;
@@ -41,7 +41,7 @@ const emptyForm = {
 	barbeiro_id: "",
 };
 
-function Sheet({ eyebrow, title, onClose, children }) {
+function Sheet({ eyebrow, title, onClose, children }: any) {
 	return (
 		<BaseModal eyebrow={eyebrow} title={title} onClose={onClose} variant="bottom-sheet">
 			{children}
@@ -49,7 +49,7 @@ function Sheet({ eyebrow, title, onClose, children }) {
 	);
 }
 
-function Field({ label, children }) {
+function Field({ label, children }: any) {
 	return (
 		<label className="block">
 			<span className="mb-1 block font-mono-ui text-[10px] text-foreground-faint">
@@ -63,20 +63,27 @@ function Field({ label, children }) {
 const inputClass =
 	"w-full rounded-md border border-border bg-secondary px-3 py-3 text-sm text-foreground outline-none disabled:opacity-60";
 
-export function ReceivablesPanel({ status, startDate, endDate, onChanged }) {
+interface ReceivablesPanelProps {
+	status: string;
+	startDate?: string;
+	endDate?: string;
+	onChanged?: () => void;
+}
+
+export function ReceivablesPanel({ status, startDate, endDate, onChanged }: ReceivablesPanelProps) {
 	const { user } = useAuth();
 	const isAdmin = user?.role === "admin";
 	const [search, setSearch] = useState("");
-	const [rows, setRows] = useState([]);
-	const [barbers, setBarbers] = useState(getCachedBarbers() || []);
-	const [paymentMethods, setPaymentMethods] = useState(
+	const [rows, setRows] = useState<any[]>([]);
+	const [barbers, setBarbers] = useState<any[]>(getCachedBarbers() || []);
+	const [paymentMethods, setPaymentMethods] = useState<any[]>(
 		getCachedPaymentMethods() || [],
 	);
 	const [isLoading, setIsLoading] = useState(true);
 	const [isSaving, setIsSaving] = useState(false);
 	const [errorMessage, setErrorMessage] = useState("");
-	const [editing, setEditing] = useState(null);
-	const [receiving, setReceiving] = useState(null);
+	const [editing, setEditing] = useState<any>(null);
+	const [receiving, setReceiving] = useState<any>(null);
 	const [form, setForm] = useState(emptyForm);
 	const [paymentMethodId, setPaymentMethodId] = useState("");
 	const [paymentDate, setPaymentDate] = useState(todayKey());
@@ -103,7 +110,7 @@ export function ReceivablesPanel({ status, startDate, endDate, onChanged }) {
 			setRows(receivableRows);
 			setPaymentMethods(methods);
 			if (isAdmin) setBarbers(barberRows);
-		} catch (error) {
+		} catch (error: any) {
 			setErrorMessage(error.message || "Falha ao carregar cobrancas.");
 		} finally {
 			setIsLoading(false);
@@ -126,7 +133,7 @@ export function ReceivablesPanel({ status, startDate, endDate, onChanged }) {
 		});
 	};
 
-	const openEdit = (row) => {
+	const openEdit = (row: any) => {
 		setEditing(row);
 		setForm({
 			client_name: row.client_name,
@@ -140,7 +147,7 @@ export function ReceivablesPanel({ status, startDate, endDate, onChanged }) {
 		});
 	};
 
-	const handleSave = async (event) => {
+	const handleSave = async (event: React.FormEvent) => {
 		event.preventDefault();
 		if (isSaving) return;
 		setIsSaving(true);
@@ -161,14 +168,14 @@ export function ReceivablesPanel({ status, startDate, endDate, onChanged }) {
 			setEditing(null);
 			await reload();
 			onChanged?.();
-		} catch (error) {
+		} catch (error: any) {
 			setErrorMessage(error.message || "Falha ao salvar cobranca.");
 		} finally {
 			setIsSaving(false);
 		}
 	};
 
-	const handleReceive = async (event) => {
+	const handleReceive = async (event: React.FormEvent) => {
 		event.preventDefault();
 		if (!receiving || !paymentMethodId || isSaving) return;
 		setIsSaving(true);
@@ -182,21 +189,21 @@ export function ReceivablesPanel({ status, startDate, endDate, onChanged }) {
 			setPaymentMethodId("");
 			await reload();
 			onChanged?.();
-		} catch (error) {
+		} catch (error: any) {
 			setErrorMessage(error.message || "Falha ao receber cobranca.");
 		} finally {
 			setIsSaving(false);
 		}
 	};
 
-	const handleCancel = async (row) => {
+	const handleCancel = async (row: any) => {
 		if (!window.confirm(`Cancelar a cobranca de ${row.client_name}?`)) return;
 		setIsSaving(true);
 		try {
 			await cancelReceivable(row.id);
 			await reload();
 			onChanged?.();
-		} catch (error) {
+		} catch (error: any) {
 			setErrorMessage(error.message || "Falha ao cancelar cobranca.");
 		} finally {
 			setIsSaving(false);
