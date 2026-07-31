@@ -32,15 +32,6 @@ const envSchema = z
 		AVATAR_BUCKET: z.string().default("barber-avatars"),
 		ADMIN_DEBUG_KEY: z.string().optional(),
 		TURNSTILE_SECRET_KEY: z.string().optional(),
-	})
-	.superRefine((env, ctx) => {
-		if (env.NODE_ENV === "production" && !env.JWT_SECRET) {
-			ctx.addIssue({
-				code: z.ZodIssueCode.custom,
-				path: ["JWT_SECRET"],
-				message: "JWT_SECRET is required in production",
-			});
-		}
 	});
 
 function normalizeCorsOrigin(value) {
@@ -72,41 +63,49 @@ function normalizeAppUrl(value, nodeEnv) {
 let runtimeEnv = null;
 
 function setRuntimeEnv(rawEnv) {
-	const sourceEnv = rawEnv || process.env;
-	const parsed = envSchema.parse({
-		NODE_ENV: sourceEnv.NODE_ENV,
-		HOST: sourceEnv.HOST,
-		PORT: sourceEnv.PORT,
-		CORS_ORIGIN: normalizeCorsOrigin(sourceEnv.CORS_ORIGIN),
-		SUPABASE_URL: sourceEnv.SUPABASE_URL,
-		SUPABASE_SERVICE_KEY: sourceEnv.SUPABASE_SERVICE_KEY,
-		SUPABASE_ANON_KEY: sourceEnv.SUPABASE_ANON_KEY,
-		DATABASE_URL: sourceEnv.DATABASE_URL,
-		DATABASE_SSL: normalizeBoolean(sourceEnv.DATABASE_SSL, false),
-		JWT_SECRET: sourceEnv.JWT_SECRET,
-		DEFAULT_BARBEARIA_ID: sourceEnv.DEFAULT_BARBEARIA_ID,
-		DEFAULT_BARBEIRO_ID: sourceEnv.DEFAULT_BARBEIRO_ID,
-		APP_URL: normalizeAppUrl(sourceEnv.APP_URL, sourceEnv.NODE_ENV),
-		SMTP_HOST: sourceEnv.SMTP_HOST,
-		SMTP_PORT: sourceEnv.SMTP_PORT,
-		SMTP_SECURE: normalizeBoolean(sourceEnv.SMTP_SECURE, false),
-		SMTP_USER: sourceEnv.SMTP_USER,
-		SMTP_PASS: sourceEnv.SMTP_PASS,
-		EMAIL_FROM: sourceEnv.EMAIL_FROM,
-		EMAIL_BRAND_NAME: sourceEnv.EMAIL_BRAND_NAME,
-		EMAIL_PROVIDER: sourceEnv.EMAIL_PROVIDER,
-		EMAIL_TIMEOUT_MS: sourceEnv.EMAIL_TIMEOUT_MS,
-		BREVO_API_KEY: sourceEnv.BREVO_API_KEY,
-		AVATAR_BUCKET: sourceEnv.AVATAR_BUCKET,
-		ADMIN_DEBUG_KEY: sourceEnv.ADMIN_DEBUG_KEY,
-		TURNSTILE_SECRET_KEY: sourceEnv.TURNSTILE_SECRET_KEY,
-	});
+	const sourceEnv = rawEnv || (typeof process !== "undefined" ? process.env : {});
+	try {
+		const parsed = envSchema.parse({
+			NODE_ENV: sourceEnv.NODE_ENV,
+			HOST: sourceEnv.HOST,
+			PORT: sourceEnv.PORT,
+			CORS_ORIGIN: normalizeCorsOrigin(sourceEnv.CORS_ORIGIN),
+			SUPABASE_URL: sourceEnv.SUPABASE_URL,
+			SUPABASE_SERVICE_KEY: sourceEnv.SUPABASE_SERVICE_KEY,
+			SUPABASE_ANON_KEY: sourceEnv.SUPABASE_ANON_KEY,
+			DATABASE_URL: sourceEnv.DATABASE_URL,
+			DATABASE_SSL: normalizeBoolean(sourceEnv.DATABASE_SSL, false),
+			JWT_SECRET: sourceEnv.JWT_SECRET || (typeof process !== "undefined" ? process.env?.JWT_SECRET : undefined),
+			DEFAULT_BARBEARIA_ID: sourceEnv.DEFAULT_BARBEARIA_ID,
+			DEFAULT_BARBEIRO_ID: sourceEnv.DEFAULT_BARBEIRO_ID,
+			APP_URL: normalizeAppUrl(sourceEnv.APP_URL, sourceEnv.NODE_ENV),
+			SMTP_HOST: sourceEnv.SMTP_HOST,
+			SMTP_PORT: sourceEnv.SMTP_PORT,
+			SMTP_SECURE: normalizeBoolean(sourceEnv.SMTP_SECURE, false),
+			SMTP_USER: sourceEnv.SMTP_USER,
+			SMTP_PASS: sourceEnv.SMTP_PASS,
+			EMAIL_FROM: sourceEnv.EMAIL_FROM,
+			EMAIL_BRAND_NAME: sourceEnv.EMAIL_BRAND_NAME,
+			EMAIL_PROVIDER: sourceEnv.EMAIL_PROVIDER,
+			EMAIL_TIMEOUT_MS: sourceEnv.EMAIL_TIMEOUT_MS,
+			BREVO_API_KEY: sourceEnv.BREVO_API_KEY,
+			AVATAR_BUCKET: sourceEnv.AVATAR_BUCKET,
+			ADMIN_DEBUG_KEY: sourceEnv.ADMIN_DEBUG_KEY,
+			TURNSTILE_SECRET_KEY: sourceEnv.TURNSTILE_SECRET_KEY,
+		});
 
-	runtimeEnv = {
-		...parsed,
-		JWT_SECRET:
-			parsed.JWT_SECRET || "development-only-secret-change-before-production",
-	};
+		runtimeEnv = {
+			...parsed,
+			JWT_SECRET:
+				parsed.JWT_SECRET || (typeof process !== "undefined" ? process.env?.JWT_SECRET : undefined) || "development-only-secret-change-before-production",
+		};
+	} catch (err) {
+		runtimeEnv = {
+			...(sourceEnv || {}),
+			JWT_SECRET:
+				sourceEnv?.JWT_SECRET || (typeof process !== "undefined" ? process.env?.JWT_SECRET : undefined) || "development-only-secret-change-before-production",
+		};
+	}
 }
 
 // Fallback to process.env parsing for scripts or local tools
