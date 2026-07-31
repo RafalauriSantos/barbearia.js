@@ -102,6 +102,12 @@ export function adaptController(controllerFn) {
           })),
         }, 400);
       }
+      if (err && err.code === "PGRST116") {
+        return c.json({ error: "Resource not found", code: "NOT_FOUND" }, 404);
+      }
+      if (err && err.code === "23505") {
+        return c.json({ error: "Registro duplicado.", code: "DUPLICATE_ENTRY" }, 409);
+      }
       console.error("adaptController Error:", err);
       return c.json(
         { error: err.message || "Internal Server Error", code: "INTERNAL_ERROR" },
@@ -127,6 +133,12 @@ router.onError((err, c) => {
         message: issue.message,
       })),
     }, 400);
+  }
+  if (err && err.code === "PGRST116") {
+    return c.json({ error: "Resource not found", code: "NOT_FOUND" }, 404);
+  }
+  if (err && err.code === "23505") {
+    return c.json({ error: "Registro duplicado.", code: "DUPLICATE_ENTRY" }, 409);
   }
   console.error("Migrated Route Error:", err);
   return c.json({ error: "Internal Server Error", code: "INTERNAL_ERROR" }, 500);
