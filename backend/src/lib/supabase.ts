@@ -2,19 +2,24 @@ const { createClient } = require("@supabase/supabase-js");
 const { env } = require("../config/env");
 
 let client;
+let lastUrl = "";
+let lastKey = "";
 
 function getSupabaseClient() {
-	if (client) return client;
-
+	const url =
+		env.SUPABASE_URL ||
+		(typeof process !== "undefined" && process.env?.SUPABASE_URL) ||
+		"https://zniehugopmvoutxnpgox.supabase.co";
 	const key =
 		env.SUPABASE_SERVICE_KEY ||
 		env.SUPABASE_ANON_KEY ||
 		(typeof process !== "undefined" && (process.env?.SUPABASE_SERVICE_KEY || process.env?.SUPABASE_ANON_KEY)) ||
 		"anon-fallback-key";
-	const url =
-		env.SUPABASE_URL ||
-		(typeof process !== "undefined" && process.env?.SUPABASE_URL) ||
-		"https://zniehugopmvoutxnpgox.supabase.co";
+
+	// Recreate client if credentials changed (e.g. setRuntimeEnv loaded real secrets)
+	if (client && url === lastUrl && key === lastKey) {
+		return client;
+	}
 
 	if (!url || !key) {
 		throw new Error(
@@ -25,6 +30,8 @@ function getSupabaseClient() {
 	client = createClient(url, key, {
 		auth: { persistSession: false },
 	});
+	lastUrl = url;
+	lastKey = key;
 
 	return client;
 }
@@ -47,3 +54,4 @@ const supabaseProxy = new Proxy(localMethods, {
 
 if (typeof module !== "undefined" && module.exports) { module.exports = supabaseProxy; }
 export default supabaseProxy;
+
