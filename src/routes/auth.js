@@ -117,7 +117,7 @@ router.post('/login', rateLimitMiddleware, async (c) => {
     const context = await resolveUserContext(user, supabase, c.env);
 
     // Sign Tokens
-    const secret = c.env.JWT_SECRET;
+    const secret = c.env?.JWT_SECRET || (typeof process !== "undefined" && process.env?.JWT_SECRET) || "development-only-secret-change-before-production";
     
     const nowInSecs = Math.floor(Date.now() / 1000);
     const accessToken = await sign({
@@ -197,7 +197,7 @@ router.post('/refresh', rateLimitMiddleware, async (c) => {
   }
 
   try {
-    const secret = c.env.JWT_SECRET;
+    const secret = c.env?.JWT_SECRET || (typeof process !== "undefined" && process.env?.JWT_SECRET) || "development-only-secret-change-before-production";
     const decoded = await verify(refreshToken, secret, 'HS256');
 
     if (decoded.type !== "refresh") {

@@ -8,12 +8,7 @@ export const authMiddleware = async (c, next) => {
   }
   
   const token = match[1];
-  const secret = c.env.JWT_SECRET;
-  
-  if (!secret) {
-    console.error('JWT_SECRET is missing from environment bindings.');
-    return c.json({ error: 'Internal Server Error' }, 500);
-  }
+  const secret = c.env?.JWT_SECRET || (typeof process !== "undefined" && process.env?.JWT_SECRET) || "development-only-secret-change-before-production";
 
   try {
     const payload = await verify(token, secret, 'HS256');
