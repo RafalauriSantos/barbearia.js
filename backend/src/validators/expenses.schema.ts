@@ -25,7 +25,7 @@ export function validateListExpensesQuery(query: unknown) {
 	return listQuerySchema.parse(query || {});
 }
 
-module.exports = {
+export default {
 	validateCreateExpense,
 	validateUpdateExpense,
 	validateListExpensesQuery,

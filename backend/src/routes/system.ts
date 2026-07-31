@@ -13,7 +13,7 @@ const authDebug = async (request: any, reply: any) => {
 	}
 };
 
-module.exports = async function (fastify: any) {
+export default async function (fastify: any) {
 	fastify.delete("/reset", { preHandler: authDebug }, controller.reset);
 	fastify.post("/test-email", { preHandler: authDebug }, controller.sendTestEmail);
 };

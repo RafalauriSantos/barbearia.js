@@ -179,7 +179,7 @@ export async function createPurchase(payload: Record<string, any>, { barbeariaId
 	return toApi(payable);
 }
 
-module.exports = {
+export default {
 	findAll,
 	findById,
 	syncFromAppointment,

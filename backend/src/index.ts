@@ -406,7 +406,7 @@ app.onError((err: any, c: any) => {
 	);
 });
 
-module.exports = typeof withSentry === "function"
+export default typeof withSentry === "function"
 	? withSentry(
 			(env: any) => ({
 				dsn: env?.SENTRY_DSN || process.env.SENTRY_DSN,

@@ -33,7 +33,7 @@ const localMethods = {
 	},
 };
 
-module.exports = new Proxy(localMethods, {
+export default new Proxy(localMethods, {
 	get(target, property) {
 		if (property in target) return target[property];
 		return getSupabaseClient()[property];

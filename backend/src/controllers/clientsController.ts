@@ -109,7 +109,7 @@ export async function removeWaitlist(request: any, reply: any) {
 	return reply.code(204).send();
 }
 
-module.exports = {
+export default {
 	listFixed,
 	createFixed,
 	updateFixed,

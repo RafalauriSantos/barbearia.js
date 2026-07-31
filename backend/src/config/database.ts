@@ -31,4 +31,4 @@ function getDatabaseConfig() {
 	};
 }
 
-module.exports = { getDatabaseConfig };
+export default { getDatabaseConfig };

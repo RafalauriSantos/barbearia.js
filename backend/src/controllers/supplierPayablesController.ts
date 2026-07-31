@@ -41,7 +41,7 @@ export async function createPurchase(request: any, reply: any) {
 	);
 }
 
-module.exports = {
+export default {
 	list,
 	pay,
 	createPurchase,

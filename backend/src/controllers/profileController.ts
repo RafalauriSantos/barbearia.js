@@ -19,7 +19,7 @@ export async function update(request: any, reply: any) {
 	return reply.send(profile);
 }
 
-module.exports = {
+export default {
 	get,
 	update,
 };

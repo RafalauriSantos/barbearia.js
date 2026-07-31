@@ -141,7 +141,7 @@ export async function upsert(payload: Record<string, any>, user: any) {
 	return toProfile({ shop, barber });
 }
 
-module.exports = {
+export default {
 	get,
 	upsert,
 };

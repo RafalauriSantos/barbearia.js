@@ -31,4 +31,4 @@ export async function auth(request: any, reply: any) {
 	}
 }
 
-module.exports = auth;
+export default auth;

@@ -80,7 +80,7 @@ export async function findRecentCodesForUser(userId: string, windowMs: number) {
 	return data || [];
 }
 
-module.exports = {
+export default {
 	invalidateForUser,
 	create,
 	findValidByUserAndHash,

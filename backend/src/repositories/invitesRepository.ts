@@ -80,7 +80,7 @@ export async function markAccepted(id: string) {
 	return toApi(data);
 }
 
-module.exports = {
+export default {
 	revokePendingForBarber,
 	create,
 	findByTokenHash,

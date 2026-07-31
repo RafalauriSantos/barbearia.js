@@ -244,7 +244,7 @@ export function toFinancialRow(row: any) {
 	};
 }
 
-module.exports = {
+export default {
 	findAll,
 	findById,
 	createManual,

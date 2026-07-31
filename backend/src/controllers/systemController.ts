@@ -48,7 +48,7 @@ export async function sendTestEmail(request: any, reply: any) {
 	});
 }
 
-module.exports = {
+export default {
 	reset,
 	sendTestEmail,
 };

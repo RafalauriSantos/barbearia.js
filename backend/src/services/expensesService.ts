@@ -85,7 +85,7 @@ export async function deleteExpense(id: string, user: any) {
 	return true;
 }
 
-module.exports = {
+export default {
 	listExpenses,
 	createExpense,
 	updateExpense,

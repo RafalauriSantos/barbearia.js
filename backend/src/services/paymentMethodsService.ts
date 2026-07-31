@@ -55,7 +55,7 @@ export async function updatePaymentMethod(id: string, updates: Record<string, an
 	}
 }
 
-module.exports = {
+export default {
 	listPaymentMethods,
 	updatePaymentMethod,
 };

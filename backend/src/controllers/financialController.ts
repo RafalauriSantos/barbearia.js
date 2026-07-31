@@ -15,6 +15,6 @@ export async function summary(request: any, reply: any) {
 	return reply.send(data);
 }
 
-module.exports = {
+export default {
 	summary,
 };

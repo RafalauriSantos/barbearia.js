@@ -14,4 +14,4 @@ export function validateAcceptInvite(body: unknown) {
 	};
 }
 
-module.exports = { validateAcceptInvite };
+export default { validateAcceptInvite };

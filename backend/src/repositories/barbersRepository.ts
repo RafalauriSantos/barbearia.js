@@ -196,7 +196,7 @@ export async function deletePendingInvites(barberId: string, barbeariaId?: strin
 	if (error) throw error;
 }
 
-module.exports = {
+export default {
 	findAllByBarbearia,
 	findByIdInBarbearia,
 	create,

@@ -465,7 +465,7 @@ export async function deleteAppointment(id: string, user: any) {
 	return true;
 }
 
-module.exports = {
+export default {
 	listAppointments,
 	createAppointment,
 	updateAppointment,

@@ -93,7 +93,7 @@ export async function remove(id: string, { barbeariaId }: { barbeariaId: string 
 	return true;
 }
 
-module.exports = {
+export default {
 	findAll,
 	findById,
 	create,

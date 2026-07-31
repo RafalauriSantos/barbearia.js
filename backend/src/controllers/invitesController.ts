@@ -27,7 +27,7 @@ export async function accept(request: any, reply: any) {
 	});
 }
 
-module.exports = {
+export default {
 	get,
 	accept,
 };

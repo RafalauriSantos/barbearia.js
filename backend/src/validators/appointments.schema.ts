@@ -102,7 +102,7 @@ export function validateListAppointmentsQuery(query: unknown) {
 	return listQuerySchema.parse(query);
 }
 
-module.exports = {
+export default {
 	validateCreateAppointment,
 	validateUpdateAppointment,
 	validateListAppointmentsQuery,

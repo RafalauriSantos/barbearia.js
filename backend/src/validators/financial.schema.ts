@@ -25,4 +25,4 @@ export function validateFinancialSummaryQuery(query: unknown) {
 	return financialSummaryQuerySchema.parse(query || {});
 }
 
-module.exports = { validateFinancialSummaryQuery };
+export default { validateFinancialSummaryQuery };

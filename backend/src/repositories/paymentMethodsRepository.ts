@@ -103,7 +103,7 @@ export async function update(id: string, updates: Record<string, any>, { barbear
 	return toApi(data);
 }
 
-module.exports = {
+export default {
 	findAll,
 	findById,
 	update,

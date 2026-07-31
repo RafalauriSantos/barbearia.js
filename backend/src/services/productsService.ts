@@ -76,7 +76,7 @@ export async function deleteProduct(id: string, user: any) {
 	return true;
 }
 
-module.exports = {
+export default {
 	listProducts,
 	createProduct,
 	updateProduct,

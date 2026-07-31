@@ -392,7 +392,7 @@ export async function removeWaitlistEntry(id: string, { barbeariaId, barbeiroId 
 	return true;
 }
 
-module.exports = {
+export default {
 	findFixedClients,
 	findFixedClientById,
 	createFixedClient,

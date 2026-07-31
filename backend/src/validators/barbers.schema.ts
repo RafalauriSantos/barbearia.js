@@ -52,7 +52,7 @@ export function validateInviteBarber(body: unknown) {
 	return inviteBarberSchema.parse(body);
 }
 
-module.exports = {
+export default {
 	validateCreateBarber,
 	validateUpdateBarber,
 	validateInviteBarber,

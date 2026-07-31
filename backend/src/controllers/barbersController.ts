@@ -49,7 +49,7 @@ export async function destroy(request: any, reply: any) {
 	return reply.send(result);
 }
 
-module.exports = {
+export default {
 	list,
 	create,
 	update,

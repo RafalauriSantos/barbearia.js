@@ -75,7 +75,7 @@ export async function findPaidManualReceivables(filters: any): Promise<any[]> {
 	return rows.map(ReceivablesRepository.toFinancialRow);
 }
 
-module.exports = {
+export default {
 	findPaidAppointments,
 	findPaidManualReceivables,
 };

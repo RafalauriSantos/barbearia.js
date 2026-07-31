@@ -1,7 +1,7 @@
 const supabase = require("../lib/supabase");
 const { env } = require("../config/env");
 
-module.exports = async function (fastify: any, opts: any) {
+export default async function (fastify: any, opts: any) {
 	// Health & Index
 	fastify.get("/", async () => ({
 		ok: true,
