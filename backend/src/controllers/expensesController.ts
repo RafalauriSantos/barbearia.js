@@ -41,10 +41,15 @@ export async function remove(request: any, reply: any) {
 	return reply.code(204).send();
 }
 
-module.exports = {
+if (typeof module !== "undefined" && module.exports) { module.exports = {
+	list,
+	create,
+	update,
+	remove,
+}; }
+export default {
 	list,
 	create,
 	update,
 	remove,
 };
-export default module.exports;

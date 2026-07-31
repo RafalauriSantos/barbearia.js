@@ -179,11 +179,17 @@ export async function createPurchase(payload: Record<string, any>, { barbeariaId
 	return toApi(payable);
 }
 
-module.exports = {
+if (typeof module !== "undefined" && module.exports) { module.exports = {
+	findAll,
+	findById,
+	syncFromAppointment,
+	pay,
+	createPurchase,
+}; }
+export default {
 	findAll,
 	findById,
 	syncFromAppointment,
 	pay,
 	createPurchase,
 };
-export default module.exports;

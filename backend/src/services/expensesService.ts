@@ -85,10 +85,15 @@ export async function deleteExpense(id: string, user: any) {
 	return true;
 }
 
-module.exports = {
+if (typeof module !== "undefined" && module.exports) { module.exports = {
+	listExpenses,
+	createExpense,
+	updateExpense,
+	deleteExpense,
+}; }
+export default {
 	listExpenses,
 	createExpense,
 	updateExpense,
 	deleteExpense,
 };
-export default module.exports;

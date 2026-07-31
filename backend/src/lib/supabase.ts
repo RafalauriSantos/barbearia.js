@@ -40,5 +40,5 @@ const supabaseProxy = new Proxy(localMethods, {
 	},
 });
 
-module.exports = supabaseProxy;
+if (typeof module !== "undefined" && module.exports) { module.exports = supabaseProxy; }
 export default supabaseProxy;

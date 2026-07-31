@@ -357,11 +357,17 @@ export async function sendBarberInviteEmail({
 	return sendEmail(message, { label: "[barber-invite]", value: inviteUrl }, runtimeEnv);
 }
 
-module.exports = {
+if (typeof module !== "undefined" && module.exports) { module.exports = {
+	sendCustomEmail,
+	sendVerificationCodeEmail,
+	sendPasswordResetCodeEmail,
+	sendVerificationEmail,
+	sendBarberInviteEmail,
+}; }
+export default {
 	sendCustomEmail,
 	sendVerificationCodeEmail,
 	sendPasswordResetCodeEmail,
 	sendVerificationEmail,
 	sendBarberInviteEmail,
 };
-export default module.exports;

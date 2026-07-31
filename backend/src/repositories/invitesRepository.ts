@@ -80,10 +80,15 @@ export async function markAccepted(id: string) {
 	return toApi(data);
 }
 
-module.exports = {
+if (typeof module !== "undefined" && module.exports) { module.exports = {
+	revokePendingForBarber,
+	create,
+	findByTokenHash,
+	markAccepted,
+}; }
+export default {
 	revokePendingForBarber,
 	create,
 	findByTokenHash,
 	markAccepted,
 };
-export default module.exports;

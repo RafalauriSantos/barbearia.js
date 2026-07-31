@@ -465,10 +465,15 @@ export async function deleteAppointment(id: string, user: any) {
 	return true;
 }
 
-module.exports = {
+if (typeof module !== "undefined" && module.exports) { module.exports = {
+	listAppointments,
+	createAppointment,
+	updateAppointment,
+	deleteAppointment,
+}; }
+export default {
 	listAppointments,
 	createAppointment,
 	updateAppointment,
 	deleteAppointment,
 };
-export default module.exports;

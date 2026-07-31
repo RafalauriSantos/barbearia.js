@@ -15,7 +15,9 @@ export async function summary(request: any, reply: any) {
 	return reply.send(data);
 }
 
-module.exports = {
+if (typeof module !== "undefined" && module.exports) { module.exports = {
+	summary,
+}; }
+export default {
 	summary,
 };
-export default module.exports;

@@ -52,9 +52,13 @@ export function validateInviteBarber(body: unknown) {
 	return inviteBarberSchema.parse(body);
 }
 
-module.exports = {
+if (typeof module !== "undefined" && module.exports) { module.exports = {
+	validateCreateBarber,
+	validateUpdateBarber,
+	validateInviteBarber,
+}; }
+export default {
 	validateCreateBarber,
 	validateUpdateBarber,
 	validateInviteBarber,
 };
-export default module.exports;

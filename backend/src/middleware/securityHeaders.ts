@@ -36,7 +36,9 @@ export function getSecurityHeaders(isProduction = false): Record<string, string>
 	return headers;
 }
 
-module.exports = {
+if (typeof module !== "undefined" && module.exports) { module.exports = {
+	getSecurityHeaders,
+}; }
+export default {
 	getSecurityHeaders,
 };
-export default module.exports;

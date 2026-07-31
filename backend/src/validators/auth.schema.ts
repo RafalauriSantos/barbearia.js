@@ -69,7 +69,16 @@ export function validateResetPassword(body: unknown) {
 	return resetPasswordSchema.parse(body);
 }
 
-module.exports = {
+if (typeof module !== "undefined" && module.exports) { module.exports = {
+	validateRegister,
+	validateLogin,
+	validateVerifyEmail,
+	validateVerifyCode,
+	validateResendCode,
+	validateForgotPassword,
+	validateResetPassword,
+}; }
+export default {
 	validateRegister,
 	validateLogin,
 	validateVerifyEmail,
@@ -78,4 +87,3 @@ module.exports = {
 	validateForgotPassword,
 	validateResetPassword,
 };
-export default module.exports;

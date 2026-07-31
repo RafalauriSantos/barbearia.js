@@ -31,5 +31,5 @@ function getDatabaseConfig() {
 	};
 }
 
-module.exports = { getDatabaseConfig };
-export default module.exports;
+if (typeof module !== "undefined" && module.exports) { module.exports = { getDatabaseConfig }; }
+export default { getDatabaseConfig };

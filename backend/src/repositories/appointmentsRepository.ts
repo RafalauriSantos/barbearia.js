@@ -335,7 +335,16 @@ export async function remove(id: string, { barbeariaId }: { barbeariaId: string 
 	return true;
 }
 
-module.exports = {
+if (typeof module !== "undefined" && module.exports) { module.exports = {
+	findAll,
+	findById,
+	findConflict,
+	create,
+	update,
+	remove,
+	_private: { normalizeItemList },
+}; }
+export default {
 	findAll,
 	findById,
 	findConflict,
@@ -344,4 +353,3 @@ module.exports = {
 	remove,
 	_private: { normalizeItemList },
 };
-export default module.exports;

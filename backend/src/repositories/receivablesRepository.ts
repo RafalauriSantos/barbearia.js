@@ -244,7 +244,17 @@ export function toFinancialRow(row: any) {
 	};
 }
 
-module.exports = {
+if (typeof module !== "undefined" && module.exports) { module.exports = {
+	findAll,
+	findById,
+	createManual,
+	update,
+	upsertFromAppointment,
+	updateByAppointment,
+	findPaidManual,
+	toFinancialRow,
+}; }
+export default {
 	findAll,
 	findById,
 	createManual,
@@ -254,4 +264,3 @@ module.exports = {
 	findPaidManual,
 	toFinancialRow,
 };
-export default module.exports;

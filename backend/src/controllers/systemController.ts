@@ -48,8 +48,11 @@ export async function sendTestEmail(request: any, reply: any) {
 	});
 }
 
-module.exports = {
+if (typeof module !== "undefined" && module.exports) { module.exports = {
+	reset,
+	sendTestEmail,
+}; }
+export default {
 	reset,
 	sendTestEmail,
 };
-export default module.exports;

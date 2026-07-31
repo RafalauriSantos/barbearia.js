@@ -76,10 +76,15 @@ export async function deleteProduct(id: string, user: any) {
 	return true;
 }
 
-module.exports = {
+if (typeof module !== "undefined" && module.exports) { module.exports = {
+	listProducts,
+	createProduct,
+	updateProduct,
+	deleteProduct,
+}; }
+export default {
 	listProducts,
 	createProduct,
 	updateProduct,
 	deleteProduct,
 };
-export default module.exports;

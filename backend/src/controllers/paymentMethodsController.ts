@@ -25,8 +25,11 @@ export async function update(request: any, reply: any) {
 	return reply.send(updated);
 }
 
-module.exports = {
+if (typeof module !== "undefined" && module.exports) { module.exports = {
+	list,
+	update,
+}; }
+export default {
 	list,
 	update,
 };
-export default module.exports;

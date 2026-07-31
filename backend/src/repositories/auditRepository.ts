@@ -104,9 +104,13 @@ export async function findAllByTenant(tenantId: string, { limit = 100 } = {}) {
 	return data || [];
 }
 
-module.exports = {
+if (typeof module !== "undefined" && module.exports) { module.exports = {
+	create,
+	findAllByTenant,
+	sanitizeValue,
+}; }
+export default {
 	create,
 	findAllByTenant,
 	sanitizeValue,
 };
-export default module.exports;

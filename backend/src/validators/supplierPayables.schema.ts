@@ -22,9 +22,13 @@ export const validateCreatePurchase = (body: unknown) =>
 		data_compra: dateSchema.optional(),
 	}).parse(body || {});
 
-module.exports = {
+if (typeof module !== "undefined" && module.exports) { module.exports = {
+	validateSupplierPayablesQuery,
+	validatePaySupplierPayable,
+	validateCreatePurchase,
+}; }
+export default {
 	validateSupplierPayablesQuery,
 	validatePaySupplierPayable,
 	validateCreatePurchase,
 };
-export default module.exports;

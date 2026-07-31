@@ -49,11 +49,17 @@ export async function destroy(request: any, reply: any) {
 	return reply.send(result);
 }
 
-module.exports = {
+if (typeof module !== "undefined" && module.exports) { module.exports = {
+	list,
+	create,
+	update,
+	invite,
+	destroy,
+}; }
+export default {
 	list,
 	create,
 	update,
 	invite,
 	destroy,
 };
-export default module.exports;

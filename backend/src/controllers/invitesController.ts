@@ -27,8 +27,11 @@ export async function accept(request: any, reply: any) {
 	});
 }
 
-module.exports = {
+if (typeof module !== "undefined" && module.exports) { module.exports = {
+	get,
+	accept,
+}; }
+export default {
 	get,
 	accept,
 };
-export default module.exports;

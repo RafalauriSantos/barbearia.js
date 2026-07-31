@@ -80,7 +80,16 @@ export async function findRecentCodesForUser(userId: string, windowMs: number) {
 	return data || [];
 }
 
-module.exports = {
+if (typeof module !== "undefined" && module.exports) { module.exports = {
+	invalidateForUser,
+	create,
+	findValidByUserAndHash,
+	markUsed,
+	findActiveForUser,
+	incrementAttempts,
+	findRecentCodesForUser,
+}; }
+export default {
 	invalidateForUser,
 	create,
 	findValidByUserAndHash,
@@ -89,4 +98,3 @@ module.exports = {
 	incrementAttempts,
 	findRecentCodesForUser,
 };
-export default module.exports;

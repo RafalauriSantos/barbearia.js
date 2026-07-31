@@ -392,7 +392,23 @@ export async function removeWaitlistEntry(id: string, { barbeariaId, barbeiroId 
 	return true;
 }
 
-module.exports = {
+if (typeof module !== "undefined" && module.exports) { module.exports = {
+	findFixedClients,
+	findFixedClientById,
+	createFixedClient,
+	updateFixedClient,
+	removeFixedClient,
+	createClientCut,
+	findClientCutById,
+	updateClientCut,
+	removeClientCut,
+	findWaitlist,
+	createWaitlistEntry,
+	findWaitlistEntryById,
+	updateWaitlistEntry,
+	removeWaitlistEntry,
+}; }
+export default {
 	findFixedClients,
 	findFixedClientById,
 	createFixedClient,
@@ -408,4 +424,3 @@ module.exports = {
 	updateWaitlistEntry,
 	removeWaitlistEntry,
 };
-export default module.exports;

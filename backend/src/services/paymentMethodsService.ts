@@ -55,8 +55,11 @@ export async function updatePaymentMethod(id: string, updates: Record<string, an
 	}
 }
 
-module.exports = {
+if (typeof module !== "undefined" && module.exports) { module.exports = {
+	listPaymentMethods,
+	updatePaymentMethod,
+}; }
+export default {
 	listPaymentMethods,
 	updatePaymentMethod,
 };
-export default module.exports;

@@ -31,5 +31,5 @@ export async function auth(request: any, reply: any) {
 	}
 }
 
-module.exports = auth;
+if (typeof module !== "undefined" && module.exports) { module.exports = auth; }
 export default auth;

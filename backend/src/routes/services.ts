@@ -12,5 +12,5 @@ async function routes (fastify: any, opts?: any) {
 export {};
 
 
-module.exports = routes;
+if (typeof module !== "undefined" && module.exports) { module.exports = routes; }
 export default routes;

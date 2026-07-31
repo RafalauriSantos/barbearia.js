@@ -93,11 +93,17 @@ export async function remove(id: string, { barbeariaId }: { barbeariaId: string 
 	return true;
 }
 
-module.exports = {
+if (typeof module !== "undefined" && module.exports) { module.exports = {
+	findAll,
+	findById,
+	create,
+	update,
+	remove,
+}; }
+export default {
 	findAll,
 	findById,
 	create,
 	update,
 	remove,
 };
-export default module.exports;

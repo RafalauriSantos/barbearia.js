@@ -17,8 +17,8 @@ export async function start() {
 	}
 }
 
-module.exports = { start };
-export default module.exports;
+if (typeof module !== "undefined" && module.exports) { module.exports = { start }; }
+export default { start };
 
 if (require.main === module) {
 	start();

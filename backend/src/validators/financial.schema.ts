@@ -25,5 +25,5 @@ export function validateFinancialSummaryQuery(query: unknown) {
 	return financialSummaryQuerySchema.parse(query || {});
 }
 
-module.exports = { validateFinancialSummaryQuery };
-export default module.exports;
+if (typeof module !== "undefined" && module.exports) { module.exports = { validateFinancialSummaryQuery }; }
+export default { validateFinancialSummaryQuery };

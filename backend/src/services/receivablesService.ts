@@ -191,11 +191,17 @@ export async function cancel(id: string, user: any) {
 	return ReceivablesRepository.update(id, { status: "cancelado" }, context);
 }
 
-module.exports = {
+if (typeof module !== "undefined" && module.exports) { module.exports = {
+	list,
+	create,
+	update,
+	receive,
+	cancel,
+}; }
+export default {
 	list,
 	create,
 	update,
 	receive,
 	cancel,
 };
-export default module.exports;

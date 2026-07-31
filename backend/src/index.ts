@@ -417,5 +417,5 @@ const exportApp = typeof withSentry === "function"
 	  )
 	: app;
 
-module.exports = exportApp;
+if (typeof module !== "undefined" && module.exports) { module.exports = exportApp; }
 export default exportApp;

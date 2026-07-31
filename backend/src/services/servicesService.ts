@@ -76,10 +76,15 @@ export async function deleteService(id: string, user: any) {
 	return true;
 }
 
-module.exports = {
+if (typeof module !== "undefined" && module.exports) { module.exports = {
+	listServices,
+	createService,
+	updateService,
+	deleteService,
+}; }
+export default {
 	listServices,
 	createService,
 	updateService,
 	deleteService,
 };
-export default module.exports;

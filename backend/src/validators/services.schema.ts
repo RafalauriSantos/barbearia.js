@@ -20,5 +20,5 @@ export function validateUpdateService(body: unknown) {
 	return parsed;
 }
 
-module.exports = { validateCreateService, validateUpdateService };
-export default module.exports;
+if (typeof module !== "undefined" && module.exports) { module.exports = { validateCreateService, validateUpdateService }; }
+export default { validateCreateService, validateUpdateService };

@@ -102,9 +102,13 @@ export function validateListAppointmentsQuery(query: unknown) {
 	return listQuerySchema.parse(query);
 }
 
-module.exports = {
+if (typeof module !== "undefined" && module.exports) { module.exports = {
+	validateCreateAppointment,
+	validateUpdateAppointment,
+	validateListAppointmentsQuery,
+}; }
+export default {
 	validateCreateAppointment,
 	validateUpdateAppointment,
 	validateListAppointmentsQuery,
 };
-export default module.exports;

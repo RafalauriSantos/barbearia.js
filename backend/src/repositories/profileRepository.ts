@@ -141,8 +141,11 @@ export async function upsert(payload: Record<string, any>, user: any) {
 	return toProfile({ shop, barber });
 }
 
-module.exports = {
+if (typeof module !== "undefined" && module.exports) { module.exports = {
+	get,
+	upsert,
+}; }
+export default {
 	get,
 	upsert,
 };
-export default module.exports;

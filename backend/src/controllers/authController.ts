@@ -242,7 +242,19 @@ export async function logout(request: any, reply: any) {
 	return reply.send({ ok: true });
 }
 
-module.exports = {
+if (typeof module !== "undefined" && module.exports) { module.exports = {
+	register,
+	login,
+	refresh,
+	me,
+	verifyEmail,
+	verifyEmailCode,
+	resendEmailCode,
+	forgotPassword,
+	resetPassword,
+	logout,
+}; }
+export default {
 	register,
 	login,
 	refresh,
@@ -254,4 +266,3 @@ module.exports = {
 	resetPassword,
 	logout,
 };
-export default module.exports;

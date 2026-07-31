@@ -20,5 +20,5 @@ export function validateUpdateProduct(body: unknown) {
 	return updateSchema.parse(body);
 }
 
-module.exports = { validateCreateProduct, validateUpdateProduct };
-export default module.exports;
+if (typeof module !== "undefined" && module.exports) { module.exports = { validateCreateProduct, validateUpdateProduct }; }
+export default { validateCreateProduct, validateUpdateProduct };

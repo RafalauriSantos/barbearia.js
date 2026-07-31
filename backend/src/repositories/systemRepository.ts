@@ -53,5 +53,5 @@ export async function reset(): Promise<boolean> {
 	return true;
 }
 
-module.exports = { reset };
-export default module.exports;
+if (typeof module !== "undefined" && module.exports) { module.exports = { reset }; }
+export default { reset };

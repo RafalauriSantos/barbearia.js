@@ -17,5 +17,5 @@ export function getDefaultBarbeiroId(): string | null {
 	return env.DEFAULT_BARBEIRO_ID || null;
 }
 
-module.exports = { getDefaultBarbeariaId, getDefaultBarbeiroId };
-export default module.exports;
+if (typeof module !== "undefined" && module.exports) { module.exports = { getDefaultBarbeariaId, getDefaultBarbeiroId }; }
+export default { getDefaultBarbeariaId, getDefaultBarbeiroId };

@@ -118,7 +118,15 @@ function resetRateLimitCounter() {
 	rateLimitCounter = 0;
 }
 
-module.exports = {
+if (typeof module !== "undefined" && module.exports) { module.exports = {
+	Sentry,
+	sanitizeSentryEvent,
+	maskSensitiveFields,
+	initSentry,
+	resetRateLimitCounter,
+	withSentry: Sentry.withSentry,
+}; }
+export default {
 	Sentry,
 	sanitizeSentryEvent,
 	maskSensitiveFields,
@@ -126,4 +134,3 @@ module.exports = {
 	resetRateLimitCounter,
 	withSentry: Sentry.withSentry,
 };
-export default module.exports;

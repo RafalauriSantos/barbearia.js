@@ -41,9 +41,13 @@ export async function createPurchase(request: any, reply: any) {
 	);
 }
 
-module.exports = {
+if (typeof module !== "undefined" && module.exports) { module.exports = {
+	list,
+	pay,
+	createPurchase,
+}; }
+export default {
 	list,
 	pay,
 	createPurchase,
 };
-export default module.exports;

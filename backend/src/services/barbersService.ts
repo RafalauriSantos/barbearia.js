@@ -140,10 +140,15 @@ export async function deleteBarber(id: string, user: any) {
 	}
 }
 
-module.exports = {
+if (typeof module !== "undefined" && module.exports) { module.exports = {
+	listBarbers,
+	createBarber,
+	updateBarber,
+	deleteBarber,
+}; }
+export default {
 	listBarbers,
 	createBarber,
 	updateBarber,
 	deleteBarber,
 };
-export default module.exports;

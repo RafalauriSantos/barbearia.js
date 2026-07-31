@@ -119,5 +119,5 @@ export async function buildApp() {
 	return app;
 }
 
-module.exports = { buildApp };
-export default module.exports;
+if (typeof module !== "undefined" && module.exports) { module.exports = { buildApp }; }
+export default { buildApp };

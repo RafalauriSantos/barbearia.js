@@ -38,9 +38,13 @@ export async function createPurchase(payload: Record<string, any>, user: any) {
 	});
 }
 
-module.exports = {
+if (typeof module !== "undefined" && module.exports) { module.exports = {
+	list,
+	pay,
+	createPurchase,
+}; }
+export default {
 	list,
 	pay,
 	createPurchase,
 };
-export default module.exports;

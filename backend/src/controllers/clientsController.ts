@@ -109,7 +109,20 @@ export async function removeWaitlist(request: any, reply: any) {
 	return reply.code(204).send();
 }
 
-module.exports = {
+if (typeof module !== "undefined" && module.exports) { module.exports = {
+	listFixed,
+	createFixed,
+	updateFixed,
+	removeFixed,
+	createCut,
+	updateCut,
+	removeCut,
+	listWaitlist,
+	createWaitlist,
+	updateWaitlist,
+	removeWaitlist,
+}; }
+export default {
 	listFixed,
 	createFixed,
 	updateFixed,
@@ -122,4 +135,3 @@ module.exports = {
 	updateWaitlist,
 	removeWaitlist,
 };
-export default module.exports;

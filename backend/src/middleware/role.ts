@@ -20,5 +20,5 @@ export function requireRole(allowedRoles: string[]) {
 	};
 }
 
-module.exports = requireRole;
+if (typeof module !== "undefined" && module.exports) { module.exports = requireRole; }
 export default requireRole;

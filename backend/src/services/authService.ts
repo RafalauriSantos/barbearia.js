@@ -394,7 +394,18 @@ export async function logout(userId: string): Promise<void> {
 	await AuthRepository.updateTokenVersion(userId, nextVersion);
 }
 
-module.exports = {
+if (typeof module !== "undefined" && module.exports) { module.exports = {
+	register,
+	verifyCredentials,
+	getCurrentUser,
+	verifyEmail,
+	verifyEmailCode,
+	resendEmailCode,
+	requestPasswordReset,
+	resetPassword,
+	logout,
+}; }
+export default {
 	register,
 	verifyCredentials,
 	getCurrentUser,
@@ -405,4 +416,3 @@ module.exports = {
 	resetPassword,
 	logout,
 };
-export default module.exports;

@@ -75,8 +75,11 @@ export async function findPaidManualReceivables(filters: any): Promise<any[]> {
 	return rows.map(ReceivablesRepository.toFinancialRow);
 }
 
-module.exports = {
+if (typeof module !== "undefined" && module.exports) { module.exports = {
+	findPaidAppointments,
+	findPaidManualReceivables,
+}; }
+export default {
 	findPaidAppointments,
 	findPaidManualReceivables,
 };
-export default module.exports;

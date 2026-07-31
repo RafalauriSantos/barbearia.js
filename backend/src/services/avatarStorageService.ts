@@ -101,5 +101,5 @@ export async function uploadBarberAvatar({
 	return data.publicUrl;
 }
 
-module.exports = { uploadBarberAvatar };
-export default module.exports;
+if (typeof module !== "undefined" && module.exports) { module.exports = { uploadBarberAvatar }; }
+export default { uploadBarberAvatar };

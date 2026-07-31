@@ -25,9 +25,13 @@ export function validateListExpensesQuery(query: unknown) {
 	return listQuerySchema.parse(query || {});
 }
 
-module.exports = {
+if (typeof module !== "undefined" && module.exports) { module.exports = {
+	validateCreateExpense,
+	validateUpdateExpense,
+	validateListExpensesQuery,
+}; }
+export default {
 	validateCreateExpense,
 	validateUpdateExpense,
 	validateListExpensesQuery,
 };
-export default module.exports;

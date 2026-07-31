@@ -11,5 +11,5 @@ export function validateUpdatePaymentMethod(body: unknown) {
 	return updateSchema.parse(body || {});
 }
 
-module.exports = { validateUpdatePaymentMethod };
-export default module.exports;
+if (typeof module !== "undefined" && module.exports) { module.exports = { validateUpdatePaymentMethod }; }
+export default { validateUpdatePaymentMethod };

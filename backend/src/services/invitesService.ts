@@ -217,9 +217,13 @@ export async function acceptInvite(token: string, payload: Record<string, any>) 
 	};
 }
 
-module.exports = {
+if (typeof module !== "undefined" && module.exports) { module.exports = {
+	createBarberInvite,
+	getInviteByToken,
+	acceptInvite,
+}; }
+export default {
 	createBarberInvite,
 	getInviteByToken,
 	acceptInvite,
 };
-export default module.exports;

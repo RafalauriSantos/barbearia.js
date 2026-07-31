@@ -14,5 +14,5 @@ export function validateAcceptInvite(body: unknown) {
 	};
 }
 
-module.exports = { validateAcceptInvite };
-export default module.exports;
+if (typeof module !== "undefined" && module.exports) { module.exports = { validateAcceptInvite }; }
+export default { validateAcceptInvite };

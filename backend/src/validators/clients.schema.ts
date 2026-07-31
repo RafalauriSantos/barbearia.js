@@ -75,7 +75,16 @@ export function validateListClientsQuery(query: unknown) {
 	return listClientsQuerySchema.parse(query || {});
 }
 
-module.exports = {
+if (typeof module !== "undefined" && module.exports) { module.exports = {
+	validateCreateFixedClient,
+	validateUpdateFixedClient,
+	validateCreateClientCut,
+	validateUpdateClientCut,
+	validateWaitlistEntry,
+	validateUpdateWaitlistEntry,
+	validateListClientsQuery,
+}; }
+export default {
 	validateCreateFixedClient,
 	validateUpdateFixedClient,
 	validateCreateClientCut,
@@ -84,4 +93,3 @@ module.exports = {
 	validateUpdateWaitlistEntry,
 	validateListClientsQuery,
 };
-export default module.exports;
