@@ -1,5 +1,15 @@
 import { ThemeToggle } from "@/components/ThemeToggle";
 
+interface IconButtonProps {
+	label: string;
+	children: React.ReactNode;
+	onClick?: () => void;
+	disabled?: boolean;
+	type?: "button" | "submit" | "reset";
+	tone?: "default" | "primary" | "danger" | "quiet";
+	className?: string;
+}
+
 export function IconButton({
 	label,
 	children,
@@ -8,8 +18,8 @@ export function IconButton({
 	type = "button",
 	tone = "default",
 	className = "",
-}) {
-	const tones = {
+}: IconButtonProps) {
+	const tones: Record<string, string> = {
 		default: "border-border bg-card text-foreground-faint hover:text-foreground",
 		primary: "border-paid/40 bg-paid/10 text-paid hover:bg-paid/15",
 		danger: "border-overdue/40 bg-overdue/10 text-overdue hover:bg-overdue/15",
@@ -29,13 +39,21 @@ export function IconButton({
 	);
 }
 
+interface ScreenHeaderProps {
+	eyebrow?: string;
+	title: string;
+	action?: React.ReactNode;
+	children?: React.ReactNode;
+	showThemeToggle?: boolean;
+}
+
 export function ScreenHeader({
 	eyebrow,
 	title,
 	action,
 	children,
 	showThemeToggle = false,
-}) {
+}: ScreenHeaderProps) {
 	return (
 		<header className="z-50 shrink-0 border-b border-border bg-background/95 px-4 pb-3 pt-4 backdrop-blur">
 			<div className="flex items-start justify-between gap-3">
@@ -59,7 +77,13 @@ export function ScreenHeader({
 	);
 }
 
-export function DateStepper({ label, onPrev, onNext }) {
+interface DateStepperProps {
+	label: string;
+	onPrev: () => void;
+	onNext: () => void;
+}
+
+export function DateStepper({ label, onPrev, onNext }: DateStepperProps) {
 	return (
 		<div className="mt-4 flex items-center justify-between rounded-lg border border-border bg-background-deep p-1 md:max-w-[520px]">
 			<IconButton label="Dia anterior" onClick={onPrev} tone="quiet">
@@ -75,8 +99,15 @@ export function DateStepper({ label, onPrev, onNext }) {
 	);
 }
 
-export function Notice({ tone = "error", title, children, action }) {
-	const tones = {
+interface NoticeProps {
+	tone?: "error" | "success" | "neutral";
+	title?: string;
+	children: React.ReactNode;
+	action?: React.ReactNode;
+}
+
+export function Notice({ tone = "error", title, children, action }: NoticeProps) {
+	const tones: Record<string, string> = {
 		error: "border-overdue/30 bg-overdue/10 text-overdue",
 		success: "border-paid/30 bg-paid/10 text-paid",
 		neutral: "border-border bg-card text-foreground-faint",
@@ -95,7 +126,13 @@ export function Notice({ tone = "error", title, children, action }) {
 	);
 }
 
-export function EmptyState({ title, hint, action }) {
+interface EmptyStateProps {
+	title: string;
+	hint?: string;
+	action?: React.ReactNode;
+}
+
+export function EmptyState({ title, hint, action }: EmptyStateProps) {
 	return (
 		<div className="rounded-lg border border-dashed border-border bg-card/70 px-4 py-10 text-center">
 			<p className="font-mono-ui text-xs text-foreground-faint">{title}</p>
@@ -109,7 +146,7 @@ export function EmptyState({ title, hint, action }) {
 	);
 }
 
-export function Skeleton({ className = "" }) {
+export function Skeleton({ className = "" }: { className?: string }) {
 	return (
 		<div
 			aria-hidden="true"
@@ -118,7 +155,7 @@ export function Skeleton({ className = "" }) {
 	);
 }
 
-export function LoadingCard({ label = "Carregando", rows = 3 }) {
+export function LoadingCard({ label = "Carregando", rows = 3 }: { label?: string; rows?: number }) {
 	return (
 		<div className="rounded-lg border border-border bg-card p-4">
 			<p className="sr-only">{label}</p>

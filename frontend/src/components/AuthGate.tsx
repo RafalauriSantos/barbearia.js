@@ -15,7 +15,7 @@ function SessionLoading() {
 	);
 }
 
-function RequireAuth({ children }) {
+function RequireAuth({ children }: { children: React.ReactNode }) {
 	const { isAuthenticated, isLoading } = useAuth();
 	const location = useLocation();
 
@@ -27,7 +27,7 @@ function RequireAuth({ children }) {
 	return children;
 }
 
-export default function AuthGate({ requireAuth = false }) {
+export default function AuthGate({ requireAuth = false }: { requireAuth?: boolean }) {
 	const content = <Outlet />;
 
 	return (

@@ -2,6 +2,14 @@ import { useState } from "react";
 import { addAppointment } from "@/lib/store";
 import { validateRequiredText, validateTime } from "@/lib/validation";
 
+interface SmartInputProps {
+	dayKey: string;
+	barbeiroId?: string | null;
+	onAdd: () => Promise<void> | void;
+	onError?: (msg: string) => void;
+	requireBarberSelection?: boolean;
+}
+
 // Campo rapido para criar atendimento direto na tela.
 export function SmartInput({
 	dayKey,
@@ -9,7 +17,7 @@ export function SmartInput({
 	onAdd,
 	onError,
 	requireBarberSelection = false,
-}) {
+}: SmartInputProps) {
 	const [clientName, setClientName] = useState("");
 	const [timeValue, setTimeValue] = useState("09:00");
 	const [isSubmitting, setIsSubmitting] = useState(false);
@@ -40,7 +48,7 @@ export function SmartInput({
 
 		try {
 			// Cria agendamento rapido direto pelos campos da barra inferior.
-			const payload = {
+			const payload: any = {
 				client_name: clientName.trim(),
 				time_slot: timeValue,
 				status: "normal",
@@ -52,7 +60,7 @@ export function SmartInput({
 			setClientName("");
 			setTimeValue("09:00");
 			await onAdd();
-		} catch (error) {
+		} catch (error: any) {
 			const message =
 				error.message || "Nao foi possivel salvar o agendamento rapido.";
 			setErrorMessage(message);
@@ -61,7 +69,7 @@ export function SmartInput({
 			setIsSubmitting(false);
 		}
 	};
-	const handleKeyDown = (e) => {
+	const handleKeyDown = (e: React.KeyboardEvent) => {
 		// Permite salvar apertando Enter.
 		if (e.key === "Enter") {
 			e.preventDefault();

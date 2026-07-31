@@ -1,7 +1,15 @@
 import { formatCurrency } from "@/lib/store";
 
+interface DaySummaryProps {
+	totalReceived: number;
+	totalClients: number;
+	paid: number;
+	pending: number;
+	toCollect: number;
+}
+
 // Card com os numeros principais do dia.
-export function DaySummaryCard({ summary }) {
+export function DaySummaryCard({ summary }: { summary: DaySummaryProps }) {
 	// Mostra os numeros principais do dia.
 	return (
 		<div className="shrink-0 px-4 pt-4">

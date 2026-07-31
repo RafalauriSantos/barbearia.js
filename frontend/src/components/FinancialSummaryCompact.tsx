@@ -1,15 +1,21 @@
 import { useState } from "react";
 import { formatCurrency } from "@/lib/store";
 
-function getAdminRows(summary) {
+function getAdminRows(summary: any) {
 	return summary?.resumo_por_barbeiro || [];
+}
+
+interface FinancialSummaryCompactProps {
+	summary: any;
+	isLoading?: boolean;
+	showBreakdown?: boolean;
 }
 
 export function FinancialSummaryCompact({
 	summary,
 	isLoading = false,
 	showBreakdown = false,
-}) {
+}: FinancialSummaryCompactProps) {
 	const [expanded, setExpanded] = useState(false);
 
 	const isAdmin = summary?.type === "admin";
@@ -99,7 +105,7 @@ export function FinancialSummaryCompact({
 
 						{expanded && (
 							<div className="mt-3 space-y-2">
-								{rows.map((row) => (
+								{rows.map((row: any) => (
 									<div
 										key={row.barbeiro_id || row.nome}
 										className="rounded-lg border border-border bg-background-deep p-3">

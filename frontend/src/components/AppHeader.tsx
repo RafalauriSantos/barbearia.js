@@ -10,14 +10,21 @@ import { DateStepper, IconButton } from "@/components/ScreenPrimitives";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { BrandName } from "@/components/BrandName";
 
+interface AppHeaderProps {
+	currentDate: string;
+	onPrevDay: () => void;
+	onNextDay: () => void;
+	onSettings: () => void;
+}
+
 // Cabecalho da tela com dados do perfil e controle de data.
-export function AppHeader({ currentDate, onPrevDay, onNextDay, onSettings }) {
-	const initialProfileRef = useRef(null);
+export function AppHeader({ currentDate, onPrevDay, onNextDay, onSettings }: AppHeaderProps) {
+	const initialProfileRef = useRef<any>(null);
 	if (initialProfileRef.current === null) {
 		initialProfileRef.current = getCachedProfile() || false;
 	}
 	const initialProfile = initialProfileRef.current || undefined;
-	const [profile, setProfile] = useState(initialProfile);
+	const [profile, setProfile] = useState<any>(initialProfile);
 	const { user } = useAuth();
 
 	useEffect(() => {
