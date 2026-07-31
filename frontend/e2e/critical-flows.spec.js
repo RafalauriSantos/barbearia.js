@@ -32,7 +32,7 @@ async function installApi(page, { expandedTeam = false } = {}) {
 		statusCalls: [],
 	};
 
-	await page.route("http://localhost:3000/**", async (route) => {
+	await page.route((url) => url.hostname.includes("barbearia-workers") || url.port === "3000", async (route) => {
 		const request = route.request();
 		const url = new URL(request.url());
 		const path = url.pathname;

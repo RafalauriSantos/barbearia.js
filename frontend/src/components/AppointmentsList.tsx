@@ -215,9 +215,11 @@ const AppointmentSwipeRow = memo(function AppointmentSwipeRow({
 				onPointerDown={handlePointerDown}
 				onPointerMove={handlePointerMove}
 				onPointerUp={handlePointerEnd}
+				onPointerCancel={handlePointerEnd}
 				onMouseDown={handleMouseDown}
 				onMouseMove={handleMouseMove}
 				onMouseUp={handleMouseUp}
+				onMouseLeave={handleMouseUp}
 				onKeyDown={handleKeyDown}
 				style={{
 					transform: `translateX(${dragX}px)`,

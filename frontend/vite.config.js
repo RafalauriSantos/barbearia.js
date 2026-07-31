@@ -2,7 +2,7 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
 // https://vitejs.dev/config/
-export default defineConfig(() => ({
+export default defineConfig(({ command }) => ({
 	server: {
 		host: "::",
 		port: 3333,
@@ -21,7 +21,10 @@ export default defineConfig(() => ({
 	},
 	define: {
 		"import.meta.env.VITE_API_URL": JSON.stringify(
-			process.env.VITE_API_URL || "https://barbearia-workers.agenddar.workers.dev"
+			process.env.VITE_API_URL ||
+				(command === "serve"
+					? "http://localhost:3000"
+					: "https://barbearia-workers.agenddar.workers.dev")
 		),
 	},
 }));

@@ -3,7 +3,7 @@
 	"version": "1.0.0",
 	"main": "src/index.js",
 	"scripts": {
-		"dev": "node --watch src/server.js",
+		"dev": "tsx watch src/server.ts",
 		"start": "node scripts/migrate-if-configured.js && node src/server.js",
 		"seed": "node scripts/seed.js",
 		"migrate": "knex migrate:latest",
