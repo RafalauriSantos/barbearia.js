@@ -35,6 +35,9 @@ const localMethods = {
 
 const supabaseProxy = new Proxy(localMethods, {
 	get(target, property) {
+		if (property === "default") {
+			return supabaseProxy;
+		}
 		if (property in target) return target[property];
 		return getSupabaseClient()[property];
 	},
