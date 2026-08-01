@@ -69,7 +69,6 @@ export default function ExpensesPage() {
 	const reload = useCallback(async () => {
 		const hasLoaded = hasLoadedRef.current;
 		setIsLoading(!hasLoaded);
-		setIsRefreshing(hasLoaded);
 		setErrorMessage("");
 		try {
 			const list = await loadExpenses(filterParams, { force: true });
@@ -81,7 +80,6 @@ export default function ExpensesPage() {
 			}
 		} finally {
 			setIsLoading(false);
-			setIsRefreshing(false);
 			hasLoadedRef.current = true;
 		}
 	}, [filterParams]);

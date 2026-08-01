@@ -61,7 +61,6 @@ export default function ServicesPage() {
 	const reloadData = useCallback(async () => {
 		const hasLoaded = hasLoadedRef.current;
 		setIsLoading(!hasLoaded);
-		setIsRefreshing(hasLoaded);
 		setErrorMessage("");
 		try {
 			const [nextServices, nextProducts] = await Promise.all([
@@ -78,7 +77,6 @@ export default function ServicesPage() {
 			}
 		} finally {
 			setIsLoading(false);
-			setIsRefreshing(false);
 			hasLoadedRef.current = true;
 		}
 	}, []);

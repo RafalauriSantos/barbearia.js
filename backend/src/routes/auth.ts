@@ -1,6 +1,12 @@
 const controller = require("../controllers/authController");
 const auth = require("../middleware/auth");
-const { rateLimit } = require("../middleware/rateLimit");
+
+let rateLimit: any = null;
+try {
+	rateLimit = require("../middleware/rateLimit");
+} catch {
+	rateLimit = null;
+}
 
 async function routes (fastify: any, opts: any) {
 	const rateLimitedOpts = rateLimit ? { preHandler: [rateLimit] } : {};
