@@ -13,16 +13,18 @@ t.test("OWASP Security Headers & Content Security Policy (CSP) Suite", async (t)
 		t.equal(headers["X-DNS-Prefetch-Control"], "off");
 		t.ok(headers["Permissions-Policy"].indexOf("camera=()") !== -1);
 		t.ok(headers["Content-Security-Policy"].indexOf("default-src 'self'") !== -1);
-		t.ok(headers["Content-Security-Policy"].indexOf("challenges.cloudflare.com") !== -1);
+		const cspHeader = String(headers["Content-Security-Policy"] || "");
+		t.ok(cspHeader.includes("https://challenges.cloudflare.com"));
 		t.notOk(headers["Strict-Transport-Security"], "HSTS should not be set in non-production");
 	});
 
 	t.test("getSecurityHeaders returns strict HSTS and CSP in production", async (t) => {
 		const headers = getSecurityHeaders(true);
+		const prodCsp = String(headers["Content-Security-Policy"] || "");
 
 		t.equal(headers["Strict-Transport-Security"], "max-age=31536000; includeSubDomains; preload");
-		t.ok(headers["Content-Security-Policy"].includes("upgrade-insecure-requests"));
-		t.notOk(headers["Content-Security-Policy"].includes("'unsafe-eval'"));
+		t.ok(prodCsp.includes("upgrade-insecure-requests"));
+		t.notOk(prodCsp.includes("'unsafe-eval'"));
 	});
 
 	t.test("Worker app includes security headers on responses", async (t) => {

@@ -1,6 +1,5 @@
 const t = require("tap");
 const jwt = require("jsonwebtoken");
-const crypto = require("crypto");
 process.env.SUPABASE_URL = process.env.SUPABASE_URL || "http://localhost";
 process.env.SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || "anon";
 

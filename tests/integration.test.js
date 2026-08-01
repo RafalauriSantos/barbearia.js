@@ -191,7 +191,7 @@ describe('Bateria de Testes de Integração da API', () => {
 
     const originalFetch = global.fetch;
     global.fetch = async (url, options) => {
-      const isBrevoUrl = typeof url === 'string' && (() => { try { return new URL(url).hostname.endsWith('brevo.com'); } catch { return false; } })();
+      const isBrevoUrl = typeof url === 'string' && (() => { try { const h = new URL(url).hostname; return h === 'api.brevo.com' || h === 'brevo.com'; } catch { return false; } })();
       if (isBrevoUrl) {
         return {
           ok: true,

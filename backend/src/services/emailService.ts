@@ -246,12 +246,18 @@ async function sendEmail(message: any, debugLog?: { label: string; value: any },
 		throw new Error(errMessage);
 	}
 
+function obfuscateEmail(email: string): string {
+	if (!email || typeof email !== "string" || !email.includes("@")) return "***";
+	const parts = email.split("@");
+	return `${parts[0].slice(0, 2)}***@${parts[1]}`;
+}
+
 	if (debugLog) {
 		const isOtp = debugLog.label.includes("code");
 		const loggedValue = isOtp ? obfuscateOtp(debugLog.value) : debugLog.value;
 		console.log(sanitizeLog(debugLog.label), sanitizeLog(loggedValue));
 	} else {
-		console.log("[email-fallback-log] Envio de email:", sanitizeLog(message.subject), "Para:", sanitizeLog(message.to));
+		console.log("[email-fallback-log] Envio de email:", sanitizeLog(message.subject), "Para:", obfuscateEmail(message.to));
 	}
 
 	return { messageId: "workers-fallback-email-id", accepted: [message.to] };

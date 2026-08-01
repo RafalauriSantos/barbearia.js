@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
-import { IconButton } from "@/components/ScreenPrimitives";
 import { BaseModal } from "@/components/BaseModal";
 import {
 	addReceivable,

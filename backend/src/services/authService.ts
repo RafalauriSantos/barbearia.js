@@ -61,9 +61,8 @@ function generateVerificationCode(): string {
 function hashVerificationCode(code: string): string {
 	const secret = env.JWT_SECRET || "verification-secret-fallback";
 	return crypto
-		.createHmac("sha256", secret)
-		.update(String(code))
-		.digest("hex");
+		.pbkdf2Sync(String(code), secret, 10000, 32, "sha256")
+		.toString("hex");
 }
 
 export async function register({ email, password }: Record<string, any>, runtimeEnv?: any, ipAddress?: string) {
