@@ -214,7 +214,6 @@ function adaptRoute(fastifyHandler: any, options: any = {}) {
 			send(body: any) {
 				responseBody = body;
 				responseSent = true;
-				resolvePromise();
 				return this;
 			},
 		};
