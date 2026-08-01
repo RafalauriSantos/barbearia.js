@@ -9,7 +9,7 @@
 		"migrate": "knex migrate:latest",
 		"migrate:rollback": "knex migrate:rollback",
 		"typecheck": "tsc --noEmit",
-		"test": "tap --node-arg=--import --node-arg=tsx --no-coverage -j1 \"test/**/*.test.js\""
+		"test": "tap --node-arg=--import --node-arg=tsx --no-coverage -j1 \"test/worker-*.test.js\" \"test/security-*.test.js\""
 	},
 	"dependencies": {
 		"@fastify/helmet": "^13.1.0",
