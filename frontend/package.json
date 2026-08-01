@@ -21,7 +21,7 @@
 		"lucide-react": "^1.21.0",
 		"react": "^18.3.1",
 		"react-dom": "^18.3.1",
-		"react-router-dom": "^7.1.5"
+		"react-router-dom": "^6.30.0"
 	},
 	"devDependencies": {
 		"@eslint/js": "^9.32.0",
@@ -47,6 +47,7 @@
 	"overrides": {
 		"form-data": "4.0.6",
 		"esbuild": "^0.25.0",
-		"launch-editor": "^3.0.0"
+		"launch-editor": "^3.0.0",
+		"react-router": "^6.30.0"
 	}
 }
