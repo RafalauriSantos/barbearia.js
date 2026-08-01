@@ -2,7 +2,7 @@ import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { createClient } from '@supabase/supabase-js';
 
-import { setRuntimeEnv } from '../backend/src/config/env.js';
+import { setRuntimeEnv, env as runtimeEnvProxy } from '../backend/src/config/env.js';
 
 const app = new Hono();
 
