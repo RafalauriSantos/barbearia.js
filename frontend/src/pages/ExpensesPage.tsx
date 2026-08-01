@@ -53,7 +53,6 @@ export default function ExpensesPage() {
 	const [expenses, setExpenses] = useState(initialExpenses || []);
 	const [form, setForm] = useState(initialForm);
 	const [isLoading, setIsLoading] = useState(!initialExpenses);
-	const [isRefreshing, setIsRefreshing] = useState(false);
 	const hasLoadedRef = useRef(Boolean(initialExpenses));
 	const [isSubmitting, setIsSubmitting] = useState(false);
 	const [errorMessage, setErrorMessage] = useState("");

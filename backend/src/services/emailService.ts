@@ -1,4 +1,3 @@
-import { AppError } from "../lib/errors";
 const { env } = require("../config/env");
 
 const DEFAULT_BRAND_NAME = "Agenddar";
@@ -20,7 +19,7 @@ function buildEmailTemplate({ title, body, code, ctaUrl, ctaText }: { title: str
 		ctaUrl && ctaText ?
 			`
 		<div style="margin:24px 0;text-align:center;">
-			<a href="${ctaUrl}" style="display:inline-block;padding:12px 24px;font-family:sans-serif;font-size:14px;font-weight:bold;color:#ffffff;background-color:#18181b;border-radius:6px;text-decoration:none;">
+			<a href="${ctaUrl}" style="display:inline-block;padding:12px 24px;font-family:sans-serif;font-size:14px;font-weight:600;color:#ffffff;background-color:#18181b;border-radius:6px;text-decoration:none;">
 				${ctaText}
 			</a>
 		</div>
@@ -28,33 +27,44 @@ function buildEmailTemplate({ title, body, code, ctaUrl, ctaText }: { title: str
 		:	"";
 
 	return `
-		<div style="font-family:sans-serif;max-width:500px;margin:0 auto;padding:20px;color:#18181b;background-color:#ffffff;">
-			<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border:1px solid #e4e4e7;border-radius:8px;padding:32px;">
+		<!DOCTYPE html>
+		<html>
+		<head>
+			<meta charset="utf-8">
+			<meta name="viewport" content="width=device-width, initial-scale=1.0">
+		</head>
+		<body style="margin:0;padding:0;background-color:#f4f4f5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+			<table width="100%" cellpadding="0" cellspacing="0" style="margin:0;padding:24px 0;background-color:#f4f4f5;">
 				<tr>
-					<td>
-						<h1 style="margin:0 0 16px;font-size:20px;font-weight:bold;color:#18181b;text-align:center;">
-							${title}
-						</h1>
-						<p style="margin:0 0 16px;font-size:14px;line-height:1.6;color:#3f3f46;">
-							${body}
-						</p>
-						${codeHtml}
-						${ctaHtml}
-						<p style="margin:0;color:#8a8a8a;font-size:12px;line-height:1.6;">
-							Se voce nao criou essa conta, ignore este email.
-						</p>
+					<td align="center">
+						<table width="100%" cellpadding="0" cellspacing="0" style="max-width:480px;background-color:#ffffff;border-radius:12px;border:1px solid #e4e4e7;padding:32px;box-sizing:border-box;">
+							<tr>
+								<td>
+									<h2 style="margin:0 0 16px 0;font-size:20px;font-weight:600;color:#18181b;text-align:center;">
+										${title}
+									</h2>
+									<p style="margin:0 0 16px 0;font-size:14px;line-height:22px;color:#52525b;text-align:center;">
+										${body}
+									</p>
+									${codeHtml}
+									${ctaHtml}
+									<hr style="border:none;border-top:1px solid #f4f4f5;margin:24px 0 16px 0;" />
+									<p style="margin:0;font-size:12px;color:#a1a1aa;text-align:center;">
+										Se voce nao solicitou este e-mail, pode ignora-lo com seguranca.
+									</p>
+								</td>
+							</tr>
+						</table>
 					</td>
 				</tr>
 			</table>
-		</div>
+		</body>
+		</html>
 	`;
 }
 
-function getEnvValue(key: string, runtimeEnv?: any) {
-	if (runtimeEnv && runtimeEnv[key] !== undefined) {
-		return runtimeEnv[key];
-	}
-	return env[key];
+function getEnvValue(key: string, runtimeEnv?: any): string | undefined {
+	return runtimeEnv?.[key] || (typeof process !== "undefined" ? process.env?.[key] : undefined) || env[key];
 }
 
 function hasSmtpConfig(runtimeEnv?: any): boolean {
@@ -80,16 +90,18 @@ function getEmailProvider(runtimeEnv?: any): string {
 
 function parseEmailAddress(value: any) {
 	const rawValue = String(value || "").trim();
-	const match = rawValue.match(/^(.*?)<([^>]+)>$/);
+	const ltIdx = rawValue.indexOf("<");
+	const gtIdx = rawValue.lastIndexOf(">");
 
-	if (!match) {
+	if (ltIdx === -1 || gtIdx === -1 || gtIdx <= ltIdx) {
 		return { email: rawValue };
 	}
 
-	const rawName = match[1].trim().replace(/^["']|["']$/g, "");
+	const rawName = rawValue.slice(0, ltIdx).trim().replace(/^["']|["']$/g, "");
+	const email = rawValue.slice(ltIdx + 1, gtIdx).trim();
 	return {
 		name: rawName || undefined,
-		email: match[2].trim(),
+		email,
 	};
 }
 
@@ -218,6 +230,10 @@ function obfuscateOtp(code: any): string {
 	return str[0] + "*".repeat(str.length - 2) + str[str.length - 1];
 }
 
+function sanitizeLog(value: any): string {
+	return String(value || "").replace(/[\r\n\t]/g, " ").slice(0, 150);
+}
+
 async function sendEmail(message: any, debugLog?: { label: string; value: any }, runtimeEnv?: any) {
 	const provider = getEmailProvider(runtimeEnv);
 	if (provider === "brevo") {
@@ -226,16 +242,16 @@ async function sendEmail(message: any, debugLog?: { label: string; value: any },
 
 	if (getEnvValue("NODE_ENV", runtimeEnv) === "production") {
 		const errMessage = `Erro: Provedor de e-mail '${provider}' nao configurado ou invalido para producao. BREVO_API_KEY disponivel: ${hasBrevoConfig(runtimeEnv)}`;
-		console.error(`[Email Service] ${errMessage}`);
+		console.error(`[Email Service] ${sanitizeLog(errMessage)}`);
 		throw new Error(errMessage);
 	}
 
 	if (debugLog) {
 		const isOtp = debugLog.label.includes("code");
 		const loggedValue = isOtp ? obfuscateOtp(debugLog.value) : debugLog.value;
-		console.log(debugLog.label, loggedValue);
+		console.log(sanitizeLog(debugLog.label), sanitizeLog(loggedValue));
 	} else {
-		console.log("[email-fallback-log] Envio de email:", message.subject, "Para:", message.to);
+		console.log("[email-fallback-log] Envio de email:", sanitizeLog(message.subject), "Para:", sanitizeLog(message.to));
 	}
 
 	return { messageId: "workers-fallback-email-id", accepted: [message.to] };

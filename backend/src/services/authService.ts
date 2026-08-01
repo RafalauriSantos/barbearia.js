@@ -59,9 +59,10 @@ function generateVerificationCode(): string {
 }
 
 function hashVerificationCode(code: string): string {
+	const secret = env.JWT_SECRET || "verification-secret-fallback";
 	return crypto
-		.createHash("sha256")
-		.update(`${code}.${env.JWT_SECRET}`)
+		.createHmac("sha256", secret)
+		.update(String(code))
 		.digest("hex");
 }
 

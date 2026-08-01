@@ -11,9 +11,9 @@ t.test("OWASP Security Headers & Content Security Policy (CSP) Suite", async (t)
 		t.equal(headers["Referrer-Policy"], "strict-origin-when-cross-origin");
 		t.equal(headers["X-Permitted-Cross-Domain-Policies"], "none");
 		t.equal(headers["X-DNS-Prefetch-Control"], "off");
-		t.ok(headers["Permissions-Policy"].includes("camera=()"));
-		t.ok(headers["Content-Security-Policy"].includes("default-src 'self'"));
-		t.ok(headers["Content-Security-Policy"].includes("https://challenges.cloudflare.com"));
+		t.ok(headers["Permissions-Policy"].indexOf("camera=()") !== -1);
+		t.ok(headers["Content-Security-Policy"].indexOf("default-src 'self'") !== -1);
+		t.ok(headers["Content-Security-Policy"].indexOf("challenges.cloudflare.com") !== -1);
 		t.notOk(headers["Strict-Transport-Security"], "HSTS should not be set in non-production");
 	});
 

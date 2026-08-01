@@ -42,7 +42,6 @@ export default function ServicesPage() {
 	const [isLoading, setIsLoading] = useState(
 		!(initialCache.services && initialCache.products),
 	);
-	const [isRefreshing, setIsRefreshing] = useState(false);
 	const hasLoadedRef = useRef(
 		Boolean(initialCache.services && initialCache.products),
 	);

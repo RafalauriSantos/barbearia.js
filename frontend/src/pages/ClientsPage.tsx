@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useFocusTrap } from "@/lib/useFocusTrap";
 import { BaseModal } from "@/components/BaseModal";
 import { BottomNav } from "@/components/BottomNav";
 

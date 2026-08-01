@@ -545,7 +545,6 @@ export default function AppPage() {
 							.filter((barber: any) => !isOwnBarber(barber, user))
 							.map((barber: any) => barber.id),
 					);
-					if (!current) return "";
 					if (current && availableIds.has(current)) return current;
 					return "";
 				});

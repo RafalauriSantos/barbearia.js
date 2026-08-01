@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from "react";
 import {
 	formatDateDisplay,
 	getCachedProfile,
-	isToday,
 	loadProfile,
 } from "@/lib/store";
 import { useAuth } from "@/context/AuthContext";

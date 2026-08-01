@@ -1,15 +1,23 @@
 const { env } = require("./env");
 
+function isSupabaseHost(urlString: string): boolean {
+	try {
+		const parsed = new URL(urlString);
+		return parsed.hostname.endsWith(".supabase.co") || parsed.hostname.endsWith(".pooler.supabase.com");
+	} catch {
+		return false;
+	}
+}
+
 function getDatabaseConfig() {
 	if (!env.DATABASE_URL) {
 		return null;
 	}
 
 	const needsSsl =
-		env.DATABASE_SSL ||
+		Boolean(env.DATABASE_SSL) ||
 		env.DATABASE_URL.includes("sslmode=require") ||
-		env.DATABASE_URL.includes(".supabase.co") ||
-		env.DATABASE_URL.includes(".pooler.supabase.com");
+		isSupabaseHost(env.DATABASE_URL);
 
 	return {
 		client: "pg",

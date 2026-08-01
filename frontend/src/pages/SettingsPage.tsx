@@ -21,7 +21,6 @@ const AVATAR_MAX_BYTES = 2 * 1024 * 1024;
 const AVATAR_SOURCE_MAX_BYTES = 20 * 1024 * 1024;
 const AVATAR_INPUT_ACCEPT = "image/*";
 const AVATAR_OUTPUT_SIZE = 512;
-const AVATAR_OUTPUT_TYPE = "image/jpeg";
 const AVATAR_OUTPUT_QUALITIES = [0.9, 0.82, 0.72, 0.62];
 const DEFAULT_AVATAR_FOCUS = { x: 50, y: 50 };
 const DEFAULT_AVATAR_ZOOM = 1;
@@ -705,8 +704,6 @@ export default function SettingsPage() {
 
 	const inputClass =
 		"w-full bg-transparent p-0 font-client text-sm text-foreground outline-none placeholder:text-foreground-faint/70 disabled:text-foreground-faint";
-	const rowInputClass =
-		"w-full bg-transparent p-0 text-right font-mono text-sm text-foreground outline-none disabled:text-foreground-faint";
 	const avatarPreviewUrl =
 		barberPhotoDraft?.dataUrl || (!removeBarberPhoto ? barberPhotoUrl : "");
 	const avatarImageStyle =
