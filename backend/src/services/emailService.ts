@@ -67,7 +67,7 @@ function getEnvValue(key: string, runtimeEnv?: any): string | undefined {
 	return runtimeEnv?.[key] || (typeof process !== "undefined" ? process.env?.[key] : undefined) || env[key];
 }
 
-function hasSmtpConfig(runtimeEnv?: any): boolean {
+export function hasSmtpConfig(runtimeEnv?: any): boolean {
 	return Boolean(
 		getEnvValue("SMTP_HOST", runtimeEnv) &&
 		getEnvValue("SMTP_USER", runtimeEnv) &&

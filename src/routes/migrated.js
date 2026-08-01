@@ -41,7 +41,7 @@ export function adaptController(controllerFn) {
   return async (c) => {
     const fn = typeof controllerFn === 'function' ? controllerFn : (controllerFn?.default || undefined);
     if (!fn || typeof fn !== 'function') {
-      console.error("adaptController Error: target function is missing or not a function", controllerFn);
+      console.error("adaptController Error: target function is missing or not a function");
       return c.json({ error: "Internal Server Error", code: "INTERNAL_ERROR" }, 500);
     }
     

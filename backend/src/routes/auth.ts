@@ -5,7 +5,7 @@ const { rateLimit } = require("../middleware/rateLimit");
 async function routes (fastify: any, opts: any) {
 	const authRateLimit = { preHandler: rateLimit };
 
-	fastify.get("/me", { preHandler: auth }, async (request: any, reply: any) =>
+	fastify.get("/me", { preHandler: [auth, rateLimit] }, async (request: any, reply: any) =>
 		controller.me(request, reply),
 	);
 	fastify.post("/register", authRateLimit, async (request: any, reply: any) =>
@@ -32,7 +32,7 @@ async function routes (fastify: any, opts: any) {
 	fastify.post("/refresh", authRateLimit, async (request: any, reply: any) =>
 		controller.refresh(request, reply),
 	);
-	fastify.post("/logout", { preHandler: auth }, async (request: any, reply: any) =>
+	fastify.post("/logout", { preHandler: [auth, rateLimit] }, async (request: any, reply: any) =>
 		controller.logout(request, reply),
 	);
 };
