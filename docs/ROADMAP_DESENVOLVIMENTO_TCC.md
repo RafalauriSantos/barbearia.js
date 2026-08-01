@@ -537,11 +537,11 @@ Status: parcial avancado.
 
 Feito:
 
-- guia `docs/DEPLOY_RENDER_VERCEL.md` existe;
-- comandos de Render e Vercel estao documentados;
-- variaveis principais estao listadas;
-- backend publicado no Render em `https://kurt-api.onrender.com`;
-- frontend publicado na Vercel em `https://kurt-barbearia.vercel.app`;
+- deploy migrado 100% para Cloudflare Workers (Backend) e Cloudflare Pages (Frontend);
+- comandos de Cloudflare e Wrangler estao documentados no README.md;
+- variaveis principais estao listadas em `docs/ENVIRONMENT_VARIABLES.md`;
+- backend publicado na Cloudflare Workers em `https://barbearia-workers.agenddar.workers.dev`;
+- frontend publicado na Cloudflare Pages em `https://barbearia-app.pages.dev`;
 - frontend usa `VITE_API_URL` apontando para o Render;
 - CORS e `APP_URL` foram configurados para a URL publica da Vercel;
 - frontend tolera cold start do Render Free com timeout maior e warmup em `/health`;
