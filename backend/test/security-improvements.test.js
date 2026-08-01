@@ -1,13 +1,10 @@
 const t = require("tap");
-const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const crypto = require("crypto");
 process.env.SUPABASE_URL = process.env.SUPABASE_URL || "http://localhost";
 process.env.SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || "anon";
-const { AppError } = require("../src/lib/errors");
 
 const jwtSecret = "development-only-secret-change-before-production";
-const correctHash = crypto.createHash("sha256").update("123456." + jwtSecret).digest("hex");
 
 t.test("Security Improvements Suite", async (t) => {
 	t.test("Role middleware blocks non-admins", async (t) => {

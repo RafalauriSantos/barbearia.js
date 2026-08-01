@@ -11,7 +11,7 @@ const router = new Hono();
 
 async function getBarbeariaId(supabase, userId, env) {
   // 1. Check if owner of a barbearia
-  const { data: owned, error: ownedErr } = await supabase
+  const { data: owned } = await supabase
     .from('barbearias')
     .select('id')
     .eq('usuario_dono_id', userId)
@@ -20,7 +20,7 @@ async function getBarbeariaId(supabase, userId, env) {
   if (owned) return owned.id;
 
   // 2. Check if linked barber
-  const { data: linked, error: linkedErr } = await supabase
+  const { data: linked } = await supabase
     .from('barbeiros')
     .select('barbearia_id')
     .eq('usuario_id', userId)

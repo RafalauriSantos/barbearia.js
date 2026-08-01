@@ -201,10 +201,6 @@ function adaptRoute(fastifyHandler: any, options: any = {}) {
 		let responseStatus = 200;
 		let responseBody: any = null;
 		let responseSent = false;
-		let resolvePromise: () => void;
-		const promise = new Promise<void>((resolve) => {
-			resolvePromise = resolve;
-		});
 
 		const reply = {
 			code(status: number) {
