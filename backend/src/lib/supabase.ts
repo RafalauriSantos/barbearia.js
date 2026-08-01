@@ -36,22 +36,30 @@ function getSupabaseClient() {
 	return client;
 }
 
-const localMethods = {
+const localMethods: Record<string, any> = {
 	ensureConfigured() {
 		getSupabaseClient();
 	},
 };
 
-const supabaseProxy = new Proxy(localMethods, {
+const supabaseProxy: any = new Proxy(localMethods, {
 	get(target, property) {
-		if (property === "default") {
+		if (property === "default" || property === "__esModule") {
 			return supabaseProxy;
 		}
-		if (property in target) return target[property];
-		return getSupabaseClient()[property];
+		if (property in target) return target[property as string];
+		const instance = getSupabaseClient();
+		const val = instance[property as string];
+		return typeof val === "function" ? val.bind(instance) : val;
 	},
 });
 
-if (typeof module !== "undefined" && module.exports) { module.exports = supabaseProxy; }
+export { supabaseProxy };
+if (typeof module !== "undefined" && module.exports) {
+	module.exports = supabaseProxy;
+	module.exports.default = supabaseProxy;
+	module.exports.__esModule = true;
+}
 export default supabaseProxy;
+
 

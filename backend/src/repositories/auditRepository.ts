@@ -1,4 +1,4 @@
-const supabase = require("../lib/supabase");
+import supabase from "../lib/supabase";
 
 const SENSITIVE_KEY_PATTERN =
 	/password|passwd|senha|token|jwt|bearer|otp|code|authorization|secret|api_key|apikey|key|private_key|credentials|access_token|refresh_token|turnstile|cf_turnstile/i;

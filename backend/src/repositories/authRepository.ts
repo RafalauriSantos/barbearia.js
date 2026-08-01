@@ -1,4 +1,4 @@
-const supabase = require("../lib/supabase");
+import supabase from "../lib/supabase";
 import { randomUUID } from "crypto";
 const { env } = require("../config/env");
 

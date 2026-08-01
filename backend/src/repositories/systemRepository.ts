@@ -1,4 +1,4 @@
-const supabase = require("../lib/supabase");
+import supabase from "../lib/supabase";
 const { getDefaultBarbeariaId } = require("../lib/tenant");
 
 const TABLES = [

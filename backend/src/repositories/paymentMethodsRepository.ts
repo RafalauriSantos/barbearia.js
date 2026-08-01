@@ -1,4 +1,4 @@
-const supabase = require("../lib/supabase");
+import supabase from "../lib/supabase";
 
 const DEFAULT_ORDER: Record<string, number> = {
 	pix: 10,

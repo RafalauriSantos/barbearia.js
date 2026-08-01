@@ -1,4 +1,4 @@
-const supabase = require("../lib/supabase");
+import supabase from "../lib/supabase";
 import { AppError } from "../lib/errors";
 const AvatarStorageService = require("../services/avatarStorageService");
 

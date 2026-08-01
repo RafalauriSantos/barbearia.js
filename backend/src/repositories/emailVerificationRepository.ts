@@ -1,4 +1,4 @@
-const supabase = require("../lib/supabase");
+import supabase from "../lib/supabase";
 
 export async function invalidateForUser(userId: string): Promise<void> {
 	const { error } = await supabase

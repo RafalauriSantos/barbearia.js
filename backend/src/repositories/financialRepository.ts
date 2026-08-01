@@ -1,4 +1,4 @@
-const supabase = require("../lib/supabase");
+import supabase from "../lib/supabase";
 
 function isMissingPaymentSnapshotColumn(error: any): boolean {
 	const text = `${error?.code || ""} ${error?.message || ""} ${

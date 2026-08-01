@@ -1,5 +1,5 @@
 import { randomUUID } from "crypto";
-const supabase = require("../lib/supabase");
+import supabase from "../lib/supabase";
 import { AppError } from "../lib/errors";
 
 function paymentStatusToApi(status?: string | null): string {

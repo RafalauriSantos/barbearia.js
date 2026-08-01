@@ -1,4 +1,4 @@
-const supabase = require("../lib/supabase");
+import supabase from "../lib/supabase";
 
 function toNumber(value: any): number {
 	const numeric = Number(value || 0);
