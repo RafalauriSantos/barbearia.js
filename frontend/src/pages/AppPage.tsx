@@ -960,7 +960,7 @@ export default function AppPage() {
 				</div>
 			</header>
 
-			<main className="min-h-0 flex-1 overflow-y-auto safe-bottom pb-20">
+			<main className="min-h-0 flex-1 overflow-y-auto safe-bottom pb-36">
 				<AppointmentsList
 					appointments={sortedAppointments}
 					isLoading={isLoading}

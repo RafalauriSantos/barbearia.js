@@ -14,7 +14,7 @@ function statusDotClass(statusColor: string) {
 	if (statusColor === "paid") return "bg-paid";
 	if (statusColor === "fiado") return "bg-fiado";
 	if (statusColor === "overdue") return "bg-overdue";
-	return "bg-foreground-faint";
+	return "bg-white";
 }
 
 function statusLabel(status: string) {

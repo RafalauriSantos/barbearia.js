@@ -474,7 +474,7 @@
   }
 
   .list-agenda {
-    padding: 0 16px;
+    padding: 0 16px calc(6rem + env(safe-area-inset-bottom, 0px));
   }
 
   .row-agenda {
@@ -509,7 +509,7 @@
     width: 6px;
     height: 6px;
     border-radius: 50%;
-    background: var(--gray-soft);
+    background: var(--white, #ffffff);
     flex-shrink: 0;
   }
 
@@ -518,9 +518,13 @@
     background: var(--green);
   }
 
-  .row-agenda.pending .status-dot,
   .row-agenda.fiado .status-dot {
     background: var(--amber);
+  }
+
+  .row-agenda.pending .status-dot,
+  .row-agenda.normal .status-dot {
+    background: var(--white, #ffffff);
   }
 
   .info-agenda {
