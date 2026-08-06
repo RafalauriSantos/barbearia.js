@@ -64,13 +64,13 @@ describe("AppointmentsList", () => {
 		expect(screen.getByText(/Corte/)).toBeTruthy();
 
 		const row = screen.getByRole("button", { name: /Cliente Teste/i });
-		fireEvent.mouseDown(row, {
+		fireEvent.pointerDown(row, {
 			clientX: 120,
 			clientY: 30,
 			button: 0,
 			buttons: 1,
 		});
-		fireEvent.mouseUp(row, {
+		fireEvent.pointerUp(row, {
 			clientX: 120,
 			clientY: 30,
 			buttons: 0,

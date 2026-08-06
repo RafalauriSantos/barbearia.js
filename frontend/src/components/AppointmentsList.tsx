@@ -1,8 +1,9 @@
 import React, { memo, useRef, useState } from "react";
 import { formatCurrency } from "@/lib/store";
 
-const SWIPE_STATUS_THRESHOLD = 50;
-const SWIPE_STATUS_MAX_OFFSET = 116;
+export const SWIPE_ACTIVATION_THRESHOLD = 8;
+export const SWIPE_ACTION_THRESHOLD = 50;
+export const SWIPE_MAX_OFFSET = 116;
 
 function clamp(value: number, min: number, max: number): number {
 	return Math.min(Math.max(value, min), max);
@@ -39,6 +40,7 @@ function getAppointmentSummary(appointment: AppointmentItem): string {
 interface PointerState {
 	startX: number;
 	startY: number;
+	axis: "undecided" | "vertical" | "horizontal";
 	dragging: boolean;
 	moved: boolean;
 	action: "paid" | "fiado" | null;
@@ -58,10 +60,10 @@ const AppointmentSwipeRow = memo(function AppointmentSwipeRow({
 	onOpen,
 	onStatusChange,
 }: AppointmentSwipeRowProps) {
-	const pointerRef = useRef<PointerState | null>(null);
-	const [dragX, setDragX] = useState<number>(0);
+	const [dragX, setDragX] = useState(0);
 	const [dragAction, setDragAction] = useState<"paid" | "fiado" | null>(null);
-	const [isExpanded, setIsExpanded] = useState<boolean>(false);
+	const [isExpanded, setIsExpanded] = useState(false);
+	const pointerRef = useRef<PointerState | null>(null);
 
 	const resetDrag = () => {
 		pointerRef.current = null;
@@ -69,29 +71,12 @@ const AppointmentSwipeRow = memo(function AppointmentSwipeRow({
 		setDragAction(null);
 	};
 
-	const updateDrag = (nextX: number) => {
-		const clampedX = clamp(
-			nextX,
-			-SWIPE_STATUS_MAX_OFFSET,
-			SWIPE_STATUS_MAX_OFFSET,
-		);
-		const nextAction =
-			clampedX >= SWIPE_STATUS_THRESHOLD ? "paid"
-			: clampedX <= -SWIPE_STATUS_THRESHOLD ? "fiado"
-			: null;
-		if (pointerRef.current) {
-			pointerRef.current.action = nextAction;
-			pointerRef.current.lastDx = clampedX;
-		}
-		setDragX(clampedX);
-		setDragAction(nextAction);
-	};
-
-	const handlePointerDown = (event: React.PointerEvent<HTMLButtonElement>) => {
+	const startGesture = (clientX: number, clientY: number) => {
 		if (isSaving) return;
 		pointerRef.current = {
-			startX: event.clientX,
-			startY: event.clientY,
+			startX: clientX,
+			startY: clientY,
+			axis: "undecided",
 			dragging: false,
 			moved: false,
 			action: null,
@@ -99,50 +84,79 @@ const AppointmentSwipeRow = memo(function AppointmentSwipeRow({
 		};
 	};
 
-	const moveDrag = (event: { clientX: number; clientY: number }) => {
+	const moveGesture = (clientX: number, clientY: number, pointerId?: number, currentTarget?: HTMLElement) => {
 		const pointer = pointerRef.current;
 		if (!pointer) return;
 
-		const dx = event.clientX - pointer.startX;
-		const dy = event.clientY - pointer.startY;
+		if (pointer.axis === "vertical") {
+			return;
+		}
+
+		const dx = clientX - pointer.startX;
+		const dy = clientY - pointer.startY;
 		const absDx = Math.abs(dx);
 		const absDy = Math.abs(dy);
 
-		if (!pointer.dragging) {
-			if (absDx < 6 && absDy < 6) return;
-			if (absDy > absDx) {
-				resetDrag();
+		if (pointer.axis === "undecided") {
+			if (absDx < SWIPE_ACTIVATION_THRESHOLD && absDy < SWIPE_ACTIVATION_THRESHOLD) {
 				return;
 			}
+
+			if (absDy >= absDx) {
+				pointer.axis = "vertical";
+				return;
+			}
+
+			pointer.axis = "horizontal";
 			pointer.dragging = true;
+			try {
+				if (currentTarget && pointerId !== undefined) {
+					currentTarget.setPointerCapture(pointerId);
+				}
+			} catch (e) {}
 		}
 
-		pointer.moved = true;
-		pointer.lastDx = dx;
-		updateDrag(dx);
+		if (pointer.axis === "horizontal") {
+			pointer.moved = true;
+			pointer.lastDx = dx;
+			const clampedX = clamp(dx, -SWIPE_MAX_OFFSET, SWIPE_MAX_OFFSET);
+			let nextAction: "paid" | "fiado" | null = null;
+			if (clampedX >= SWIPE_ACTION_THRESHOLD) {
+				nextAction = "paid";
+			} else if (clampedX <= -SWIPE_ACTION_THRESHOLD) {
+				nextAction = "fiado";
+			}
+			pointer.action = nextAction;
+			setDragX(clampedX);
+			setDragAction(nextAction);
+		}
 	};
 
-	const handlePointerMove = (event: React.PointerEvent<HTMLButtonElement>) => {
-		moveDrag(event);
-	};
-
-	const endDrag = async () => {
+	const endGesture = (pointerId?: number, currentTarget?: HTMLElement) => {
 		const pointer = pointerRef.current;
 		if (!pointer) return;
+
+		if (pointerId !== undefined && currentTarget) {
+			try {
+				if (currentTarget.hasPointerCapture && currentTarget.hasPointerCapture(pointerId)) {
+					currentTarget.releasePointerCapture(pointerId);
+				}
+			} catch (e) {}
+		}
 
 		const dx = pointer.lastDx || dragX;
 		const finalAction =
 			pointer.action ||
 			dragAction ||
-			(dx >= SWIPE_STATUS_THRESHOLD ? "paid"
-			: dx <= -SWIPE_STATUS_THRESHOLD ? "fiado"
+			(dx >= SWIPE_ACTION_THRESHOLD ? "paid"
+			: dx <= -SWIPE_ACTION_THRESHOLD ? "fiado"
 			: null);
-		const shouldTap = !pointer.moved;
+		const shouldTap = !pointer.moved && pointer.axis !== "vertical";
 
 		resetDrag();
 
 		if (finalAction === "fiado" || finalAction === "paid") {
-			await onStatusChange(appointment, finalAction);
+			onStatusChange(appointment, finalAction);
 			return;
 		}
 		if (shouldTap) {
@@ -151,29 +165,41 @@ const AppointmentSwipeRow = memo(function AppointmentSwipeRow({
 		}
 	};
 
-	const handlePointerEnd = async () => {
-		await endDrag();
+	const handlePointerDown = (event: React.PointerEvent<HTMLButtonElement>) => {
+		if (event.button !== undefined && event.button !== 0) return;
+		startGesture(event.clientX, event.clientY);
+	};
+
+	const handlePointerMove = (event: React.PointerEvent<HTMLButtonElement>) => {
+		moveGesture(event.clientX, event.clientY, event.pointerId, event.currentTarget);
+	};
+
+	const handlePointerEnd = (event: React.PointerEvent<HTMLButtonElement>) => {
+		const pointerId = event.pointerId;
+		const currentTarget = event.currentTarget;
+		endGesture(pointerId, currentTarget);
+	};
+
+	const handlePointerCancel = () => {
+		resetDrag();
 	};
 
 	const handleMouseDown = (event: React.MouseEvent<HTMLButtonElement>) => {
 		if (pointerRef.current) return;
-		if (isSaving || event.button !== 0) return;
-		pointerRef.current = {
-			startX: event.clientX,
-			startY: event.clientY,
-			dragging: false,
-			moved: false,
-			action: null,
-			lastDx: 0,
-		};
+		if (event.button !== 0) return;
+		startGesture(event.clientX, event.clientY);
 	};
 
 	const handleMouseMove = (event: React.MouseEvent<HTMLButtonElement>) => {
-		moveDrag(event);
+		if (pointerRef.current) {
+			moveGesture(event.clientX, event.clientY);
+		}
 	};
 
-	const handleMouseUp = async () => {
-		await endDrag();
+	const handleMouseUp = () => {
+		if (pointerRef.current) {
+			endGesture();
+		}
 	};
 
 	const handleKeyDown = (event: React.KeyboardEvent<HTMLButtonElement>) => {
@@ -215,7 +241,7 @@ const AppointmentSwipeRow = memo(function AppointmentSwipeRow({
 				onPointerDown={handlePointerDown}
 				onPointerMove={handlePointerMove}
 				onPointerUp={handlePointerEnd}
-				onPointerCancel={handlePointerEnd}
+				onPointerCancel={handlePointerCancel}
 				onMouseDown={handleMouseDown}
 				onMouseMove={handleMouseMove}
 				onMouseUp={handleMouseUp}
