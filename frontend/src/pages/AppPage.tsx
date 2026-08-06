@@ -845,7 +845,7 @@ export default function AppPage() {
 	const shopName = profile?.shopName || "Marque's";
 
 	return (
-		<div className="wrap flex flex-col min-h-screen bg-[var(--bg)] text-[var(--white)] overflow-x-hidden">
+		<div className="wrap flex flex-col h-[var(--app-height)] max-h-[var(--app-height)] bg-[var(--bg)] text-[var(--white)] overflow-hidden">
 			<header className="agenda-header">
 				<div className="flex items-center justify-between">
 					<div className="profile">
