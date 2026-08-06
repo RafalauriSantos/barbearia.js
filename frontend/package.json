@@ -5,7 +5,7 @@
 	"type": "module",
 	"scripts": {
 		"dev": "vite --open",
-		"build": "vite build",
+		"build": "vite build && node -e \"import('node:fs').then((fs) => fs.cpSync('.output', 'dist', { recursive: true }))\"",
 		"build:artifact": "vite build",
 		"build:dev": "vite build --mode development",
 		"lint": "eslint .",
