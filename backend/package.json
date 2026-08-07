@@ -38,6 +38,14 @@
 		"wrangler": "^4.114.0"
 	},
 	"overrides": {
+		"tap": {
+			"lodash": "^4.17.23",
+			"ws": "^8.18.0",
+			"shell-quote": "^1.8.4",
+			"brace-expansion": "^1.1.11",
+			"minimatch": "^3.1.2",
+			"@babel/core": "^7.26.10"
+		},
 		"lodash": "^4.17.23",
 		"ws": "^8.18.0",
 		"shell-quote": "^1.8.4",
