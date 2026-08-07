@@ -48,3 +48,6 @@ frontend/playwright-report
 .gemini/
 .codex/
 graphify-out/
+.tap/
+backend/.tap/
+

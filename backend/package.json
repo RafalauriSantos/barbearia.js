@@ -9,7 +9,7 @@
 		"migrate": "knex migrate:latest",
 		"migrate:rollback": "knex migrate:rollback",
 		"typecheck": "tsc --noEmit",
-		"test": "tap --node-arg=--import --node-arg=tsx --no-coverage -j1 \"test/worker-*.test.js\" \"test/security-*.test.js\""
+		"test": "tsx test/worker-runtime.test.js && tsx test/worker-rate-limiter.test.js && tsx test/security-headers.test.js && tsx test/security-improvements.test.js"
 	},
 	"dependencies": {
 		"@fastify/helmet": "^13.1.0",
@@ -32,27 +32,9 @@
 		"@types/pg": "^8.20.0",
 		"dotenv": "^17.4.2",
 		"fastify": "^5.10.0",
-		"tap": "^16.3.10",
+		"tap": "^21.7.5",
 		"tsx": "^4.23.1",
 		"typescript": "^7.0.2",
 		"wrangler": "^4.114.0"
-	},
-	"overrides": {
-		"tap": {
-			"lodash": "^4.17.23",
-			"ws": "^8.18.0",
-			"shell-quote": "^1.8.4",
-			"brace-expansion": "^1.1.11",
-			"minimatch": "^3.1.2",
-			"@babel/core": "^7.26.10"
-		},
-		"lodash": "^4.17.23",
-		"ws": "^8.18.0",
-		"shell-quote": "^1.8.4",
-		"brace-expansion": "^1.1.11",
-		"minimatch": "^3.1.2",
-		"uuid": "^11.1.1",
-		"@babel/core": "^7.26.10",
-		"undici": "^7.29.0"
 	}
 }
