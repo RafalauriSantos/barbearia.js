@@ -3,8 +3,7 @@ import { createRequire } from 'module';
 import fs from 'fs';
 import path from 'path';
 
-const require = createRequire(import.meta.url);
-const { setRuntimeEnv } = require('../backend/src/config/env.js');
+import { setRuntimeEnv } from '../backend/src/config/env.ts';
 
 // Função auxiliar para carregar arquivos .env / .dev.vars de forma segura
 function loadEnvFile(filePath) {
@@ -41,7 +40,7 @@ const mockEnv = {
 
 setRuntimeEnv(mockEnv);
 
-import app from '../src/index.js';
+import app from '../backend/src/index.ts';
 
 describe('Bateria de Testes de Integração da API', () => {
   let token = null;

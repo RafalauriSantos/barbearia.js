@@ -128,5 +128,4 @@ const env = new Proxy({}, {
 });
 
 export { env, setRuntimeEnv };
-if (typeof module !== "undefined" && module.exports) { module.exports = { env, setRuntimeEnv }; }
 export default { env, setRuntimeEnv };
