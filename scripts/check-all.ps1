@@ -2,6 +2,7 @@
 param(
 	[switch] $SkipBuild,
 	[switch] $SkipLint,
+	[switch] $SkipAudit,
 	[switch] $Live
 )
 
@@ -100,6 +101,11 @@ $pathsOk = (Assert-PathExists -Name "Backend dependencies" -Path (Join-Path $Bac
 $pathsOk = (Assert-PathExists -Name "Frontend dependencies" -Path (Join-Path $FrontendDir "node_modules") -Fix "Run: cd frontend ; npm install") -and $pathsOk
 
 if ($pathsOk) {
+	if (-not $SkipAudit) {
+		Invoke-Check -Name "Backend security audit (npm audit --omit=dev --audit-level=high)" -WorkingDirectory $BackendDir -FilePath $npmCommand.Source -Arguments @("audit", "--omit=dev", "--audit-level=high")
+		Invoke-Check -Name "Frontend security audit (npm audit --omit=dev --audit-level=high)" -WorkingDirectory $FrontendDir -FilePath $npmCommand.Source -Arguments @("audit", "--omit=dev", "--audit-level=high")
+	}
+
 	Invoke-Check -Name "Backend unit/API tests" -WorkingDirectory $BackendDir -FilePath $npmCommand.Source -Arguments @("test")
 
 	if (-not $SkipLint) {
