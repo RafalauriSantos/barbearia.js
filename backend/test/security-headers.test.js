@@ -14,7 +14,7 @@ t.test("OWASP Security Headers & Content Security Policy (CSP) Suite", async (t)
 		t.ok(headers["Permissions-Policy"].indexOf("camera=()") !== -1);
 		t.ok(headers["Content-Security-Policy"].indexOf("default-src 'self'") !== -1);
 		const cspHeader = String(headers["Content-Security-Policy"] || "");
-		t.ok(cspHeader.includes("https://challenges.cloudflare.com"));
+		t.ok(/\bhttps:\/\/challenges\.cloudflare\.com\b/.test(cspHeader));
 		t.notOk(headers["Strict-Transport-Security"], "HSTS should not be set in non-production");
 	});
 
