@@ -112,7 +112,7 @@ if ($pathsOk) {
 		Invoke-Check -Name "Frontend security audit (npm audit --omit=dev --audit-level=high)" -WorkingDirectory $FrontendDir -FilePath $npmCommand.Source -Arguments @("audit", "--omit=dev", "--audit-level=high")
 	}
 
-	Invoke-Check -Name "Backend Cloudflare Worker V8 compilation (wrangler deploy --dry-run)" -WorkingDirectory $BackendDir -FilePath $npxCommand.Source -Arguments @("wrangler", "deploy", "--dry-run")
+	Invoke-Check -Name "Backend Cloudflare Worker V8 compilation (wrangler build)" -WorkingDirectory $BackendDir -FilePath $npxCommand.Source -Arguments @("wrangler", "build")
 
 	Invoke-Check -Name "Backend unit/API tests" -WorkingDirectory $BackendDir -FilePath $npmCommand.Source -Arguments @("test")
 
