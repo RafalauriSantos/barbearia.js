@@ -3,6 +3,7 @@ param(
 	[switch] $SkipBuild,
 	[switch] $SkipLint,
 	[switch] $SkipAudit,
+	[switch] $SkipE2E,
 	[switch] $Live
 )
 
@@ -96,6 +97,11 @@ if (-not $powershellCommand) {
 	$powershellCommand = Get-Command powershell -ErrorAction Stop
 }
 
+$npxCommand = Get-Command npx.cmd -ErrorAction SilentlyContinue
+if (-not $npxCommand) {
+	$npxCommand = Get-Command npx -ErrorAction Stop
+}
+
 $pathsOk = $true
 $pathsOk = (Assert-PathExists -Name "Backend dependencies" -Path (Join-Path $BackendDir "node_modules") -Fix "Run: cd backend ; npm install") -and $pathsOk
 $pathsOk = (Assert-PathExists -Name "Frontend dependencies" -Path (Join-Path $FrontendDir "node_modules") -Fix "Run: cd frontend ; npm install") -and $pathsOk
@@ -106,13 +112,19 @@ if ($pathsOk) {
 		Invoke-Check -Name "Frontend security audit (npm audit --omit=dev --audit-level=high)" -WorkingDirectory $FrontendDir -FilePath $npmCommand.Source -Arguments @("audit", "--omit=dev", "--audit-level=high")
 	}
 
+	Invoke-Check -Name "Backend Cloudflare Worker V8 compilation (wrangler deploy --dry-run)" -WorkingDirectory $BackendDir -FilePath $npxCommand.Source -Arguments @("wrangler", "deploy", "--dry-run")
+
 	Invoke-Check -Name "Backend unit/API tests" -WorkingDirectory $BackendDir -FilePath $npmCommand.Source -Arguments @("test")
 
 	if (-not $SkipLint) {
 		Invoke-Check -Name "Frontend lint" -WorkingDirectory $FrontendDir -FilePath $npmCommand.Source -Arguments @("run", "lint", "--", "--max-warnings=0")
 	}
 
-	Invoke-Check -Name "Frontend tests" -WorkingDirectory $FrontendDir -FilePath $npmCommand.Source -Arguments @("test")
+	Invoke-Check -Name "Frontend unit tests" -WorkingDirectory $FrontendDir -FilePath $npmCommand.Source -Arguments @("test")
+
+	if (-not $SkipE2E) {
+		Invoke-Check -Name "Frontend E2E real browser tests (Playwright Chromium & Mobile)" -WorkingDirectory $FrontendDir -FilePath $npxCommand.Source -Arguments @("playwright", "test")
+	}
 
 	if (-not $SkipBuild) {
 		Invoke-Check -Name "Frontend production build" -WorkingDirectory $FrontendDir -FilePath $npmCommand.Source -Arguments @("run", "build")

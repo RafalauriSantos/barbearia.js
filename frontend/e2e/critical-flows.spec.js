@@ -215,7 +215,9 @@ test("barber invitation ignores a repeated click while pending", async ({ page }
 		});
 	}
 	await page.getByLabel("Gerenciar equipe").first().click();
-	await page.getByRole("button", { name: "Enviar convite" }).first().dblclick();
+	const inviteBtn = page.getByRole("button", { name: "Enviar convite" }).first();
+	await inviteBtn.scrollIntoViewIfNeeded();
+	await inviteBtn.dblclick();
 	await expect(page.getByText(/Convite enviado e link pronto para copiar/)).toBeVisible();
 	expect(state.inviteCalls).toBe(1);
 

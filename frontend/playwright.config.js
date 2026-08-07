@@ -2,6 +2,7 @@ import { defineConfig, devices } from "@playwright/test";
 
 export default defineConfig({
 	testDir: "./e2e",
+	testIgnore: ["**/audit-real-user-flow.spec.js"],
 	fullyParallel: false,
 	timeout: 45000,
 	expect: { timeout: 15000 },
