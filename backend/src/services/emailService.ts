@@ -2,6 +2,7 @@ const { env } = require("../config/env");
 
 const DEFAULT_BRAND_NAME = "Agenddar";
 const BREVO_API_URL = "https://api.brevo.com/v3/smtp/email";
+const RESEND_API_URL = "https://api.resend.com/emails";
 
 function buildEmailTemplate({ title, body, code, ctaUrl, ctaText }: { title: string; body: string; code?: string; ctaUrl?: string; ctaText?: string }): string {
 	const codeHtml =
@@ -79,10 +80,18 @@ function hasBrevoConfig(runtimeEnv?: any): boolean {
 	return Boolean(getEnvValue("BREVO_API_KEY", runtimeEnv));
 }
 
+function hasResendConfig(runtimeEnv?: any): boolean {
+	return Boolean(getEnvValue("RESEND_API_KEY", runtimeEnv));
+}
+
 function getEmailProvider(runtimeEnv?: any): string {
 	const provider = getEnvValue("EMAIL_PROVIDER", runtimeEnv);
 	if (provider) {
 		return provider;
+	}
+
+	if (hasResendConfig(runtimeEnv)) {
+		return "resend";
 	}
 
 	return hasBrevoConfig(runtimeEnv) ? "brevo" : "smtp";
@@ -224,6 +233,69 @@ async function sendViaBrevo(message: any, runtimeEnv?: any) {
 	return parsedBody;
 }
 
+async function sendViaResend(message: any, runtimeEnv?: any) {
+	const apiKey = getEnvValue("RESEND_API_KEY", runtimeEnv);
+	if (!apiKey) {
+		throw new Error("RESEND_API_KEY environment variable is missing");
+	}
+
+	const sender = message.from || getSenderAddress(runtimeEnv);
+	const recipients = parseRecipients(message.to).map((r: any) => r.email);
+
+	if (!recipients.length) {
+		throw new Error("Email recipient is required");
+	}
+
+	const payload: Record<string, any> = {
+		from: sender,
+		to: recipients,
+		subject: message.subject,
+	};
+
+	if (message.html) {
+		payload.html = message.html;
+	} else if (message.text) {
+		payload.text = message.text;
+	} else {
+		throw new Error("Email content is required");
+	}
+
+	console.log(`[Resend Email] Enviando e-mail via API do Resend para: ${JSON.stringify(recipients)}`);
+
+	let response: any;
+	try {
+		response = await fetchWithTimeout(RESEND_API_URL, {
+			method: "POST",
+			headers: {
+				"accept": "application/json",
+				"authorization": `Bearer ${apiKey}`,
+				"content-type": "application/json",
+			},
+			body: JSON.stringify(payload),
+		}, runtimeEnv);
+	} catch (fetchError: any) {
+		console.error("[Resend Email] Erro de rede ou timeout no fetch:", fetchError.message || fetchError);
+		throw fetchError;
+	}
+
+	const body = await response.text();
+	console.log(`[Resend Email] Resposta HTTP Status: ${response.status}`);
+
+	if (!response.ok) {
+		console.error(`[Resend Email] Erro retornado pela API do Resend: ${body}`);
+		throw new Error(`Resend email API failed with status ${response.status}: ${body}`);
+	}
+
+	let parsedBody = body;
+	try {
+		parsedBody = body ? JSON.parse(body) : {};
+	} catch {
+		// Keep original body text
+	}
+
+	return parsedBody;
+}
+
 function obfuscateOtp(code: any): string {
 	const str = String(code || "");
 	if (str.length <= 2) return "**";
@@ -236,12 +308,15 @@ function sanitizeLog(value: any): string {
 
 async function sendEmail(message: any, debugLog?: { label: string; value: any }, runtimeEnv?: any) {
 	const provider = getEmailProvider(runtimeEnv);
+	if (provider === "resend") {
+		return sendViaResend(message, runtimeEnv);
+	}
 	if (provider === "brevo") {
 		return sendViaBrevo(message, runtimeEnv);
 	}
 
 	if (getEnvValue("NODE_ENV", runtimeEnv) === "production") {
-		const errMessage = `Erro: Provedor de e-mail '${provider}' nao configurado ou invalido para producao. BREVO_API_KEY disponivel: ${hasBrevoConfig(runtimeEnv)}`;
+		const errMessage = `Erro: Provedor de e-mail '${provider}' nao configurado ou invalido para producao. RESEND_API_KEY disponivel: ${hasResendConfig(runtimeEnv)}, BREVO_API_KEY disponivel: ${hasBrevoConfig(runtimeEnv)}`;
 		console.error(`[Email Service] ${sanitizeLog(errMessage)}`);
 		throw new Error(errMessage);
 	}

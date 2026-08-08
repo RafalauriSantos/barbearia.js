@@ -176,6 +176,17 @@ function createBindingRateLimiterMiddleware(options: { bindingName: string; erro
 	};
 }
 
+const emailLimiterMiddleware = createBindingRateLimiterMiddleware({
+	bindingName: "EMAIL_LIMITER",
+	errorCode: "EMAIL_RATE_LIMIT_EXCEEDED",
+	errorMessage: "Limite de envio de e-mails atingido por segurança. Por favor, aguarde 3 minutos antes de solicitar outro e-mail.",
+	retryAfterSeconds: 180,
+});
+
+app.use("/auth/resend-code", emailLimiterMiddleware);
+app.use("/auth/forgot-password", emailLimiterMiddleware);
+app.use("/auth/verify-code", emailLimiterMiddleware);
+
 app.use(
 	"/auth/*",
 	createBindingRateLimiterMiddleware({
