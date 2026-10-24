@@ -18,7 +18,7 @@ tap.test("Suite 1 – Worker middleware never crashes with HTTP 500", async (t) 
 
 	const mockEnv = {
 		NODE_ENV: "test",
-		SUPABASE_URL: "https://zniehugopmvoutxnpgox.supabase.co",
+		SUPABASE_URL: "https://pytplzykuqdfyrfotgzq.supabase.co",
 		SUPABASE_ANON_KEY: "anon-key-test",
 		JWT_SECRET: secret,
 	};
@@ -76,7 +76,7 @@ tap.test("Suite 2 – Supabase client recreates when credentials change", async 
 	// (like process.env on Cloudflare Workers which lacks secrets)
 	setRuntimeEnv({
 		NODE_ENV: "production",
-		SUPABASE_URL: "https://zniehugopmvoutxnpgox.supabase.co",
+		SUPABASE_URL: "https://pytplzykuqdfyrfotgzq.supabase.co",
 		// NO SUPABASE_SERVICE_KEY
 		// NO SUPABASE_ANON_KEY
 	});
@@ -88,7 +88,7 @@ tap.test("Suite 2 – Supabase client recreates when credentials change", async 
 	const realServiceKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.test-service-key";
 	setRuntimeEnv({
 		NODE_ENV: "production",
-		SUPABASE_URL: "https://zniehugopmvoutxnpgox.supabase.co",
+		SUPABASE_URL: "https://pytplzykuqdfyrfotgzq.supabase.co",
 		SUPABASE_SERVICE_KEY: realServiceKey,
 		JWT_SECRET: "development-only-secret-change-before-production",
 	});
@@ -127,7 +127,7 @@ tap.test("Suite 3 – Authenticated routes must never return 500 from credential
 	// to simulate what happens when credentials are stale/missing
 	const envWithBadKey = {
 		NODE_ENV: "test",
-		SUPABASE_URL: "https://zniehugopmvoutxnpgox.supabase.co",
+		SUPABASE_URL: "https://pytplzykuqdfyrfotgzq.supabase.co",
 		SUPABASE_SERVICE_KEY: "deliberately-wrong-key-to-test-error-handling",
 		JWT_SECRET: secret,
 	};
@@ -169,7 +169,7 @@ tap.test("Suite 3 – Authenticated routes must never return 500 from credential
 tap.test("Suite 4 – POST /auth/login with bad credentials returns structured error, never unhandled crash", async (t) => {
 	const envWithKey = {
 		NODE_ENV: "test",
-		SUPABASE_URL: "https://zniehugopmvoutxnpgox.supabase.co",
+		SUPABASE_URL: "https://pytplzykuqdfyrfotgzq.supabase.co",
 		SUPABASE_SERVICE_KEY: "deliberately-wrong-key-to-test-error-handling",
 		JWT_SECRET: "development-only-secret-change-before-production",
 	};

@@ -23,8 +23,11 @@ app.use('*', async (c, next) => {
 
 // Helper para instanciar o Supabase utilizando as bindings do Worker
 export function getSupabase(c) {
-  const url = c.env?.SUPABASE_URL || "https://zniehugopmvoutxnpgox.supabase.co";
-  const key = c.env?.SUPABASE_SERVICE_KEY || c.env?.SUPABASE_ANON_KEY || "anon-fallback-key";
+  const url = c.env?.SUPABASE_URL;
+  const key = c.env?.SUPABASE_SERVICE_KEY || c.env?.SUPABASE_ANON_KEY;
+  if (!url || !key) {
+    throw new Error("SUPABASE_URL e SUPABASE_SERVICE_KEY (ou SUPABASE_ANON_KEY) são obrigatórios");
+  }
   return createClient(url, key, {
     auth: { persistSession: false },
   });
