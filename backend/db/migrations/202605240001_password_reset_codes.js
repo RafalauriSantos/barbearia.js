@@ -21,6 +21,5 @@ exports.up = async function (knex) {
 	);
 };
 
-exports.down = async function (knex) {
-	await knex.schema.dropTableIfExists("password_reset_codes");
-};
+// A tabela pertence ao schema.sql baseline e pode ter dados reais: não é removida no rollback.
+exports.down = async function () {};
