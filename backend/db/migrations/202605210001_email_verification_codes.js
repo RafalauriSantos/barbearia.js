@@ -1,5 +1,5 @@
 exports.up = async function (knex) {
-	await knex.schema.createTable("email_verification_codes", (table) => {
+	await knex.schema.createTableIfNotExists("email_verification_codes", (table) => {
 		table.uuid("id").primary().defaultTo(knex.raw("gen_random_uuid()"));
 		table
 			.uuid("user_id")
@@ -21,6 +21,5 @@ exports.up = async function (knex) {
 	);
 };
 
-exports.down = async function (knex) {
-	await knex.schema.dropTableIfExists("email_verification_codes");
-};
+// A tabela pertence ao schema.sql baseline e pode ter dados reais: não é removida no rollback.
+exports.down = async function () {};
