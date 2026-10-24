@@ -9,8 +9,9 @@ import {
 export const API_BASE_URL: string =
 	import.meta.env.VITE_API_URL || "http://localhost:3000";
 export const API_TIMEOUT_MS: number = Number(
-	import.meta.env.VITE_API_TIMEOUT_MS || 75000,
+	import.meta.env.VITE_API_TIMEOUT_MS || 15000,
 );
+export const WARMUP_TIMEOUT_MS = 30000;
 export const SESSION_EXPIRED_EVENT = "gestor-barbearia:session-expired";
 const NETWORK_ERROR_MESSAGE =
 	"Sem conexao com a internet ou a API esta indisponivel. Tente novamente.";
@@ -111,7 +112,7 @@ export function warmUpApi(): Promise<any> {
 		warmUpRequest ||
 		axios
 			.get(`${API_BASE_URL}/health/db`, {
-				timeout: API_TIMEOUT_MS,
+				timeout: WARMUP_TIMEOUT_MS,
 				validateStatus: () => true,
 			})
 			.catch(() => null)
