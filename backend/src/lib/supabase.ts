@@ -8,13 +8,11 @@ let lastKey = "";
 function getSupabaseClient() {
 	const url =
 		env.SUPABASE_URL ||
-		(typeof process !== "undefined" && process.env?.SUPABASE_URL) ||
-		"https://zniehugopmvoutxnpgox.supabase.co";
+		(typeof process !== "undefined" && process.env?.SUPABASE_URL);
 	const key =
 		env.SUPABASE_SERVICE_KEY ||
 		env.SUPABASE_ANON_KEY ||
-		(typeof process !== "undefined" && (process.env?.SUPABASE_SERVICE_KEY || process.env?.SUPABASE_ANON_KEY)) ||
-		"anon-fallback-key";
+		(typeof process !== "undefined" && (process.env?.SUPABASE_SERVICE_KEY || process.env?.SUPABASE_ANON_KEY));
 
 	// Recreate client if credentials changed (e.g. setRuntimeEnv loaded real secrets)
 	if (client && url === lastUrl && key === lastKey) {
