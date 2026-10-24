@@ -1,5 +1,5 @@
 exports.up = async function (knex) {
-	await knex.schema.createTable("email_verification_codes", (table) => {
+	await knex.schema.createTableIfNotExists("email_verification_codes", (table) => {
 		table.uuid("id").primary().defaultTo(knex.raw("gen_random_uuid()"));
 		table
 			.uuid("user_id")
